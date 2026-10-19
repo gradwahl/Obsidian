@@ -43,3 +43,21 @@ directory. Set `WOLODRIVE_TEST_SCREENSHOTS=1` when running `make test` to save
 screenshots for each language in `build/`.
 
 For PS5, configure `PS5_PAYLOAD_SDK` and run `make ps5`.
+
+## Windows preview through WSL
+
+Run `make linux` from your WSL distribution in this repository. WSL uses SDL's
+software renderer by default because some WSLg accelerated drivers create a
+window successfully but display only black. Other Linux environments and PS5
+continue to prefer accelerated rendering. The selected video driver and renderer
+are printed at startup.
+
+To test a particular renderer, set `SDL_RENDER_DRIVER` explicitly. For example,
+to force software rendering when troubleshooting an older build:
+
+```sh
+SDL_RENDER_DRIVER=software ./build/wolodrive
+```
+
+If the app reports missing fonts, install DejaVu Sans (Arch: `ttf-dejavu`,
+Debian/Ubuntu: `fonts-dejavu-core`).

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
 static const char *FONT_CANDIDATES_BOLD[] = {
     "/data/homebrew/wolodrive/assets/font_bold.ttf",
@@ -234,6 +235,37 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
     }
 }
 
+bool ui_create_renderer(WolodriveApp *app) {
+    Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+#ifndef __PS5__
+    /* WSLg can create an accelerated renderer successfully but present only black.
+       An explicit SDL_RENDER_DRIVER remains available for driver testing. */
+    if (!SDL_GetHint(SDL_HINT_RENDER_DRIVER) &&
+        (getenv("WSL_DISTRO_NAME") || getenv("WSL_INTEROP"))) {
+        flags = SDL_RENDERER_SOFTWARE;
+    }
+#endif
+    app->renderer = SDL_CreateRenderer(app->window, -1, flags);
+    if (!app->renderer && flags != SDL_RENDERER_SOFTWARE) {
+        fprintf(stderr, "[WOLODRIVE WARN] Accelerated renderer: %s; trying software\n", SDL_GetError());
+        app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_SOFTWARE);
+    }
+    if (!app->renderer) {
+        fprintf(stderr, "[WOLODRIVE ERROR] SDL_CreateRenderer: %s\n", SDL_GetError());
+        return false;
+    }
+    if (SDL_RenderSetLogicalSize(app->renderer, SCREEN_WIDTH, SCREEN_HEIGHT) != 0) {
+        fprintf(stderr, "[WOLODRIVE ERROR] SDL_RenderSetLogicalSize: %s\n", SDL_GetError());
+        return false;
+    }
+    SDL_RendererInfo info;
+    if (SDL_GetRendererInfo(app->renderer, &info) == 0) {
+        printf("[WOLODRIVE DISPLAY] Video: %s; renderer: %s\n",
+               SDL_GetCurrentVideoDriver(), info.name);
+    }
+    return true;
+}
+
 bool ui_init(WolodriveApp *app) {
     app->font_logo       = open_first_available_font(FONT_CANDIDATES_BOLD, 32);
     app->font_hero_title = open_first_available_font(FONT_CANDIDATES_BOLD, 46);
@@ -241,6 +273,12 @@ bool ui_init(WolodriveApp *app) {
     app->font_body       = open_first_available_font(FONT_CANDIDATES_REGULAR, 19);
     app->font_small      = open_first_available_font(FONT_CANDIDATES_BOLD, 15);
     app->font_micro      = open_first_available_font(FONT_CANDIDATES_BOLD, 13);
+
+    if (!app->font_logo || !app->font_hero_title || !app->font_row_title ||
+        !app->font_body || !app->font_small || !app->font_micro) {
+        fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
+        return false;
+    }
 
     app->active_row = 0;
     app->vertical_scroll_y = 0.0f;
@@ -778,6 +816,10 @@ static void render_toast_notification(WolodriveApp *app) {
 
 void ui_render(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
+
+    /* The presented backbuffer is undefined; clear before drawing scaled layers. */
+    SDL_SetRenderDrawColor(r, COLOR_BG_TOP_R, COLOR_BG_TOP_G, COLOR_BG_TOP_B, 255);
+    SDL_RenderClear(r);
 
     render_background_and_ambient(app);
     render_hero_banner(app);

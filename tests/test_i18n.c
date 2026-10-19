@@ -61,8 +61,14 @@ static void test_live_switching(void) {
     assert(app->catalog_mutex);
     app->window = SDL_CreateWindow("Language test", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
     assert(app->window);
-    app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_SOFTWARE);
-    assert(app->renderer);
+    /* WSL must select software even when acceleration can appear available. */
+    setenv("WSL_DISTRO_NAME", "wolodrive-test", 1);
+    unsetenv("SDL_RENDER_DRIVER");
+    SDL_ResetHint(SDL_HINT_RENDER_DRIVER);
+    assert(ui_create_renderer(app));
+    SDL_RendererInfo info;
+    assert(SDL_GetRendererInfo(app->renderer, &info) == 0);
+    assert(strcmp(info.name, "software") == 0);
     setenv("LC_ALL", "en_US.UTF-8", 1);
     sys_init(app);
     assert(ui_init(app));

@@ -168,6 +168,7 @@ void catalog_free_textures(WolodriveApp *app);
 
 /* Warstwa interfejsu Premium Netflix/PS5 UI (src/ui_netflix.c) */
 bool ui_init(WolodriveApp *app);
+bool ui_create_renderer(WolodriveApp *app);
 void ui_cleanup(WolodriveApp *app);
 void ui_rebuild_carousels(WolodriveApp *app);
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev);

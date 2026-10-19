@@ -66,15 +66,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    app.renderer = SDL_CreateRenderer(app.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!app.renderer) {
-        app.renderer = SDL_CreateRenderer(app.window, -1, SDL_RENDERER_SOFTWARE);
-    }
-
-    SDL_RenderSetLogicalSize(app.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+    int exit_code = 1;
+    if (!ui_create_renderer(&app)) goto cleanup;
 
     sys_init(&app);
-    ui_init(&app);
+    if (!ui_init(&app)) goto cleanup;
 
     /* Automatyczne pobranie default-sources.json (Pegasus-DL) oraz okładek w tle przy starcie */
     catalog_start_async_sync(&app);
@@ -110,6 +106,8 @@ int main(int argc, char *argv[]) {
         ui_render(&app);
     }
 
+    exit_code = 0;
+cleanup:
     ui_cleanup(&app);
     if (app.catalog_mutex) SDL_DestroyMutex(app.catalog_mutex);
     if (app.renderer)      SDL_DestroyRenderer(app.renderer);
@@ -118,5 +116,5 @@ int main(int argc, char *argv[]) {
     IMG_Quit();
     SDL_Quit();
     curl_global_cleanup();
-    return 0;
+    return exit_code;
 }
