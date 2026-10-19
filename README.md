@@ -159,6 +159,46 @@ game panels use the same cache, including games beyond the former prefetch limit
 
 ## Game artwork
 
+To download all card artwork from the default catalog sources ahead of browsing,
+install Python 3 and run from the repository on native Windows:
+
+```powershell
+python scripts/download_artwork.py
+```
+
+On Linux or WSL, use `python3 scripts/download_artwork.py`. The output defaults
+to the repository's `assets/covers` folder, regardless of the launch directory.
+For this Windows checkout that is
+`C:\Users\Callum\Documents\GitHub\wolodrive\assets\covers`.
+The app reuses these URL-keyed `.art` files without another image download;
+they contain the original PNG, JPEG or WebP image bytes. For viewing individual
+files in an external image viewer, use the image type recorded in
+`assets/covers/artwork-index.json` to choose an extension for a copy.
+
+The index maps files to game titles, title IDs and sources, and records failures.
+The downloader fetches the catalog's supplied full box covers, cover fallbacks,
+icons and card images, deduplicating shared URLs across packages. Sources with
+only square icons retain those icons; this does not locate retail box art elsewhere.
+Screenshots, game packages and separate background images are not bulk downloaded.
+Files already cached are reused, invalid image signatures are retried, and
+completed files remain available if a run is interrupted. Rerun the same command
+to resume or fetch additions. There is no automatic disk size limit.
+
+Downloads use four workers, verified HTTPS, a 12-second timeout, a 16 MiB image
+limit and one retry. Failures leave existing files intact and return a nonzero
+exit status; partial success remains usable. Use `--workers 1` for a slower
+connection, `--catalog URL` for a particular catalog/source list, or `--output PATH`
+to export elsewhere (the app reads its usual cache folder). No extra Python
+packages are required. Local fixture tests passed on native Windows and Linux
+through WSL with `python -m unittest discover -s tests -p test_download_artwork.py`
+(use `python3` on Linux). This verifies the standalone downloader; native Windows
+app builds/launch and a separate native Linux graphical session remain unverified.
+The PS5 app/build is unchanged; transfer downloaded cache files to
+`/data/homebrew/wolodrive/covers` for that target.
+The initial bulk run cached 1,170 of 1,173 unique artwork URLs; SDL successfully
+decoded all 1,170 files through WSL. Two source URLs returned HTTP 403 and one
+provided an unsupported AVIF image. Those failures are recorded in the local index.
+
 Catalog entries accept `boxArtUrl`, `boxartUrl` or `boxCoverUrl` for a complete
 portrait front cover including its platform branding. They retain
 `posterUrl` / `coverUrl` / `cover` / `image` as cover

@@ -2,5 +2,6 @@ build/
 __pycache__/
 assets/covers/*.art
 assets/covers/*.tmp
+assets/covers/artwork-index.json
 assets/artwork/
 assets/screenshots/
