@@ -3,6 +3,53 @@
 enum { SEARCH_COLUMNS = 3, SEARCH_PAGE = 9, SEARCH_KEYS = 38 };
 static const char SEARCH_LETTERS[] = "abcdefghijklmnopqrstuvwxyz1234567890";
 
+/* Source typography and package tags are not separate game identities. Keep
+   edition/DLC words and the console family so meaningful differences survive. */
+static void search_title_key(const char *title, char key[128]) {
+    while (*title == ' ') title++;
+    const char *tags[] = {"[exfat]", "[ffpkg]", "[pkg]"};
+    for (int i = 0; i < 3; i++) {
+        size_t n = strlen(tags[i]);
+        if (SDL_strncasecmp(title, tags[i], n) == 0) { title += n; break; }
+    }
+    size_t length = 0;
+    while (*title && length < 127) {
+        const unsigned char *s = (const unsigned char *)title;
+        if (strncmp(title, "®", strlen("®")) == 0) { title += strlen("®"); continue; }
+        if (strncmp(title, "™", strlen("™")) == 0) { title += strlen("™"); continue; }
+        if (strncmp(title, "’", strlen("’")) == 0) { title += strlen("’"); continue; }
+        if (strncmp(title, "—", strlen("—")) == 0) { title += strlen("—"); continue; }
+        if (*s >= 128 || SDL_isalnum(*s)) key[length++] = (char)(*s < 128 ? SDL_tolower(*s) : *s);
+        title++;
+    }
+    key[length] = '\0';
+}
+
+static int search_platform(const GameItem *item) {
+    if (SDL_strncasecmp(item->id_code, "CUSA", 4) == 0) return 4;
+    if (SDL_strncasecmp(item->id_code, "PPSA", 4) == 0) return 5;
+    return 0;
+}
+
+static bool search_same_game(const GameItem *a, const GameItem *b) {
+    char first[128], second[128];
+    if (a->is_game != b->is_game || search_platform(a) != search_platform(b)) return false;
+    search_title_key(a->title, first);
+    search_title_key(b->title, second);
+    return first[0] && strcmp(first, second) == 0;
+}
+
+static uint64_t search_title_hash(const GameItem *item) {
+    char key[128];
+    search_title_key(item->title, key);
+    uint64_t hash = 14695981039346656037ULL;
+    for (const unsigned char *s = (const unsigned char *)key; *s; s++) {
+        hash ^= *s;
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
 static bool search_contains(const char *text, const char *query) {
     size_t length = strlen(query);
     if (!length) return true;
@@ -12,19 +59,47 @@ static bool search_contains(const char *text, const char *query) {
 
 static void search_rebuild_locked(WolodriveApp *app) {
     GameItem *previous = app->search_count ? app->search_results[app->search_selected] : NULL;
+    uint64_t hashes[MAX_CATALOG_ITEMS];
     app->search_count = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
-        if (search_contains(item->title, app->search_query) || search_contains(item->id_code, app->search_query))
+        if (!search_contains(item->title, app->search_query) && !search_contains(item->id_code, app->search_query)) continue;
+        bool duplicate = false;
+        uint64_t hash = search_title_hash(item);
+        for (int j = 0; j < app->search_count; j++) {
+            if (hashes[j] == hash && search_same_game(app->search_results[j], item)) { duplicate = true; break; }
+        }
+        if (!duplicate) {
+            hashes[app->search_count] = hash;
             app->search_results[app->search_count++] = item;
+        }
     }
     app->search_selected = 0;
     for (int i = 0; i < app->search_count; i++)
-        if (app->search_results[i] == previous) app->search_selected = i;
+        if (previous && search_same_game(app->search_results[i], previous)) {
+            app->search_selected = i;
+            app->search_results[i] = previous;
+        }
     if (!app->search_count) {
         app->search_results_focus = false;
         app->search_detail = false;
     }
+}
+
+/* Retain every source package; grouping is only a presentation change. */
+static void search_cycle_variant(WolodriveApp *app, int direction) {
+    GameItem *current = get_focused_item(app);
+    if (!current) return;
+    int index = (int)(current - app->catalog);
+    SDL_LockMutex(app->catalog_mutex);
+    for (int step = 1; step <= app->catalog_count; step++) {
+        int candidate = (index + direction * step + app->catalog_count) % app->catalog_count;
+        if (search_same_game(current, &app->catalog[candidate])) {
+            app->search_results[app->search_selected] = &app->catalog[candidate];
+            break;
+        }
+    }
+    SDL_UnlockMutex(app->catalog_mutex);
 }
 
 static void search_edit(WolodriveApp *app, const char *text, bool erase) {
@@ -64,6 +139,10 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
         return true;
     }
     if (app->search_detail && ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+        if (contains_point((SDL_Rect){900, 620, 900, 70}, ev->button.x, ev->button.y)) {
+            search_cycle_variant(app, 1);
+            return true;
+        }
         if (contains_point((SDL_Rect){CONTENT_X, 24, 180, 50}, ev->button.x, ev->button.y)) {
             app->search_detail = false;
             return true;
@@ -125,6 +204,7 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
     if (app->search_detail) {
         if (action == 6) app->search_detail = false;
         else if (action == 5) sys_trigger_action(app, get_focused_item(app));
+        else if (action == 1 || action == 2) search_cycle_variant(app, action == 1 ? -1 : 1);
         return action != 0; /* Reuse description scrolling and Original controls. */
     }
     if (action == 6) { app->sidebar_focus = true; return true; }
@@ -163,6 +243,21 @@ static void render_search(WolodriveApp *app) {
     if (app->search_detail) {
         GameItem *item = get_focused_item(app);
         if (item) render_cover_or_placeholder(app, item, CONTENT_X, 600, 530, 300, false);
+        if (item) {
+            int count = 0, position = 0;
+            SDL_LockMutex(app->catalog_mutex);
+            for (int i = 0; i < app->catalog_count; i++) if (search_same_game(item, &app->catalog[i])) {
+                count++;
+                if (item == &app->catalog[i]) position = count;
+            }
+            char label[256];
+            snprintf(label, sizeof(label), TR(app, TXT_SEARCH_VARIANTS), position, count);
+            draw_text(r, app->font_small, label, 900, 620, white, 850);
+            snprintf(label, sizeof(label), "%s   |   %s   |   %s   |   %s", item->source_name,
+                     sys_format_short_badge(item->format), item->id_code, item->version);
+            SDL_UnlockMutex(app->catalog_mutex);
+            draw_text(r, app->font_small, label, 900, 720, muted, 850);
+        }
         draw_text(r, app->font_small, TR(app, TXT_SEARCH_DETAIL_HINT), CONTENT_X, 930, white, 0);
         draw_text(r, app->font_small, TR(app, TXT_LIBRARY_BACK), CONTENT_X, 28, white, 0);
         return;

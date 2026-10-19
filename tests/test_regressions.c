@@ -201,6 +201,53 @@ static void test_search(WolodriveApp *app) {
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
     ui_handle_input(app, &event);
     assert(app->active_row == VIEW_HOME);
+    /* Reproduce source labels from the duplicate Search report. */
+    const char *variants[] = {
+        "Assassins Creed Valhalla", "[exFAT] Assassin's Creed® Valhalla",
+        "Assassins Creed Valhalla (DLC)", "Assassins Creed Valhalla Complete Edition",
+        "Assassin's Creed Valhalla — Complete Edition", "Assassins Creed Valhalla",
+        "Assassin's Creed Mirage", "Assassin’s Creed® Mirage",
+        "Assassins Creed Black Flag Resynced", "[FFPKG] Assassin's Creed Black Flag Resynced",
+        "Assassins Creed Black Flag Resynced Deluxe Edition"
+    };
+    for (int i = 0; i < 11; i++) {
+        GameItem *item = &app->catalog[300 + i];
+        SDL_strlcpy(item->title, variants[i], sizeof(item->title));
+        SDL_strlcpy(item->id_code, i == 5 ? "CUSA12345" : "PPSA12345", sizeof(item->id_code));
+        item->is_game = i != 2;
+        item->format = i == 1 ? FMT_EXFAT : FMT_FFPKG;
+    }
+    app->catalog_count = 311;
+    select_sidebar_view(app, VIEW_SEARCH);
+    app->search_query[0] = '\0';
+    search_edit(app, "assass", false);
+    /* Base, DLC, Complete, PS4 base, Mirage, Black Flag and Deluxe. */
+    assert(app->search_count == 7);
+    assert(app->catalog_count == 311); /* Package variants remain intact. */
+    app->search_selected = 0;
+    app->sidebar_focus = false;
+    app->search_detail = true;
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_RIGHT;
+    ui_handle_input(app, &event);
+    assert(get_focused_item(app) == &app->catalog[301]);
+    ui_rebuild_carousels(app);
+    assert(app->search_count == 7 && get_focused_item(app) == &app->catalog[301]);
+    event.key.keysym.sym = SDLK_LEFT;
+    ui_handle_input(app, &event);
+    assert(get_focused_item(app) == &app->catalog[300]);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 950;
+    event.button.y = 650;
+    ui_handle_input(app, &event);
+    assert(get_focused_item(app) == &app->catalog[301]);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+    ui_handle_input(app, &event);
+    assert(get_focused_item(app) == &app->catalog[300]);
+    ui_render(app);
+    puts("Search groups format/typography duplicates, preserves DLC/editions/platforms and cycles every retained package.");
     puts("Search: full catalog, title/ID matching, UTF-8 editing, paging, refresh, details and keyboard/controller/mouse input passed.");
 }
 

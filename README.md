@@ -37,6 +37,13 @@ including entries outside the 128-item browsing rows. ASCII letters match withou
 case sensitivity; other scripts match their entered UTF-8 text. An empty query
 shows the loaded catalog. Unconnected sources are not searched.
 
+Search groups the same title across package formats and source typography
+(format prefixes, punctuation and trademark symbols). PS4 and PS5, DLC and named
+editions stay separate. On a result's details screen, use **Left/Right** or click
+the **Package** selector to choose another retained source package. Its source,
+format, title ID and version are shown beside the cover. Catalog entries and
+download choices are preserved; only the search cards are grouped.
+
 Move Right past the keyboard's right edge to browse results. Up/Down pages through
 all matches, nine covers at a time. Left from the first result column returns to
 the keyboard; Left from the keyboard's first column reaches the sidebar.
@@ -221,6 +228,9 @@ screenshots for each language in `build/`.
 Search regression coverage includes full-catalog title/ID matching beyond the
 carousel limit, UTF-8 deletion, live text input, keyboard/controller/mouse
 navigation, result paging, refresh selection, empty states and result details.
+It also reproduces duplicate source typography/format labels, verifies grouping
+without merging DLC, named editions or PS4/PS5, and exercises retained package
+selection with keyboard, controller and mouse events.
 The Linux build and automated search checks were run through WSL. Native Windows
 and PS5 builds and a separate native Linux graphical session remain unverified;
 the WSLg Search screen's visual and live interaction checks were interrupted.
