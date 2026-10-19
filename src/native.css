@@ -48,7 +48,7 @@
 .tv-platform-ps5 { background: #f5f5f5; color: #0c0c10; }
 .tv-platform-ps4 { background: #003e9b; color: white; }
 .tv-cover-image { position: relative; min-height: 0; flex: 1; overflow: hidden; }
-.tv-cover-image img { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: contain; object-position: center; }
+.tv-cover-image img { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: fill; object-position: center; }
 .tv-cover-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 16px; color: #ddd; }
 .tv-cover-placeholder strong { opacity: .45; font-size: 20px; }
 .tv-cover-placeholder span { font-size: 16px; }
