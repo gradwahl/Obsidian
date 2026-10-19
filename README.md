@@ -20,6 +20,9 @@ Non-16:9 windows have black margins to preserve these proportions. Browser fonts
 use the native application's system-font families; glyph metrics can differ by OS.
 This is a React recreation of the source layout; pixel-level appearance and input
 behavior still need manual browser verification.
+React card artwork fits fully inside its frame without cropping. Square and wide
+images leave a matching background around the image; the missing-art placeholder
+only appears when no image is available. This also applies to Search and game-panel covers.
 
 ### Start without Node or Vite
 

@@ -14,7 +14,7 @@ export function CoverArt({ game, className = '' }: { game: GameItem; className?:
     `linear-gradient(rgb(${game.cover_r},${game.cover_g},${game.cover_b}), #101014)` }}>
     {platform && !completeBox && <div className={`tv-platform tv-platform-${platform.toLowerCase()}`}>{platform}</div>}
     <div className="tv-cover-image">
-      <div className="tv-cover-placeholder"><strong>WOLODRIVE</strong><span>{game.title}</span></div>
+      {!source && <div className="tv-cover-placeholder"><strong>WOLODRIVE</strong><span>{game.title}</span></div>}
       {source && <img src={source} alt={game.title}
         onError={() => setFailedSources(values => [...values, source])} />}
     </div>
