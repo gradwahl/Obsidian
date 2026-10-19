@@ -10,6 +10,7 @@ typedef struct {
     const char *name;
     /* NULL means this platform has no supported catalog mapping yet. */
     const char *title_id_prefix;
+    const char *artwork_path;
 } LibraryConsole;
 
 typedef struct {
@@ -17,6 +18,7 @@ typedef struct {
     uint8_t r, g, b;
     const LibraryConsole *consoles;
     int console_count;
+    const char *artwork_path;
 } LibraryCompany;
 
 int library_company_count(void);

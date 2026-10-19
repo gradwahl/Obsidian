@@ -39,7 +39,20 @@ downloading at most 384 distinct covers per sync.
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
 **Sega**, **Nintendo**, **Atari**, and **SNK**. Opening a company shows its consoles,
-including handhelds. Click a tile to open it, or press **Right / Enter / Cross**
+including handhelds. Company tiles use their logos; console tiles show photos of
+the actual hardware with a small name label. All six logos and 41 console photos
+are bundled under `assets/library/` and work offline. Images retain their aspect
+ratio and are fitted completely inside the tile rather than cropped. Missing
+assets fall back to a readable name. Sources, authors, individual image licenses,
+and download hashes are recorded in [the artwork credits](assets/library/CREDITS.md)
+and `assets/library/SOURCES.json`.
+
+For PS5 deployment, copy `assets/library/` to
+`/data/homebrew/wolodrive/assets/library/` alongside the payload. Desktop builds
+look in the working directory and relative to the executable (including the
+repository's `build/` layout).
+
+Click a tile to open it, or press **Right / Enter / Cross**
 from the sidebar to focus the grid, then use arrows / D-pad and **Enter / Cross**.
 Long console lists page automatically as selection moves past the first eight
 tiles. **Backspace / Escape / Circle**, or the on-screen **Back** button, returns

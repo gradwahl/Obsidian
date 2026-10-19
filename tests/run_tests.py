@@ -1,5 +1,6 @@
 """Check UTF-8 catalogs and printf contracts, then exercise SDL in isolation."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -8,6 +9,15 @@ import tempfile
 from translation_server import translation_server
 
 catalog = Path("src/translations.def").read_text(encoding="utf-8")
+artwork = json.loads(Path("assets/library/SOURCES.json").read_text(encoding="utf-8-sig"))
+paths = {entry["path"] for entry in artwork}
+bindings = set(re.findall(r'"(assets/library/[^\"]+)"', Path("src/library.c").read_text(encoding="utf-8")))
+assert len(artwork) == len(paths) == 47 and paths == bindings
+for entry in artwork:
+    assert entry["source"].startswith("https://commons.wikimedia.org/wiki/File:")
+    assert entry["author"] and entry["license"]
+    assert hashlib.sha256(Path(entry["path"]).read_bytes()).hexdigest() == entry["sha256"], entry["path"]
+print("Verified all 47 bundled logos/photos, model bindings, attribution records and file hashes.", flush=True)
 count = 0
 for line in catalog.splitlines():
     if not line.startswith("TEXT("):

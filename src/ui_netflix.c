@@ -441,6 +441,10 @@ bool ui_init(WolodriveApp *app) {
 
 void ui_cleanup(WolodriveApp *app) {
     catalog_free_textures(app);
+    for (int i = 0; i < app->library_artwork_count; i++) {
+        if (app->library_artwork[i].texture) SDL_DestroyTexture(app->library_artwork[i].texture);
+    }
+    app->library_artwork_count = 0;
     if (app->font_logo)       TTF_CloseFont(app->font_logo);
     if (app->font_hero_title) TTF_CloseFont(app->font_hero_title);
     if (app->font_row_title)  TTF_CloseFont(app->font_row_title);
@@ -1163,6 +1167,58 @@ static void render_library_breadcrumb(WolodriveApp *app) {
                      (SDL_Rect){CONTENT_X + 204, 24, 1150, 50});
 }
 
+static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path) {
+    if (!path || !path[0]) return NULL;
+    for (int i = 0; i < app->library_artwork_count; i++) {
+        if (strcmp(app->library_artwork[i].path, path) == 0) return &app->library_artwork[i];
+    }
+    if (app->library_artwork_count >= MAX_LIBRARY_ARTWORK) return NULL;
+    LibraryArtwork *art = &app->library_artwork[app->library_artwork_count++];
+    art->path = path;
+    SDL_Surface *surface = IMG_Load(path);
+    char resolved[1024];
+#ifdef __PS5__
+    if (!surface) {
+        snprintf(resolved, sizeof(resolved), "%s/%s", WOLODRIVE_DATA_PATH, path);
+        surface = IMG_Load(resolved);
+    }
+#else
+    /* Support running from the repo, beside a bundled assets directory, or
+       from a different working directory with the executable in build/. */
+    char *base = SDL_GetBasePath();
+    if (!surface && base) {
+        snprintf(resolved, sizeof(resolved), "%s%s", base, path);
+        surface = IMG_Load(resolved);
+        if (!surface) {
+            snprintf(resolved, sizeof(resolved), "%s../%s", base, path);
+            surface = IMG_Load(resolved);
+        }
+    }
+    SDL_free(base);
+#endif
+    if (!surface) {
+        fprintf(stderr, "[WOLODRIVE ARTWORK] Could not load %s: %s\n", path, IMG_GetError());
+        return art; /* Cache failure too, preserving a usable text fallback. */
+    }
+    art->width = surface->w;
+    art->height = surface->h;
+    art->texture = SDL_CreateTextureFromSurface(app->renderer, surface);
+    SDL_FreeSurface(surface);
+    if (art->texture) SDL_SetTextureBlendMode(art->texture, SDL_BLENDMODE_BLEND);
+    return art;
+}
+
+static bool render_library_artwork(WolodriveApp *app, const char *path, SDL_Rect bounds) {
+    LibraryArtwork *art = load_library_artwork(app, path);
+    if (!art || !art->texture || art->width <= 0 || art->height <= 0) return false;
+    float scale = fminf((float)bounds.w / art->width, (float)bounds.h / art->height);
+    int width = (int)(art->width * scale), height = (int)(art->height * scale);
+    SDL_Rect destination = {bounds.x + (bounds.w - width) / 2,
+                            bounds.y + (bounds.h - height) / 2, width, height};
+    SDL_RenderCopy(app->renderer, art->texture, NULL, &destination);
+    return true;
+}
+
 static void render_library_grid(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 245, 255}, muted = {165, 165, 165, 255};
@@ -1184,14 +1240,23 @@ static void render_library_grid(WolodriveApp *app) {
                   (Uint8)(18 + brand->r / 8), (Uint8)(18 + brand->g / 8), (Uint8)(18 + brand->b / 8), 255);
         fill_rect(r, tile.x, tile.y, tile.w, 5, brand->r, brand->g, brand->b, 255);
         draw_border(r, tile.x, tile.y, tile.w, tile.h, 1, 65, 65, 65, 255);
-        SDL_Rect title = {tile.x + 24, tile.y + 98, tile.w - 48, 100};
-        draw_fitted_text(r, companies ? app->font_hero_title : app->font_row_title,
-                         companies ? brand->name : console->name, title, white, title, true);
+        SDL_Rect panel = {tile.x + 16, tile.y + 20, tile.w - 32, 208};
+        fill_rect(r, panel.x, panel.y, panel.w, panel.h, 245, 245, 245, 255);
+        SDL_Rect image = {panel.x + 16, panel.y + 16, panel.w - 32, panel.h - 32};
+        if (!render_library_artwork(app, companies ? brand->artwork_path : console->artwork_path, image)) {
+            draw_fitted_text(r, app->font_row_title, companies ? brand->name : console->name,
+                             image, (SDL_Color){25, 25, 25, 255}, image, true);
+        }
+        if (!companies) {
+            SDL_Rect title = {tile.x + 16, tile.y + 234, tile.w - 32, 34};
+            draw_fitted_text(r, app->font_small, console->name, title, white, title, true);
+        }
         char subtitle[100];
         snprintf(subtitle, sizeof(subtitle), TR(app, companies ? TXT_CONSOLE_COUNT : TXT_LIBRARY_GAME_COUNT),
                  companies ? brand->console_count : library_console_game_count(app, console));
-        SDL_Rect footer = {tile.x + 24, tile.y + 248, tile.w - 48, 40};
-        draw_fitted_text(r, app->font_small, subtitle, footer, muted, footer, true);
+        SDL_Rect footer = {tile.x + 24, tile.y + (companies ? 248 : 276), tile.w - 48, companies ? 40 : 28};
+        draw_fitted_text(r, companies ? app->font_small : app->font_micro,
+                         subtitle, footer, muted, footer, true);
         if (focused) draw_border(r, tile.x - 4, tile.y - 4, tile.w + 8, tile.h + 8,
                                  4, 245, 245, 245, 255);
     }

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #if SDL_VERSION_ATLEAST(2, 0, 18)
 static bool force_texture_fallback;
@@ -316,6 +317,37 @@ static void test_tv_catalog_navigation(void) {
     event.button.y = LIBRARY_BACK_BUTTON.y + 20;
     ui_handle_input(app, &event);
     assert(app->library_depth == LIBRARY_CONSOLES && app->library_console_selection == 12);
+    /* Every tile has a decodable local asset; renderer-owned textures are reused. */
+    for (int c = 0; c < library_company_count(); c++) {
+        const LibraryCompany *brand = library_company_at(c);
+        LibraryArtwork *logo = load_library_artwork(app, brand->artwork_path);
+        assert(logo && logo->texture && logo->width > 0 && logo->height > 0);
+        for (int i = 0; i < brand->console_count; i++) {
+            LibraryArtwork *art = load_library_artwork(app, brand->consoles[i].artwork_path);
+            assert(art && art->texture && art->width > 0 && art->height > 0);
+        }
+    }
+    assert(app->library_artwork_count == 47);
+    const char *logo_path = library_company_at(0)->artwork_path;
+    LibraryArtwork *logo = load_library_artwork(app, logo_path);
+    assert(load_library_artwork(app, logo_path) == logo && app->library_artwork_count == 47);
+    assert(!render_library_artwork(app, "assets/library/missing-test-image.png", (SDL_Rect){0, 0, 20, 20}));
+    assert(app->library_artwork_count == 48);
+    assert(!render_library_artwork(app, "assets/library/missing-test-image.png", (SDL_Rect){0, 0, 20, 20}));
+    assert(app->library_artwork_count == 48);
+    /* Resolve bundled assets relative to the executable if cwd is not the repo. */
+    char working_directory[4096];
+    assert(getcwd(working_directory, sizeof(working_directory)));
+    assert(chdir("build") == 0);
+    WolodriveApp *relocated = calloc(1, sizeof(*relocated));
+    assert(relocated);
+    relocated->renderer = app->renderer;
+    LibraryArtwork *relocated_logo = load_library_artwork(relocated, logo_path);
+    assert(relocated_logo && relocated_logo->texture);
+    ui_cleanup(relocated);
+    free(relocated);
+    assert(chdir(working_directory) == 0);
+    puts("All six logos and 41 hardware images decode, cache, fit tiles, and resolve outside the repo working directory.");
     puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);

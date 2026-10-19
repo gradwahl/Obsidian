@@ -119,6 +119,13 @@ typedef struct {
     float target_scroll_x;
 } CarouselRow;
 
+#define MAX_LIBRARY_ARTWORK 64
+typedef struct {
+    const char *path;
+    SDL_Texture *texture;
+    int width, height;
+} LibraryArtwork;
+
 typedef struct {
     float data_free_gb;
     float data_total_gb;
@@ -166,6 +173,8 @@ typedef struct {
     int library_company;
     int library_console_selection;
     bool library_sidebar_focus;
+    LibraryArtwork library_artwork[MAX_LIBRARY_ARTWORK];
+    int library_artwork_count;
     float vertical_scroll_y;
     float target_vertical_scroll_y;
     float focus_pulse;          /* Animacja pulsowania ramki i zoomu aktywnego kafelka */
