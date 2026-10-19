@@ -146,12 +146,19 @@ typedef struct {
 } SystemStats;
 
 typedef struct {
+    bool sources_limited; /* false includes current and future sources. */
+    int source_count;
+    char sources[MAX_CATALOG_ITEMS][64];
+    unsigned disabled_formats; /* PackageFormat bits; zero includes all. */
+} CatalogFilters;
+
+typedef struct {
     SDL_atomic_t language;
     char language_path[512];
     char settings_path[512];
-    char filter_source[64]; /* Empty means all sources. */
-    int filter_format;     /* 0=all; otherwise PackageFormat + 1. */
+    CatalogFilters filters;
     int settings_selection;
+    int settings_column;
     bool language_menu_open;
     int language_menu_index;
     TranslationService *translations;
@@ -214,6 +221,8 @@ void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);
 void sys_cancel_action(WolodriveApp *app, GameItem *item);
 bool settings_accepts_item(const WolodriveApp *app, const GameItem *item);
+bool settings_source_enabled(const WolodriveApp *app, const char *source);
+bool settings_filters_active(const WolodriveApp *app);
 bool settings_load(WolodriveApp *app);
 bool settings_save(const WolodriveApp *app);
 const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt);

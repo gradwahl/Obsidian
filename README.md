@@ -54,25 +54,31 @@ does not trigger catalog shortcuts. The globe and **Square** still open language
 
 ### Settings and catalog filters
 
-**Settings**, directly below Downloads, filters the catalog by download source
-and package format. Source choices use the loaded catalog's website/source labels;
-choose **All sources** to show every source. Formats are **All formats**,
-**.exfat**, **Folder (.ffpkg)**, and **.pkg**. Both filters apply together to Home,
+**Settings**, directly below Downloads, has independent checkboxes for each
+download source and package format. Tick any combination of sources, using the
+loaded catalog's website/source labels, and **.exfat**, **Folder (.ffpkg)**, or
+**.pkg** formats. **All sources** and **All formats** select or clear their groups;
+a dash indicates a partial selection. Clearing every source or format deliberately
+shows no matching games. Source choices combine with OR, formats combine with OR,
+and both groups must match. These filters apply together to Home,
 Games/Roms and its console counts, Downloads, Search, and Install/DLC package cards.
 Filtering happens before the 128-item list limits and Search's duplicate grouping.
 All source and format packages are retained in the catalog; re-syncing updates
 only the matching source/format/title-ID/title record. Home still shows the newest
 dated copy of an identically named game per console family.
 
-Focus Settings with **Right / Enter / Cross** from the sidebar. **Up/Down** selects
-Source, Format, or **Reset filters**. **Right / Enter / Cross** cycles the selected
-option; click its **< / >** controls to cycle in either direction. **Left / Circle**
-returns to the sidebar. Changes apply immediately and save automatically to
+Focus Settings with **Right / Enter / Cross** from the sidebar. **Up/Down** moves
+through checkboxes; **Left/Right** moves between Sources and Formats.
+**Space / Enter / Cross**, or a mouse click, toggles the focused checkbox.
+Long source lists page as focus moves; the mouse wheel also moves through sources.
+**Left** from Sources or **Circle / Escape** returns to the sidebar.
+**Reset filters** checks every source and format. Changes apply immediately and save automatically to
 `filters` beside the saved language preference (SDL's user preference directory on
 desktop, `/data/homebrew/wolodrive/filters` on PS5). Save failures are reported while
 keeping the session's changes. Missing or invalid files default to all sources
-and formats. A saved source missing from the current catalog stays selected until
-changed; empty lists explain how to reset the filters. Source choices always come
+and formats. Existing single-source/single-format preferences migrate to the same
+checkbox selections. Saved sources missing from the current catalog remain in the
+checkbox list so they can still be deselected; empty lists explain how to reset the filters. Source choices always come
 from the full loaded catalog, including sources hidden by the current filters.
 
 ### Game panels
@@ -282,11 +288,12 @@ package availability, explicit DLC relationships, screenshot-link parsing and
 filtering, empty states and modal close/return behavior. Saved SDL renders were
 inspected for layout, and the panel with real artwork and readable details was
 inspected in WSLg. Live interaction checks were interrupted by Escape.
-Settings regressions cover combined source/format filters before list limits and
-grouping, source package retention, console counts, selection bounds, saved and
-malformed preferences, unavailable sources, reset, and mouse/keyboard/controller
-input. The Settings layout was inspected in saved SDL renders and in WSLg;
-live source-selection checks were interrupted by Escape. Native Windows and PS5
+Settings regressions cover combined multi-source/multi-format filters before list
+limits and grouping, all/partial/empty checkbox selections, source package retention,
+paging, saved and malformed preferences, legacy preference migration, unavailable
+sources, reset, and mouse/keyboard/controller input. The checkbox layout was
+inspected in saved SDL renders; fresh WSLg checks were interrupted by Escape.
+Native Windows and PS5
 builds and a separate native Linux graphical session remain unverified.
 The Linux build and automated search checks were run through WSL. Native Windows
 and PS5 builds and a separate native Linux graphical session remain unverified;

@@ -356,75 +356,103 @@ static void test_settings(WolodriveApp *app) {
     assert(app->catalog_count == first+3); /* Re-sync updates only its own package. */
     GameItem *alpha = &app->catalog[first], *beta = &app->catalog[first+1];
     app->detail_open = false;
+    app->active_row = VIEW_SETTINGS;
+    app->sidebar_focus = false;
     app->search_query[0] = '\0';
     search_edit(app, "SettingsGame", false);
-    assert(app->search_count == 1);
-    SDL_strlcpy(app->filter_source, "Source Beta", sizeof(app->filter_source));
-    app->active_row = VIEW_HOME;
-    app->rows[VIEW_GAMES].selected_col = 127;
-    ui_rebuild_carousels(app);
+    const char *names[MAX_CATALOG_ITEMS*2];
+    int count = settings_sources(app, names), alpha_index = -1, beta_index = -1;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(names[i], "Source Alpha") == 0) alpha_index = i+1;
+        if (strcmp(names[i], "Source Beta") == 0) beta_index = i+1;
+    }
+    assert(alpha_index > 0 && beta_index > 0);
+    app->settings_column = 0; app->settings_selection = 0;
+    settings_toggle(app); /* All sources -> none. */
+    assert(app->filters.sources_limited && !app->filters.source_count && !app->search_count);
+    app->settings_selection = beta_index;
+    settings_toggle(app);
     assert(app->search_count == 1 && app->search_results[0] == beta);
     assert(app->rows[VIEW_HOME].item_count == 1 && app->rows[VIEW_HOME].items[0] == beta);
-    assert(app->rows[VIEW_GAMES].item_count == 1 && app->rows[VIEW_GAMES].selected_col == 0);
-    app->active_row = VIEW_GAMES;
-    app->library_company = 0;
-    app->library_console_selection = 4;
-    app->library_depth = LIBRARY_GAMES;
-    ui_rebuild_carousels(app);
-    assert(app->rows[VIEW_GAMES].item_count == 1);
-    assert(library_console_game_count(app, library_console_at(0, 4)) == 1);
-    ui_open_game(app, beta);
+    app->settings_selection = alpha_index;
+    settings_toggle(app);
+    assert(settings_source_enabled(app, "Source Alpha") && settings_source_enabled(app, "Source Beta"));
+    assert(app->filters.source_count == 2 && app->search_count == 1);
+    ui_open_game(app, alpha);
     GameItem *entries[MAX_CATALOG_ITEMS];
-    assert(game_entries(app, entries) == 1 && entries[0] == beta);
+    assert(game_entries(app, entries) == 3);
     app->detail_open = false;
-    select_sidebar_view(app, VIEW_DOWNLOADS);
+    app->active_row = VIEW_SETTINGS;
+    /* Exclude folder; exfat and pkg stay selected together. */
+    app->settings_column = 1; app->settings_selection = 2;
+    settings_toggle(app);
+    assert(settings_accepts_item(app, alpha) && !settings_accepts_item(app, beta));
+    assert(settings_accepts_item(app, &app->catalog[first+2]));
+    assert(app->search_results[0] != beta);
+    app->settings_selection = 0;
+    settings_toggle(app); /* Partial -> all. */
+    assert(!app->filters.disabled_formats);
+    settings_toggle(app); /* All -> none, never silently reset to All. */
+    assert(app->filters.disabled_formats == 7 && !app->search_count);
     SDL_Event event;
     SDL_zero(event);
     event.type = SDL_KEYDOWN;
     event.key.keysym.sym = SDLK_DOWN;
     ui_handle_input(app, &event);
-    assert(app->active_row == VIEW_SETTINGS && app->sidebar_focus);
-    assert(sidebar_target(VIEW_SETTINGS).y == sidebar_target(VIEW_DOWNLOADS).y + 90);
-    event.key.keysym.sym = SDLK_RIGHT;
+    assert(app->settings_selection == 1);
+    event.key.keysym.sym = SDLK_SPACE;
     ui_handle_input(app, &event);
-    event.key.keysym.sym = SDLK_DOWN;
-    ui_handle_input(app, &event);
-    assert(app->settings_selection == 1 && !app->sidebar_focus);
-    event.key.keysym.sym = SDLK_RETURN;
-    ui_handle_input(app, &event);
-    assert(app->filter_format == 1 && !app->search_count && !app->rows[VIEW_HOME].item_count);
+    assert(app->filters.disabled_formats == 6 && settings_accepts_item(app, alpha));
     event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    ui_handle_input(app, &event);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
     ui_handle_input(app, &event);
-    assert(app->filter_format == 2 && app->search_count == 1);
-    app->filter_format = 3;
-    settings_changed(app);
-    assert(!app->search_count);
-    app->filter_source[0] = '\0';
-    settings_changed(app);
-    assert(app->search_count == 1 && app->search_results[0] == &app->catalog[first+2]);
-    /* Preferences round-trip, malformed input fallback and missing sources. */
-    SDL_strlcpy(app->filter_source, "A source\n中文", sizeof(app->filter_source));
+    assert(app->filters.disabled_formats == 4 && settings_accepts_item(app, beta));
+    /* Multiple source names and mixed formats round-trip, including Unicode. */
+    SDL_strlcpy(app->filters.sources[1], "A source\n中文", 64);
     assert(settings_save(app));
-    app->filter_source[0] = '\0'; app->filter_format = 0;
-    assert(settings_load(app) && app->filter_format == 3 && strcmp(app->filter_source, "A source\n中文") == 0);
+    memset(&app->filters, 0, sizeof(app->filters));
+    assert(settings_load(app) && app->filters.disabled_formats == 4 && app->filters.source_count == 2);
+    assert(strcmp(app->filters.sources[1], "A source\n中文") == 0);
+    /* Existing single-select preferences migrate without changing their meaning. */
+    FILE *legacy = fopen(app->settings_path, "wb");
+    assert(legacy); fputs("WOLODRIVE_FILTERS_1\n2\n11\nSource Beta", legacy); fclose(legacy);
+    assert(settings_load(app) && app->filters.disabled_formats == 5 && app->filters.source_count == 1);
+    assert(settings_source_enabled(app, "Source Beta") && !settings_source_enabled(app, "Source Alpha"));
     FILE *bad = fopen(app->settings_path, "wb");
-    assert(bad); fputs("WOLODRIVE_FILTERS_1\n99\n4000\n", bad); fclose(bad);
-    assert(!settings_load(app) && !app->filter_source[0] && !app->filter_format);
-    SDL_strlcpy(app->filter_source, "Unavailable source", sizeof(app->filter_source));
+    assert(bad); fputs("WOLODRIVE_FILTERS_2\n99\n4000\n", bad); fclose(bad);
+    assert(!settings_load(app) && !settings_filters_active(app));
+    /* Missing saved sources remain individually visible and can be unchecked. */
+    app->filters.sources_limited = true; app->filters.source_count = 1;
+    SDL_strlcpy(app->filters.sources[0], "Unavailable source", 64);
+    count = settings_sources(app, names);
+    assert(strcmp(names[count-1], "Unavailable source") == 0);
+    app->settings_column = 0; app->settings_selection = count;
     ui_rebuild_carousels(app);
     assert(!app->search_count);
-    settings_cycle_source(app, 1);
-    assert(!app->filter_source[0]); /* Missing saved source can always return to All. */
-    /* Mouse reset restores every source and format, keeping the source packages. */
-    app->filter_format = 1;
+    settings_toggle(app);
+    assert(!app->filters.source_count && app->filters.sources_limited);
+    /* Source list paging and direct mouse checkboxes use the displayed rows. */
+    for (int i = 0; i < 12; i++) {
+        GameItem *item = &app->catalog[app->catalog_count++];
+        snprintf(item->title, sizeof(item->title), "Paging fixture %d", i);
+        snprintf(item->source_name, sizeof(item->source_name), "Extra source %d", i);
+    }
+    count = settings_sources(app, names);
+    app->settings_selection = 9;
+    ui_render(app);
     event.type = SDL_MOUSEBUTTONDOWN;
     event.button.button = SDL_BUTTON_LEFT;
-    event.button.x = settings_target(2).x+20;
-    event.button.y = settings_target(2).y+20;
+    event.button.x = settings_target(0, 2).x+25;
+    event.button.y = settings_target(0, 2).y+25;
+    char clicked_source[64]; SDL_strlcpy(clicked_source, names[8], 64);
     ui_handle_input(app, &event);
-    assert(!app->filter_source[0] && !app->filter_format && settings_accepts_item(app, alpha));
-    assert(app->search_count == 1);
+    assert(settings_source_enabled(app, clicked_source));
+    event.button.x = settings_target(1, 4).x+25;
+    event.button.y = settings_target(1, 4).y+25;
+    ui_handle_input(app, &event);
+    assert(!settings_filters_active(app) && app->search_count == 1);
     ui_render(app);
     if (getenv("WOLODRIVE_TEST_SCREENSHOTS")) {
         int w, h;
@@ -438,12 +466,14 @@ static void test_settings(WolodriveApp *app) {
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
     ui_handle_input(app, &event);
+    assert(app->settings_column == 0 && !app->sidebar_focus);
+    ui_handle_input(app, &event);
     assert(app->sidebar_focus);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
     ui_handle_input(app, &event);
     assert(app->active_row == VIEW_DOWNLOADS);
     SDL_strlcpy(app->settings_path, original_path, sizeof(app->settings_path));
-    puts("Settings: sidebar order, source/format intersections, package retention, selection, input, persistence, missing sources and reset passed.");
+    puts("Settings checkboxes: multiple/none/all sources and formats, grouping, input, paging, persistence, legacy migration and reset passed.");
 }
 
 static void test_tv_catalog_navigation(void) {

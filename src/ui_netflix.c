@@ -863,7 +863,7 @@ static const char *action_label(WolodriveApp *app, GameItem *item) {
 }
 
 static const char *empty_view_message(WolodriveApp *app) {
-    if ((app->filter_source[0] || app->filter_format) &&
+    if ((settings_filters_active(app)) &&
         (app->active_row == VIEW_HOME || app->active_row == VIEW_GAMES || app->active_row == VIEW_DOWNLOADS))
         return TR(app, TXT_SETTINGS_NO_MATCHES);
     if (app->active_row == VIEW_HOME) return TR(app, TXT_NO_LATEST_GAMES);

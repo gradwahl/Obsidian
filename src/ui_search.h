@@ -230,7 +230,7 @@ static void render_search(WolodriveApp *app) {
             draw_border(r, box.x - 3, box.y - 3, box.w + 6, box.h + 6, 3,245,245,245,255);
     }
     if (!app->search_count) draw_text(r, app->font_body,
-        TR(app, app->filter_source[0] || app->filter_format ? TXT_SETTINGS_NO_MATCHES : TXT_SEARCH_EMPTY),
+        TR(app, settings_filters_active(app) ? TXT_SETTINGS_NO_MATCHES : TXT_SEARCH_EMPTY),
         820, 230, muted, 950);
     if (app->search_count) {
         snprintf(count, sizeof(count), "%d / %d", app->search_selected + 1, app->search_count);
