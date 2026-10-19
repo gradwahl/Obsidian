@@ -5,5 +5,8 @@ __pycache__/
 assets/covers/*.art
 assets/covers/*.tmp
 assets/covers/artwork-index.json
-assets/artwork/
+assets/artwork/*
+!assets/artwork/cover-matches.json
+!assets/artwork/cover-matches.tsv
+.cache/wolodrive-artwork/
 assets/screenshots/

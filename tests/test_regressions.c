@@ -1206,7 +1206,7 @@ static void test_additional_source_snapshot(void) {
     assert(app->catalog_source_count == sources);
     assert(app->catalog_count > 100);
     bool psp_present = false, named_source = false;
-    int axekin_count = 0;
+    int axekin_count = 0, enriched_covers = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
         assert(item->format == FMT_CATALOG);
@@ -1215,6 +1215,7 @@ static void test_additional_source_snapshot(void) {
         if (strcmp(item->source_name, "Vimm's Lair") == 0) named_source = true;
         if (strcmp(item->source_name, "Axekin") == 0) {
             axekin_count++;
+            if (item->boxart_url[0]) enriched_covers++;
             assert(strcmp(item->platform, "sony-psvita") != 0);
             bool library_match = false;
             for (int co = 0; co < library_company_count(); co++) {
@@ -1228,6 +1229,7 @@ static void test_additional_source_snapshot(void) {
     }
     assert(psp_present && named_source);
     assert(axekin_count > 18000);
+    assert(enriched_covers > 0); /* Local overlay resolves box art. */
     int previous_count = app->catalog_count;
     assert(load_additional_catalog(app, &sources) == 0);
     assert(app->catalog_count == previous_count && sources == 17);

@@ -11,6 +11,7 @@ import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
 import { INITIAL_CATALOG, getLatestGames, getDistinctSources, metadataFromSources, matchesFilters, isAvailableCatalogSource } from './catalog';
 import { t } from './translations';
+import { applyArtworkMatches, type ArtworkMatches } from './artworkMatches';
 
 export function App() {
   // 1. Language state (saved to localStorage 'language')
@@ -34,6 +35,18 @@ export function App() {
 
   // 3. Catalog state
   const [catalog, setCatalog] = useState<GameItem[]>(INITIAL_CATALOG);
+  const [coverMatches, setCoverMatches] = useState<ArtworkMatches>({});
+  useEffect(() => {
+    let active = true;
+    import('../assets/artwork/cover-matches.json')
+      .then(({ default: data }) => {
+        if (active && data.schemaVersion === 1) setCoverMatches(data.matches);
+      })
+      .catch(error => console.warn('Artwork manifest unavailable:', error));
+    return () => { active = false; };
+  }, []);
+  const catalogWithArtwork = useMemo(() => applyArtworkMatches(catalog, coverMatches),
+    [catalog, coverMatches]);
   // Keep the full Axekin index in its own lazy-loaded chunk. This avoids
   // blocking initial UI load with 20,000+ catalogue entries.
   useEffect(() => {
@@ -176,10 +189,10 @@ export function App() {
   }, []);
 
   // Computed data
-  const availableSources = useMemo(() => getDistinctSources(catalog), [catalog]);
+  const availableSources = useMemo(() => getDistinctSources(catalogWithArtwork), [catalogWithArtwork]);
   const homeGames = useMemo(
-    () => getLatestGames(catalog, filters, 128),
-    [catalog, filters]
+    () => getLatestGames(catalogWithArtwork, filters, 128),
+    [catalogWithArtwork, filters]
   );
   const activeHeroGame = homeGames[selectedHomeCol] || homeGames[0] || null;
   useEffect(() => {
@@ -189,12 +202,12 @@ export function App() {
   // Downloads view items
   const downloadItems = useMemo(
     () =>
-      catalog.filter(
+      catalogWithArtwork.filter(
         (it) =>
           matchesFilters(it, filters) &&
           (it.state === 'downloading' || it.state === 'installed')
       ),
-    [catalog, filters]
+    [catalogWithArtwork, filters]
   );
 
   // Trigger Action handler: Truthful notice as mandated by rules
@@ -451,7 +464,7 @@ export function App() {
             <LibraryBrowser
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={false}
-              catalog={catalog}
+              catalog={catalogWithArtwork}
               language={language}
               onOpenGame={(g) => {
                 setDetailGame(g);
@@ -466,7 +479,7 @@ export function App() {
             <LibraryBrowser
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={true}
-              catalog={catalog}
+              catalog={catalogWithArtwork}
               language={language}
               onOpenGame={(g) => {
                 setDetailGame(g);
@@ -489,7 +502,7 @@ export function App() {
           {/* VIEW: SEARCH */}
           {currentView === 'search' && (
             <SearchGrid
-              catalog={catalog}
+              catalog={catalogWithArtwork}
               language={language}
               onOpenGame={(g) => {
                 setDetailGame(g);
@@ -515,7 +528,7 @@ export function App() {
       {detailGame && (
         <GameDetailModal
           game={detailGame}
-          catalog={catalog}
+          catalog={catalogWithArtwork}
           neighborGames={currentView === 'home' ? homeGames : currentView === 'downloads' ? downloadItems : undefined}
           language={language}
           onClose={() => {

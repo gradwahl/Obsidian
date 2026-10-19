@@ -13,6 +13,65 @@ typedef struct {
     size_t size;
 } MemoryBuffer;
 
+typedef struct { char source[64], id[32], url[512]; } CoverOverride;
+static CoverOverride *cover_overrides;
+static size_t cover_count;
+static bool covers_loaded;
+static int cover_cmp(const void *a, const void *b) {
+    const CoverOverride *x=a,*y=b;
+    int c=strcmp(x->source,y->source);
+    return c ? c : strcmp(x->id,y->id);
+}
+static void load_cover_overrides(void) {
+    if (covers_loaded) return;
+    covers_loaded = true;
+#ifdef __PS5__
+    const char *path=WOLODRIVE_DATA_PATH "/artwork/cover-matches.tsv";
+#else
+    const char *path="assets/artwork/cover-matches.tsv";
+#endif
+    FILE *fp=fopen(path,"rb");
+    if (!fp) return;
+    char line[1280];
+    size_t allocated=0;
+    while (fgets(line,sizeof(line),fp) && cover_count<30000) {
+        char *id=strchr(line,'\t');
+        if (!id) continue;
+        *id++=0;
+        char *url=strchr(id,'\t');
+        if (!url) continue;
+        *url++=0;
+        url[strcspn(url,"\r\n")]=0;
+        if (!line[0] || !id[0] || strncmp(url,"https://",8) ||
+            strlen(line)>=64 || strlen(id)>=32 || strlen(url)>=512) continue;
+        if (cover_count==allocated) {
+            size_t capacity=allocated ? allocated*2 : 256;
+            CoverOverride *next=realloc(cover_overrides,capacity*sizeof(*next));
+            if (!next) break;
+            cover_overrides=next;
+            allocated=capacity;
+        }
+        CoverOverride *row=&cover_overrides[cover_count++];
+        SDL_strlcpy(row->source,line,sizeof(row->source));
+        SDL_strlcpy(row->id,id,sizeof(row->id));
+        SDL_strlcpy(row->url,url,sizeof(row->url));
+    }
+    fclose(fp);
+    qsort(cover_overrides,cover_count,sizeof(*cover_overrides),cover_cmp);
+}
+static const char *matched_cover(const char *source, const char *id) {
+    load_cover_overrides();
+    if (!cover_count) return NULL;
+    CoverOverride key={{0},{0},{0}};
+    SDL_strlcpy(key.source,source,sizeof(key.source));
+    SDL_strlcpy(key.id,id,sizeof(key.id));
+    const CoverOverride *found=bsearch(&key,cover_overrides,cover_count,
+                                       sizeof(*cover_overrides),cover_cmp);
+    return found ? found->url : NULL;
+}
+/* Full image downloads remain lazy in src/artwork.c. */
+
+
 static size_t write_mem_cb(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
     MemoryBuffer *mem = (MemoryBuffer *)userp;
@@ -484,6 +543,10 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
         snprintf(target->download_url, sizeof(target->download_url), "%s", dl_url);
     }
     SDL_strlcpy(target->cover_url, cover_url ? cover_url : "", sizeof(target->cover_url));
+    if (fmt == FMT_CATALOG && !target->boxart_url[0] && !target->cover_url[0]) {
+        const char *url = matched_cover(target->source_name,target->id_code);
+        if (url) SDL_strlcpy(target->boxart_url,url,sizeof(target->boxart_url));
+    }
 
     target->format  = fmt;
     target->size_gb = fmt == FMT_CATALOG ? (size_gb > 0 ? size_gb : 0) :

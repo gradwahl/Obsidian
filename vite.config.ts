@@ -21,7 +21,8 @@ export default defineConfig({
           cwd: projectRoot,
           encoding: 'utf8'
         }).split('\0').filter(Boolean).filter(fileName =>
-          !fileName.replace(/\\/g, '/').startsWith('assets/catalogs/'));
+          !fileName.replace(/\\/g, '/').startsWith('assets/catalogs/') &&
+          !fileName.replace(/\\/g, '/').startsWith('assets/artwork/cover-matches.'));
         for (const fileName of files) {
           this.emitFile({
             type: 'asset',

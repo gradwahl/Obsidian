@@ -73,6 +73,23 @@ assert.equal(filteredAxekinHome.length, 128);
 assert.ok(filteredAxekinHome.every(game => game.source_name === 'Axekin'));
 assert.equal(filteredAxekinHome[2].title, fullAxekin[0].title);
 
+const { applyArtworkMatches } = require('../src/artworkMatches.ts');
+const missingCover = { ...homeFixture[3], id_code: 'ART001', cover_r: 40, cover_g: 50, cover_b: 60 };
+const detectedArt = { 'Axekin|ART001': { url: 'https://images.example/box.png',
+  provider: 'libretro-exact', confidence: 95 } };
+const matchedCover = applyArtworkMatches([missingCover], detectedArt)[0];
+assert.equal(matchedCover.boxart_url, 'https://images.example/box.png');
+assert.match(render(React.createElement(CoverArt, { game: matchedCover })),
+  /src="https:\/\/images.example\/box.png"/);
+const manualArt = { ...missingCover, cover_local_path: '/user/cover.png' };
+assert.deepEqual(applyArtworkMatches([manualArt], detectedArt)[0], manualArt);
+assert.equal(applyArtworkMatches([missingCover], {
+  'Axekin|ART001': { url: 'https://images.example/uncertain.png', provider: 'candidate', confidence: 70 }
+})[0].boxart_url, undefined);
+assert.equal(applyArtworkMatches([missingCover], {
+  'Other Source|ART001': { url: 'https://images.example/incorrect.png', provider: 'candidate', confidence: 100 }
+})[0].boxart_url, undefined);
+
 const { t } = require('../src/translations.ts');
 const native = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'src/native.css'), 'utf8');

@@ -55,6 +55,7 @@ test:
 	python3 -m unittest discover -s tests -p test_download_artwork.py
 	python3 -m unittest discover -s tests -p test_import_sources.py
 	python3 -m unittest discover -s tests -p test_full_sources.py
+	python3 -m unittest discover -s tests -p test_enrich_artwork.py
 	python3 tests/run_tests.py
 
 ps5:

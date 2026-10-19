@@ -49,6 +49,11 @@ def main():
                 chunks = list((PREVIEW / "assets").glob(source + "-*.js"))
                 assert len(chunks) == 1, f"Missing/duplicated full index: {source}"
                 links.extend("/assets/" + chunk.name for chunk in chunks)
+            artwork_chunks = list((PREVIEW / "assets").glob("cover-matches-*.js"))
+            assert len(artwork_chunks) == 1, "Artwork override manifest must be lazy-loaded"
+            assert not (PREVIEW / "assets/artwork/cover-matches.json").exists()
+            assert not (PREVIEW / "assets/artwork/cover-matches.tsv").exists()
+            links.extend("/assets/" + chunk.name for chunk in artwork_chunks)
             for name in sorted(set(links + ["/" + path for path in artwork])):
                 with urllib.request.urlopen(base + name) as response:
                     assert response.read() == (PREVIEW / name.lstrip("/")).read_bytes(), name

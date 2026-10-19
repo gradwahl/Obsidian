@@ -2,6 +2,53 @@
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
+### Artwork matching and box-art cache
+
+Wolodrive's box-art enrichment uses three conservative stages: first-party
+artwork URLs already present in the source, an exact **same-console and title**
+match from another source, and [Libretro Named_Boxarts](https://github.com/libretro-thumbnails/libretro-thumbnails)
+using exact or uniquely normalised filename matches. Unknown console
+matches, ambiguous editions, and multiple regional covers are *not* guessed.
+Libretro serves scans organised by console; those covers are not automatically
+licensed for redistribution. Respect its service and copyright requirements.
+
+The current results are in
+[`docs/artwork_coverage.md`](docs/artwork_coverage.md). The report counts
+links, **not verified images**. Artwork manifests are imported separately
+in the React preview and read as an optional URL overlay by the native
+catalogue loader. The existing asynchronous artwork cache loads images only
+when a card is visible, and manual local art always wins.
+
+To refresh matches after indexing titles:
+
+```bash
+python scripts/enrich_artwork.py --workers 4
+python -m unittest discover -s tests -p test_enrich_artwork.py
+npm run build:static
+```
+
+The importer downloads **directory listings only**, caches them in
+`.cache/wolodrive-artwork/`, and does **not download cover images** by default.
+To opt into caching at most ten unique matched images locally:
+
+```bash
+python scripts/enrich_artwork.py --offline --download 10
+```
+
+This uses the existing URL-keyed image cache at `assets/covers/`. Keep
+downloaded cover bytes out of Git; the manifests consist only of source
+IDs, image URLs and confidence. Missing modern-console art can later use an
+opt-in SteamGridDB/ScreenScraper provider with its own credentials, quotas,
+matching review and licensing rules; there is no configured key in this
+implementation.
+
+The native Linux/Windows/PS5 catalogue reads
+`assets/artwork/cover-matches.tsv` alongside the snapshots. On PS5 copy it
+to `/data/homebrew/wolodrive/artwork/cover-matches.tsv`. The web preview
+loads `assets/artwork/cover-matches.json` as a separate deferred chunk;
+it contains no image bytes. Native Windows runtime and PS5 deployment remain
+unverified until tested on their respective platforms.
+
 ### Full public catalogue coverage
 
 A source-by-source completeness audit is maintained in
