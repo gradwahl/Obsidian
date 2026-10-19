@@ -127,10 +127,11 @@ class IGDBTests(unittest.TestCase):
         }
         class Fake:
             def __init__(self): self.searched = []
-            def search(self, title, platform_id):
-                self.searched.append((title, platform_id))
-                return [{"id": 23, "name": "Phasmophobia", "platforms": [167],
-                         "cover": {"image_id": "coabcde"}}] if title == "Phasmophobia" else []
+            def multi_search(self, requests):
+                self.searched.extend(requests)
+                return [[{"id": 23, "name": "Phasmophobia", "platforms": [167],
+                          "cover": {"image_id": "coabcde"}}] if title == "Phasmophobia"
+                        else [] for title, _ in requests]
         with tempfile.TemporaryDirectory() as folder:
             fake = Fake()
             with patch.object(igdb, "CACHE", Path(folder) / "igdb.json"):
@@ -143,10 +144,10 @@ class IGDBTests(unittest.TestCase):
     def test_cache_resume_and_export(self):
         cache = {"schemaVersion": 1, "results": {}}
         class Fake:
-            def search(self, title, platform_id):
-                if title == "Matched": return [{"id": 10, "name": "Matched", "platforms": [48],
-                                                "cover": {"image_id": "coabcde"}}]
-                return []
+            def multi_search(self, requests):
+                return [[{"id": 10, "name": "Matched", "platforms": [48],
+                          "cover": {"image_id": "coabcde"}}] if title == "Matched"
+                        else [] for title, _ in requests]
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "cache.json"
             out = Path(folder) / "artwork.json"

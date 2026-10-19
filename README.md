@@ -75,8 +75,31 @@ npm run build:static
 unset IGDB_CLIENT_SECRET IGDB_CLIENT_ID
 ```
 
-The script enforces a maximum of roughly **3 queries per second**, below
-IGDB's 4-request-per-second limit, with retry/backoff. It searches missing
+The importer now uses **IGDB Multi-Query** to search up to 10 games per
+HTTP request. By default, 3 concurrent workers share a thread-safe global
+request limiter of approximately **3 HTTP requests/second** (below IGDB's
+4-request/second and 8 concurrent-request limits). This gives a theoretical
+maximum of ~30 game searches/second, with actual speed dependent on IGDB
+latency, retries and server load. Both Windows and Linux use Python's
+built-in networking and thread pool, with no new dependencies.
+
+Run a batch with the existing local environment credentials:
+
+```bash
+python3 scripts/igdb_artwork.py --max-queries 1000 --batch-size 10 --workers 3 --platforms nintendo-switch,sony-ps4,sony-ps5
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+Use `--batch-size 1 --workers 1` for troubleshooting or smaller requests.
+The importer checkpoints each successfully completed Multi-Query group;
+**never run two importer processes against the same cache simultaneously**.
+If interrupted, completed batches remain resumable. Incomplete or malformed
+Multi-Query responses fail without caching false `not-found` results. Existing
+cached results and previously exported IGDB covers remain intact. Never put
+IGDB credentials in Git or command arguments.
+
+It searches missing
 titles only, deduplicates by console/title and resumes via ignored local
 cache `.cache/wolodrive-artwork/igdb-results.json`. IGDB queries now
 remove **only trailing source distribution metadata**: `PS4`/`PS5` suffixes
