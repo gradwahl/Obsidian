@@ -211,6 +211,112 @@ static void test_tv_catalog_navigation(void) {
     event.button.y = DESCRIPTION_BUTTON.y + 20;
     ui_handle_input(app, &event);
     assert(app->show_original_description);
+
+    /* Games/Roms is a company -> console -> filtered games browser. */
+    assert(library_company_count() == 6);
+    assert(!library_company_at(-1) && !library_company_at(6));
+    assert(!library_console_at(0, -1) && !library_console_at(0, 99));
+    assert(library_console_matches_id(library_console_at(0, 3), "cusa12345"));
+    assert(!library_console_matches_id(library_console_at(0, 3), "PPSA12345"));
+    event.button.x = 50;
+    event.button.y = sidebar_target(VIEW_GAMES).y + 40;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_COMPANIES && app->library_sidebar_focus);
+    assert(!get_focused_item(app));
+    ui_render(app);
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_RIGHT;
+    ui_handle_input(app, &event);
+    assert(!app->library_sidebar_focus);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_CONSOLES && app->library_company == 0);
+    event.key.keysym.sym = SDLK_RIGHT;
+    for (int i = 0; i < 3; i++) ui_handle_input(app, &event);
+    assert(app->library_console_selection == 3);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_GAMES && app->rows[VIEW_GAMES].item_count > 0);
+    for (int i = 0; i < app->rows[VIEW_GAMES].item_count; i++) {
+        assert(strncmp(app->rows[VIEW_GAMES].items[i]->id_code, "CUSA", 4) == 0);
+    }
+    ui_render(app);
+    event.key.keysym.sym = SDLK_ESCAPE;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_CONSOLES && app->library_console_selection == 3 && app->running);
+    event.key.keysym.sym = SDLK_LEFT;
+    for (int i = 0; i < 3; i++) ui_handle_input(app, &event);
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->library_console_selection == 4);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(app->rows[VIEW_GAMES].item_count > 0);
+    for (int i = 0; i < app->rows[VIEW_GAMES].item_count; i++) {
+        assert(strncmp(app->rows[VIEW_GAMES].items[i]->id_code, "PPSA", 4) == 0);
+    }
+    SDL_zero(event);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_CONSOLES);
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_COMPANIES);
+    ui_handle_input(app, &event);
+    assert(app->library_sidebar_focus);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_EMULATORS);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_COMPANIES);
+
+    SDL_zero(event);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    /* Every company tile opens its own console list. */
+    for (int c = 0; c < library_company_count(); c++) {
+        SDL_Rect tile = library_tile_target(c);
+        assert(tile.w == tile.h && tile.x + tile.w <= SCREEN_WIDTH && tile.y + tile.h < 944);
+        event.button.x = tile.x + 40;
+        event.button.y = tile.y + 40;
+        ui_handle_input(app, &event);
+        assert(app->library_depth == LIBRARY_CONSOLES && app->library_company == c);
+        assert(library_company_at(c)->console_count > 0);
+        ui_render(app);
+        event.button.x = LIBRARY_BACK_BUTTON.x + 20;
+        event.button.y = LIBRARY_BACK_BUTTON.y + 20;
+        ui_handle_input(app, &event);
+        assert(app->library_depth == LIBRARY_COMPANIES);
+    }
+    SDL_Rect nintendo_tile = library_tile_target(3);
+    event.button.x = nintendo_tile.x + 40;
+    event.button.y = nintendo_tile.y + 40;
+    ui_handle_input(app, &event);
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    ui_handle_input(app, &event);
+    assert(app->library_console_selection == 8); /* Second page is reachable. */
+    ui_render(app);
+    SDL_Rect console_tile = library_tile_target(12);
+    SDL_zero(event);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = console_tile.x + 40;
+    event.button.y = console_tile.y + 40;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_GAMES && app->library_console_selection == 12);
+    assert(!app->rows[VIEW_GAMES].item_count && !get_focused_item(app));
+    assert(strcmp(empty_view_message(app), TR(app, TXT_CONSOLE_NOT_CONNECTED)) == 0);
+    ui_render(app);
+    event.button.x = LIBRARY_BACK_BUTTON.x + 20;
+    event.button.y = LIBRARY_BACK_BUTTON.y + 20;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_CONSOLES && app->library_console_selection == 12);
+    puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);
     SDL_DestroyWindow(app->window);
@@ -276,9 +382,9 @@ static void test_latest_catalog_games(void) {
     for (int i = 1; i < home->item_count; i++) {
         assert(home->items[i - 1]->catalog_added_at >= home->items[i]->catalog_added_at);
     }
-    GameItem *covers[MAX_ITEMS_PER_ROW * 2];
+    GameItem *covers[MAX_COVER_PREFETCH];
     int count = cover_prefetch_locked(app, covers);
-    assert(count <= MAX_ITEMS_PER_ROW * 2 && covers[0] == home->items[0]);
+    assert(count <= MAX_COVER_PREFETCH && covers[0] == home->items[0]);
     for (int i = 0; i < home->item_count; i++) assert(covers[i] == home->items[i]);
     for (int i = 0; i < count; i++) {
         for (int j = i + 1; j < count; j++) assert(covers[i] != covers[j]);

@@ -11,7 +11,7 @@ and action footer. WoloDrive uses its own branding and the catalog's game artwor
 portrait covers are cropped to fill the landscape backdrop and cards, so their
 composition depends on the available source image.
 
-Use **Left/Right** or the controller **D-pad** to select a game. **Up/Down**
+Use **Left/Right** or the controller **D-pad** to select a game. In the sidebar, **Up/Down**
 switch between **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**, and
 **Downloads**. Each sidebar entry has a text label and an icon: house, gamepad,
 joystick, folder, chip, and download arrow. Click an entry to switch sections,
@@ -34,10 +34,25 @@ shows a refresh prompt instead of calling the built-in sample games new releases
 
 The catalog holds up to 4096 entries, accommodating the current default sources;
 sources beyond that limit are not retained. Cover prefetch prioritizes Home's
-latest games and Games/Roms' first 128 entries, downloading at most 256 distinct
-covers per sync. This avoids downloading the enlarged catalog's entire cover set.
-Games/Roms keeps the existing catalog order and includes PS4 and PS5 formats.
-ROM browsing, emulator management, the file browser, and
+latest games and the first 128 games for each supported console (PS4 and PS5),
+downloading at most 384 distinct covers per sync.
+
+**Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
+**Sega**, **Nintendo**, **Atari**, and **SNK**. Opening a company shows its consoles,
+including handhelds. Click a tile to open it, or press **Right / Enter / Cross**
+from the sidebar to focus the grid, then use arrows / D-pad and **Enter / Cross**.
+Long console lists page automatically as selection moves past the first eight
+tiles. **Backspace / Escape / Circle**, or the on-screen **Back** button, returns
+from games to consoles and then to companies. **Left** at the start of a grid row
+or game list returns focus to the sidebar; Up/Down then switch sections. Clicking
+Games/Roms in the sidebar resets it to the company grid.
+
+Selecting **Sony → PlayStation 4** or **Sony → PlayStation 5** shows up to 128 games
+in catalog order, identified by explicit game entries and their CUSA/PPSA title IDs.
+Other consoles currently show that no catalog or ROM source is connected; adding
+their navigation tiles does not implement emulation or ROM scanning. Home's latest
+additions remain independent of the selected console.
+Emulator management, the file browser, and
 payload management are not implemented; the corresponding sections explicitly
 show that they are unavailable. Downloads shows downloading and installed entries,
 or an empty-state message. These navigation entries do not enable new backends.

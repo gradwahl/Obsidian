@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "i18n.h"
 #include "translation.h"
+#include "library.h"
 
 #define TR(app, id) i18n_text((Language)SDL_AtomicGet(&(app)->language), (id))
 
@@ -54,6 +55,7 @@
 
 #define MAX_CATALOG_ITEMS       4096
 #define MAX_ITEMS_PER_ROW       128
+#define MAX_COVER_PREFETCH      (MAX_ITEMS_PER_ROW * 3)
 typedef enum {
     VIEW_HOME,
     VIEW_GAMES,
@@ -159,6 +161,11 @@ typedef struct {
 
     CarouselRow rows[TOTAL_ROWS];
     int active_row;
+    LibraryDepth library_depth;
+    int library_company_selection;
+    int library_company;
+    int library_console_selection;
+    bool library_sidebar_focus;
     float vertical_scroll_y;
     float target_vertical_scroll_y;
     float focus_pulse;          /* Animacja pulsowania ramki i zoomu aktywnego kafelka */

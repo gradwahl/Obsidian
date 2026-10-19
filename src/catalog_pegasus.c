@@ -316,16 +316,26 @@ int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacit
     return count;
 }
 
-/* Keep cover prefetch bounded to the same two visible catalog rows. */
+/* Prioritize Home, then the supported consoles' visible catalog rows. */
 static int cover_prefetch_locked(WolodriveApp *app, GameItem **items) {
     int count = catalog_latest_games_locked(app, items, MAX_ITEMS_PER_ROW);
-    for (int i = 0; i < app->catalog_count && i < MAX_ITEMS_PER_ROW; i++) {
-        GameItem *item = &app->catalog[i];
-        bool duplicate = false;
-        for (int j = 0; j < count; j++) {
-            if (items[j] == item) { duplicate = true; break; }
+    for (int company = 0; company < library_company_count(); company++) {
+        const LibraryCompany *brand = library_company_at(company);
+        for (int c = 0; c < brand->console_count; c++) {
+            const LibraryConsole *console = &brand->consoles[c];
+            if (!console->title_id_prefix) continue;
+            int matched = 0;
+            for (int i = 0; i < app->catalog_count && matched < MAX_ITEMS_PER_ROW; i++) {
+                GameItem *item = &app->catalog[i];
+                if (!item->is_game || !library_console_matches_id(console, item->id_code)) continue;
+                matched++;
+                bool duplicate = false;
+                for (int j = 0; j < count; j++) {
+                    if (items[j] == item) { duplicate = true; break; }
+                }
+                if (!duplicate && count < MAX_COVER_PREFETCH) items[count++] = item;
+            }
         }
-        if (!duplicate) items[count++] = item;
     }
     return count;
 }
@@ -562,7 +572,7 @@ static void *catalog_sync_worker(void *userdata) {
     /* Krok 2: Pobieranie i cache'owanie okładek do assets/covers/ dla wszystkich pozycji w katalogu */
     int cached_ok = 0;
     int total_items = 0;
-    GameItem *cover_items[MAX_ITEMS_PER_ROW * 2];
+    GameItem *cover_items[MAX_COVER_PREFETCH];
 
     SDL_LockMutex(app->catalog_mutex);
     total_items = cover_prefetch_locked(app, cover_items);

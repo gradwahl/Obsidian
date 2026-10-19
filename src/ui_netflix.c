@@ -61,6 +61,30 @@ static const SDL_Rect LANGUAGE_BUTTON = {0, 24, RAIL_WIDTH, 90};
 static const SDL_Rect LANGUAGE_MENU = {14, 122, RAIL_WIDTH - 28, LANG_COUNT * 44 + 16};
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
+enum { LIBRARY_COLUMNS = 4, LIBRARY_PAGE_SIZE = 8, LIBRARY_TILE = 320,
+       LIBRARY_GAP = 30, LIBRARY_GRID_Y = 220 };
+static const SDL_Rect LIBRARY_BACK_BUTTON = {CONTENT_X, 24, 180, 50};
+
+static SDL_Rect library_tile_target(int index) {
+    int slot = index % LIBRARY_PAGE_SIZE;
+    return (SDL_Rect){CONTENT_X + slot % LIBRARY_COLUMNS * (LIBRARY_TILE + LIBRARY_GAP),
+                      LIBRARY_GRID_Y + slot / LIBRARY_COLUMNS * (LIBRARY_TILE + LIBRARY_GAP),
+                      LIBRARY_TILE, LIBRARY_TILE};
+}
+
+static bool library_matches_console(WolodriveApp *app, const GameItem *item) {
+    const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+    return item->is_game && library_console_matches_id(console, item->id_code);
+}
+
+static void select_sidebar_view(WolodriveApp *app, int view) {
+    app->active_row = view;
+    if (view == VIEW_GAMES) {
+        app->library_depth = LIBRARY_COMPANIES;
+        app->library_sidebar_focus = true;
+        ui_rebuild_carousels(app);
+    }
+}
 
 static SDL_Rect sidebar_target(int row) {
     return (SDL_Rect){0, 240 + row * 90, RAIL_WIDTH, 90};
@@ -457,7 +481,8 @@ void ui_rebuild_carousels(WolodriveApp *app) {
 
         /* The existing catalog has no reliable emulator/file/payload/ROM type.
            Keep those views explicit rather than guessing from package titles. */
-        if (app->rows[VIEW_GAMES].item_count < MAX_ITEMS_PER_ROW) {
+        if ((app->library_depth != LIBRARY_GAMES || library_matches_console(app, it)) &&
+            app->rows[VIEW_GAMES].item_count < MAX_ITEMS_PER_ROW) {
             app->rows[VIEW_GAMES].items[app->rows[VIEW_GAMES].item_count++] = it;
         }
         if ((it->state == STATE_DOWNLOADING || it->state == STATE_INSTALLED) &&
@@ -477,6 +502,7 @@ void ui_rebuild_carousels(WolodriveApp *app) {
 }
 
 static GameItem *get_focused_item(WolodriveApp *app) {
+    if (app->active_row == VIEW_GAMES && app->library_depth != LIBRARY_GAMES) return NULL;
     CarouselRow *row = &app->rows[app->active_row];
     if (row->item_count <= 0) return NULL;
     return row->items[row->selected_col];
@@ -516,16 +542,117 @@ static void description_text(WolodriveApp *app, GameItem *item, char *out, size_
     }
 }
 
+static void library_back(WolodriveApp *app) {
+    if (app->library_depth == LIBRARY_GAMES) app->library_depth = LIBRARY_CONSOLES;
+    else if (app->library_depth == LIBRARY_CONSOLES) app->library_depth = LIBRARY_COMPANIES;
+    else app->library_sidebar_focus = true;
+}
+
+static void library_open_selected(WolodriveApp *app) {
+    app->library_sidebar_focus = false;
+    if (app->library_depth == LIBRARY_COMPANIES) {
+        app->library_company = app->library_company_selection;
+        app->library_console_selection = 0;
+        app->library_depth = LIBRARY_CONSOLES;
+    } else if (app->library_depth == LIBRARY_CONSOLES) {
+        app->library_depth = LIBRARY_GAMES;
+        app->rows[VIEW_GAMES].selected_col = 0;
+        app->rows[VIEW_GAMES].scroll_x = app->rows[VIEW_GAMES].target_scroll_x = 0;
+        ui_rebuild_carousels(app);
+    }
+}
+
+static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
+    if (app->active_row != VIEW_GAMES) return false;
+    const LibraryCompany *company = library_company_at(app->library_company);
+    int count = app->library_depth == LIBRARY_COMPANIES ? library_company_count() : company->console_count;
+    int *selection = app->library_depth == LIBRARY_COMPANIES ?
+                     &app->library_company_selection : &app->library_console_selection;
+    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+        if (app->library_depth != LIBRARY_COMPANIES &&
+            contains_point(LIBRARY_BACK_BUTTON, ev->button.x, ev->button.y)) {
+            app->library_sidebar_focus = false;
+            library_back(app);
+            return true;
+        }
+        if (app->library_depth == LIBRARY_GAMES) {
+            if (ev->button.x >= CONTENT_X) app->library_sidebar_focus = false;
+            return false;
+        }
+        int page_start = *selection / LIBRARY_PAGE_SIZE * LIBRARY_PAGE_SIZE;
+        for (int i = page_start; i < count && i < page_start + LIBRARY_PAGE_SIZE; i++) {
+            if (contains_point(library_tile_target(i), ev->button.x, ev->button.y)) {
+                *selection = i;
+                library_open_selected(app);
+                return true;
+            }
+        }
+        return true;
+    }
+    int action = 0; /* left, right, up, down, open, back */
+    if (ev->type == SDL_KEYDOWN) {
+        switch (ev->key.keysym.sym) {
+            case SDLK_LEFT: case SDLK_a: action = 1; break;
+            case SDLK_RIGHT: case SDLK_d: action = 2; break;
+            case SDLK_UP: case SDLK_w: action = 3; break;
+            case SDLK_DOWN: case SDLK_s: action = 4; break;
+            case SDLK_RETURN: case SDLK_SPACE: action = 5; break;
+            case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_b: action = 6; break;
+            default: break;
+        }
+        if (ev->key.repeat && action >= 5) return true;
+    } else if (ev->type == SDL_CONTROLLERBUTTONDOWN) {
+        switch (ev->cbutton.button) {
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT: action = 1; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: action = 2; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP: action = 3; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN: action = 4; break;
+            case SDL_CONTROLLER_BUTTON_A: action = 5; break;
+            case SDL_CONTROLLER_BUTTON_B: action = 6; break;
+            default: break;
+        }
+    }
+    if (action == 6) { library_back(app); return true; }
+    if (app->library_sidebar_focus) {
+        if (action == 2 || action == 5) { app->library_sidebar_focus = false; return true; }
+        if (action == 1) return true;
+        return false; /* Up/down still navigate the sidebar. */
+    }
+    if (app->library_depth == LIBRARY_GAMES) {
+        if (action == 1 && app->rows[VIEW_GAMES].selected_col == 0) {
+            app->library_sidebar_focus = true;
+            return true;
+        }
+        return action == 3 || action == 4; /* Console games use a horizontal row. */
+    }
+    if (action == 1) {
+        if (*selection % LIBRARY_COLUMNS == 0) app->library_sidebar_focus = true;
+        else (*selection)--;
+    } else if (action == 2) {
+        if (*selection % LIBRARY_COLUMNS < LIBRARY_COLUMNS - 1 && *selection + 1 < count) (*selection)++;
+    } else if (action == 3) {
+        if (*selection >= LIBRARY_COLUMNS) *selection -= LIBRARY_COLUMNS;
+        else app->library_sidebar_focus = true;
+    } else if (action == 4) {
+        if ((*selection / LIBRARY_COLUMNS + 1) * LIBRARY_COLUMNS < count)
+            *selection = SDL_min(*selection + LIBRARY_COLUMNS, count - 1);
+    } else if (action == 5) library_open_selected(app);
+    return action != 0 || ev->type == SDL_MOUSEWHEEL;
+}
+
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_language_input(app, ev)) return;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         for (int r = 0; r < TOTAL_ROWS; r++) {
             if (contains_point(sidebar_target(r), ev->button.x, ev->button.y)) {
-                app->active_row = r;
+                select_sidebar_view(app, r);
                 track_description_focus(app, get_focused_item(app));
                 return;
             }
         }
+    }
+    if (handle_library_input(app, ev)) return;
+    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         CarouselRow *clicked_row = &app->rows[app->active_row];
         if (ev->button.x >= RAIL_WIDTH + 20) {
             for (int col = 0; col < clicked_row->item_count; col++) {
@@ -579,12 +706,12 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 break;
             case SDLK_UP:
             case SDLK_w:
-                if (app->active_row > 0) app->active_row--;
+                if (app->active_row > 0) select_sidebar_view(app, app->active_row - 1);
                 break;
             case SDLK_DOWN:
             case SDLK_s:
                 if (app->active_row + 1 < TOTAL_ROWS) {
-                    app->active_row++;
+                    select_sidebar_view(app, app->active_row + 1);
                 }
                 break;
             case SDLK_RETURN:
@@ -615,11 +742,11 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 if (row->selected_col + 1 < row->item_count) row->selected_col++;
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_UP:
-                if (app->active_row > 0) app->active_row--;
+                if (app->active_row > 0) select_sidebar_view(app, app->active_row - 1);
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
                 if (app->active_row + 1 < TOTAL_ROWS) {
-                    app->active_row++;
+                    select_sidebar_view(app, app->active_row + 1);
                 }
                 break;
             case SDL_CONTROLLER_BUTTON_A: /* [X] Cross na DualSense */
@@ -681,9 +808,22 @@ static const char *action_label(WolodriveApp *app, GameItem *item) {
 
 static const char *empty_view_message(WolodriveApp *app) {
     if (app->active_row == VIEW_HOME) return TR(app, TXT_NO_LATEST_GAMES);
+    if (app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_GAMES) {
+        const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+        if (console && !console->title_id_prefix) return TR(app, TXT_CONSOLE_NOT_CONNECTED);
+    }
     if (app->active_row == VIEW_EMULATORS || app->active_row == VIEW_FILES ||
         app->active_row == VIEW_PAYLOADS) return TR(app, TXT_SECTION_UNAVAILABLE);
     return TR(app, app->active_row == VIEW_DOWNLOADS ? TXT_NO_DOWNLOADS : TXT_NO_PACKAGES);
+}
+
+static const char *view_content_title(WolodriveApp *app) {
+    if (app->active_row == VIEW_HOME) return TR(app, TXT_LATEST_GAMES);
+    if (app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_GAMES) {
+        const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+        if (console) return console->name;
+    }
+    return app->rows[app->active_row].title;
 }
 
 static void render_hero_banner(WolodriveApp *app) {
@@ -692,8 +832,7 @@ static void render_hero_banner(WolodriveApp *app) {
     SDL_Color white = {245, 245, 245, 255};
     SDL_Color muted = {185, 185, 185, 255};
     if (!hero) {
-        draw_text(r, app->font_hero_title, app->active_row == VIEW_HOME ?
-                  TR(app, TXT_LATEST_GAMES) : app->rows[app->active_row].title,
+        draw_text(r, app->font_hero_title, view_content_title(app),
                   CONTENT_X, 150, white, 900);
         draw_text(r, app->font_body, empty_view_message(app), CONTENT_X, 320, muted, 690);
         return;
@@ -758,8 +897,7 @@ static void render_carousels(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 245, 255}, muted = {170, 170, 170, 255};
     CarouselRow *row = &app->rows[app->active_row];
-    draw_text(r, app->font_row_title, app->active_row == VIEW_HOME ?
-              TR(app, TXT_LATEST_GAMES) : row->title, CONTENT_X, 552, white, 0);
+    draw_text(r, app->font_row_title, view_content_title(app), CONTENT_X, 552, white, 0);
     if (!row->item_count) {
         return;
     }
@@ -995,6 +1133,76 @@ static void render_toast_notification(WolodriveApp *app) {
     draw_text(r, app->font_small, app->toast_message, box_x + 22, box_y + 18, white, box_w - 36);
 }
 
+static int library_console_game_count(WolodriveApp *app, const LibraryConsole *console) {
+    if (!console || !console->title_id_prefix) return 0;
+    int count = 0;
+    SDL_LockMutex(app->catalog_mutex);
+    for (int i = 0; i < app->catalog_count; i++) {
+        GameItem *item = &app->catalog[i];
+        if (item->is_game && library_console_matches_id(console, item->id_code)) count++;
+    }
+    SDL_UnlockMutex(app->catalog_mutex);
+    return count;
+}
+
+static void render_library_breadcrumb(WolodriveApp *app) {
+    SDL_Renderer *r = app->renderer;
+    SDL_Color muted = {180, 180, 180, 255};
+    const LibraryCompany *company = library_company_at(app->library_company);
+    if (app->library_depth == LIBRARY_COMPANIES) return;
+    fill_rect(r, LIBRARY_BACK_BUTTON.x, LIBRARY_BACK_BUTTON.y,
+              LIBRARY_BACK_BUTTON.w, LIBRARY_BACK_BUTTON.h, 28, 28, 28, 255);
+    draw_fitted_text(r, app->font_small, TR(app, TXT_LIBRARY_BACK),
+                     (SDL_Rect){CONTENT_X + 18, 28, 144, 42}, muted, LIBRARY_BACK_BUTTON, false);
+    char path[200];
+    const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+    snprintf(path, sizeof(path), "%s / %s%s%s", TR(app, TXT_NAV_GAMES), company->name,
+             app->library_depth == LIBRARY_GAMES ? " / " : "",
+             app->library_depth == LIBRARY_GAMES ? console->name : "");
+    draw_single_line(r, app->font_small, path, CONTENT_X + 204, 36, muted,
+                     (SDL_Rect){CONTENT_X + 204, 24, 1150, 50});
+}
+
+static void render_library_grid(WolodriveApp *app) {
+    SDL_Renderer *r = app->renderer;
+    SDL_Color white = {245, 245, 245, 255}, muted = {165, 165, 165, 255};
+    bool companies = app->library_depth == LIBRARY_COMPANIES;
+    const LibraryCompany *company = library_company_at(app->library_company);
+    int selected = companies ? app->library_company_selection : app->library_console_selection;
+    int count = companies ? library_company_count() : company->console_count;
+    int first = selected / LIBRARY_PAGE_SIZE * LIBRARY_PAGE_SIZE;
+    draw_text(r, app->font_hero_title, companies ? TR(app, TXT_NAV_GAMES) : company->name,
+              CONTENT_X, 100, white, 1300);
+    draw_text(r, app->font_small, TR(app, companies ? TXT_CHOOSE_COMPANY : TXT_CHOOSE_CONSOLE),
+              CONTENT_X, 178, muted, 1200);
+    for (int i = first; i < count && i < first + LIBRARY_PAGE_SIZE; i++) {
+        SDL_Rect tile = library_tile_target(i);
+        const LibraryCompany *brand = companies ? library_company_at(i) : company;
+        const LibraryConsole *console = companies ? NULL : library_console_at(app->library_company, i);
+        bool focused = !app->library_sidebar_focus && i == selected;
+        fill_rect(r, tile.x, tile.y, tile.w, tile.h,
+                  (Uint8)(18 + brand->r / 8), (Uint8)(18 + brand->g / 8), (Uint8)(18 + brand->b / 8), 255);
+        fill_rect(r, tile.x, tile.y, tile.w, 5, brand->r, brand->g, brand->b, 255);
+        draw_border(r, tile.x, tile.y, tile.w, tile.h, 1, 65, 65, 65, 255);
+        SDL_Rect title = {tile.x + 24, tile.y + 98, tile.w - 48, 100};
+        draw_fitted_text(r, companies ? app->font_hero_title : app->font_row_title,
+                         companies ? brand->name : console->name, title, white, title, true);
+        char subtitle[100];
+        snprintf(subtitle, sizeof(subtitle), TR(app, companies ? TXT_CONSOLE_COUNT : TXT_LIBRARY_GAME_COUNT),
+                 companies ? brand->console_count : library_console_game_count(app, console));
+        SDL_Rect footer = {tile.x + 24, tile.y + 248, tile.w - 48, 40};
+        draw_fitted_text(r, app->font_small, subtitle, footer, muted, footer, true);
+        if (focused) draw_border(r, tile.x - 4, tile.y - 4, tile.w + 8, tile.h + 8,
+                                 4, 245, 245, 245, 255);
+    }
+    char position[50];
+    snprintf(position, sizeof(position), "%d / %d", selected + 1, count);
+    draw_text(r, app->font_micro, position, CONTENT_X, 910, muted, 0);
+    draw_text(r, app->font_micro, TR(app, app->library_sidebar_focus ?
+              TXT_LIBRARY_ENTER_HINT : TXT_LIBRARY_NAV_HINT), CONTENT_X, 944, muted, 1200);
+    render_library_breadcrumb(app);
+}
+
 void ui_render(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
 
@@ -1002,8 +1210,13 @@ void ui_render(WolodriveApp *app) {
     SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
     SDL_RenderClear(r);
 
-    render_hero_banner(app);
-    render_carousels(app);
+    if (app->active_row == VIEW_GAMES && app->library_depth != LIBRARY_GAMES) {
+        render_library_grid(app);
+    } else {
+        render_hero_banner(app);
+        render_carousels(app);
+        if (app->active_row == VIEW_GAMES) render_library_breadcrumb(app);
+    }
     render_sidebar(app);
     render_top_bar(app);
     render_toast_notification(app);

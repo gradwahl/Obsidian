@@ -138,6 +138,7 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
     it->size_gb  = size_gb;
     it->format   = fmt;
     it->state    = STATE_AVAILABLE;
+    it->is_game  = true;
     it->progress = 0.0f;
     it->cover_r  = r;
     it->cover_g  = g;
