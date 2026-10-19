@@ -17,6 +17,8 @@ static void test_locale_and_preferences(void) {
     setenv("LC_ALL", "EN_gb.UTF-8", 1);
     assert(i18n_detect_language() == LANG_EN);
     setenv("LC_ALL", "de_DE.UTF-8", 1);
+    assert(i18n_detect_language() == LANG_DE);
+    setenv("LC_ALL", "ja_JP.UTF-8", 1);
     assert(i18n_detect_language() == LANG_EN);
     setenv("LC_ALL", "C", 1);
     assert(i18n_detect_language() == LANG_EN);
@@ -28,7 +30,10 @@ static void test_locale_and_preferences(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/preference", getenv("XDG_DATA_HOME"));
     assert(i18n_load_language(path, LANG_PL) == LANG_PL);
+    const char *locales[] = { "en_GB", "pl_PL", "es_ES", "fr_FR", "nl_NL", "de_DE", "it_IT", "zh_CN", "ru_RU" };
     for (int lang = 0; lang < LANG_COUNT; lang++) {
+        setenv("LC_ALL", locales[lang], 1);
+        assert(i18n_detect_language() == (Language)lang);
         assert(i18n_save_language(path, (Language)lang));
         assert(i18n_load_language(path, LANG_EN) == (Language)lang);
     }
@@ -73,16 +78,41 @@ static void test_live_switching(void) {
     sys_init(app);
     assert(ui_init(app));
     assert(app->font_body && app->font_small && app->font_hero_title);
+    /* Validate actual glyph coverage for every translated label and language name. */
+    for (int lang = 0; lang < LANG_COUNT; lang++) {
+        for (int id = 0; id <= TEXT_COUNT; id++) {
+            const unsigned char *text = (const unsigned char *)(id == TEXT_COUNT
+                ? i18n_language_name((Language)lang) : i18n_text((Language)lang, (TextId)id));
+            while (*text) {
+                unsigned code = *text++;
+                if (code >= 0xc0) {
+                    int remaining = code < 0xe0 ? 1 : 2;
+                    code &= remaining == 1 ? 0x1f : 0x0f;
+                    while (remaining--) code = (code << 6) | (*text++ & 0x3f);
+                }
+                assert(TTF_GlyphIsProvided(app->font_body, (Uint16)code));
+                assert(TTF_GlyphIsProvided(app->font_small, (Uint16)code));
+            }
+        }
+    }
     assert(SDL_AtomicGet(&app->language) == LANG_EN);
     app->rows[0].selected_col = 2;
     GameItem *selected = app->rows[0].items[2];
     SDL_Event event = {0};
     SDL_zero(event);
-    event.type = SDL_KEYDOWN;
-    event.key.keysym.sym = SDLK_l;
-    for (int lang = LANG_PL; lang <= LANG_COUNT; lang++) {
+    const Language order[] = { LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU };
+    for (int lang = 0; lang < LANG_COUNT; lang++) {
+        Language expected = order[lang];
+        SDL_zero(event);
+        event.type = SDL_MOUSEBUTTONDOWN;
+        event.button.button = SDL_BUTTON_LEFT;
+        event.button.x = 1600;
+        event.button.y = 30;
         ui_handle_input(app, &event);
-        Language expected = (Language)(lang % LANG_COUNT);
+        assert(app->language_menu_open);
+        event.button.y = 66 + 8 + lang * 44 + 22;
+        ui_handle_input(app, &event);
+        assert(!app->language_menu_open);
         assert(SDL_AtomicGet(&app->language) == (int)expected);
         assert(app->rows[0].items[app->rows[0].selected_col] == selected);
         assert(app->catalog[1].state == STATE_DOWNLOADING);
@@ -103,6 +133,10 @@ static void test_live_switching(void) {
         app->sync_sources = 3;
         ui_render(app);
         if (getenv("WOLODRIVE_TEST_SCREENSHOTS")) {
+            app->language_menu_open = true;
+            app->language_menu_index = lang;
+            ui_render(app);
+            app->language_menu_open = false;
             SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, SCREEN_WIDTH, SCREEN_HEIGHT,
                                                                 32, SDL_PIXELFORMAT_RGBA32);
             assert(surface);
@@ -114,13 +148,64 @@ static void test_live_switching(void) {
             SDL_FreeSurface(surface);
         }
     }
+    /* Keyboard opens the menu, repeat is ignored, Escape cancels without quitting. */
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_l;
+    app->running = true;
+    ui_handle_input(app, &event);
+    assert(app->language_menu_open);
     event.key.repeat = 1;
     ui_handle_input(app, &event);
-    assert(SDL_AtomicGet(&app->language) == LANG_EN);
+    assert(app->language_menu_open);
+    event.key.keysym.sym = SDLK_ESCAPE;
+    ui_handle_input(app, &event);
+    assert(!app->language_menu_open && app->running);
+    assert(SDL_AtomicGet(&app->language) == LANG_RU);
+    /* Controller wraps through all options, then selects Polish. */
+    SDL_zero(event);
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_X;
     ui_handle_input(app, &event);
+    assert(app->language_menu_open);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->language_menu_index == 0);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app, &event);
+    assert(!app->language_menu_open);
     assert(SDL_AtomicGet(&app->language) == LANG_PL);
+    /* Outside clicks dismiss; navigation inside the menu never changes the catalog. */
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_X;
+    ui_handle_input(app, &event);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    ui_handle_input(app, &event);
+    assert(app->language_menu_index == LANG_COUNT - 1);
+    assert(app->rows[0].selected_col == 2);
+    SDL_zero(event);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 100;
+    event.button.y = 100;
+    ui_handle_input(app, &event);
+    assert(!app->language_menu_open && SDL_AtomicGet(&app->language) == LANG_PL);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_X;
+    ui_handle_input(app, &event);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
+    ui_handle_input(app, &event);
+    assert(!app->language_menu_open && app->rows[0].selected_col == 2);
+    /* Keyboard navigation applies an explicit choice. */
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_l;
+    ui_handle_input(app, &event);
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(SDL_AtomicGet(&app->language) == LANG_EN);
+    sys_set_language(app, LANG_PL);
     /* A new app instance restores the saved choice ahead of the environment. */
     WolodriveApp *restarted = calloc(1, sizeof(*restarted));
     assert(restarted);
@@ -128,7 +213,7 @@ static void test_live_switching(void) {
     assert(SDL_AtomicGet(&restarted->language) == LANG_PL);
     free(restarted);
     app->language_path[0] = '\0';
-    sys_cycle_language(app);
+    sys_set_language(app, LANG_ES);
     assert(SDL_AtomicGet(&app->language) == LANG_ES);
     assert(strstr(app->toast_message, "no se pudo guardar"));
     /* Publisher descriptions and generated fallbacks both render after switching. */

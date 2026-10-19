@@ -118,6 +118,8 @@ typedef struct {
 typedef struct {
     SDL_atomic_t language;
     char language_path[512];
+    bool language_menu_open;
+    int language_menu_index;
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font_logo;
@@ -146,14 +148,14 @@ typedef struct {
     SystemStats stats;
     uint32_t last_stats_update;
 
-    char toast_message[160];
+    char toast_message[512];
     uint32_t toast_expire_tick;
     bool running;
 } WolodriveApp;
 
 /* Warstwa systemowa (src/sys_bridge.c) */
 void sys_init(WolodriveApp *app);
-void sys_cycle_language(WolodriveApp *app);
+void sys_set_language(WolodriveApp *app, Language language);
 void sys_send_notification(WolodriveApp *app, const char *fmt, ...);
 void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);

@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *const codes[] = { "en", "pl", "es" };
-static const char *const names[] = { "English", "Polski", "Español" };
+static const char *const codes[] = { "en", "pl", "es", "fr", "nl", "de", "it", "zh", "ru" };
+static const char *const names[] = { "English", "Polski", "Español", "Français", "Nederlands", "Deutsch", "Italiano", "中文", "Русский" };
 static const char *const translations[TEXT_COUNT][LANG_COUNT] = {
-#define TEXT(id, en, pl, es) [id] = { en, pl, es },
+#define TEXT(id, en, pl, es, fr, nl, de, it, zh, ru) [id] = { en, pl, es, fr, nl, de, it, zh, ru },
 #include "translations.def"
 #undef TEXT
 };

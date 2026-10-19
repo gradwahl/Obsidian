@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-typedef enum { LANG_EN, LANG_PL, LANG_ES, LANG_COUNT } Language;
+typedef enum { LANG_EN, LANG_PL, LANG_ES, LANG_FR, LANG_NL, LANG_DE, LANG_IT, LANG_ZH, LANG_RU, LANG_COUNT } Language;
 typedef enum {
-#define TEXT(id, en, pl, es) id,
+#define TEXT(id, en, pl, es, fr, nl, de, it, zh, ru) id,
 #include "translations.def"
 #undef TEXT
     TEXT_COUNT

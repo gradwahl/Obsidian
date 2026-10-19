@@ -5,7 +5,14 @@
 #include <stdlib.h>
 
 static const char *FONT_CANDIDATES_BOLD[] = {
+    "assets/font_bold.ttf",
+    "assets/font_cjk.ttc",
     "/data/homebrew/wolodrive/assets/font_bold.ttf",
+    "/data/homebrew/wolodrive/assets/font_cjk.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
+    "C:/Windows/Fonts/msyhbd.ttc",
+    "/mnt/c/Windows/Fonts/msyhbd.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
@@ -15,7 +22,14 @@ static const char *FONT_CANDIDATES_BOLD[] = {
 };
 
 static const char *FONT_CANDIDATES_REGULAR[] = {
+    "assets/font.ttf",
+    "assets/font_cjk.ttc",
     "/data/homebrew/wolodrive/assets/font.ttf",
+    "/data/homebrew/wolodrive/assets/font_cjk.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    "C:/Windows/Fonts/msyh.ttc",
+    "/mnt/c/Windows/Fonts/msyh.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/TTF/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
@@ -25,11 +39,115 @@ static const char *FONT_CANDIDATES_REGULAR[] = {
 };
 
 static TTF_Font *open_first_available_font(const char **candidates, int ptsize) {
-    for (int i = 0; candidates[i] != NULL; i++) {
-        TTF_Font *f = TTF_OpenFont(candidates[i], ptsize);
-        if (f) return f;
+    /* Prefer one font covering Latin, Cyrillic and Chinese so switching needs no reload. */
+    for (int require_cjk = 1; require_cjk >= 0; require_cjk--) {
+        for (int i = 0; candidates[i] != NULL; i++) {
+            TTF_Font *f = TTF_OpenFont(candidates[i], ptsize);
+            if (!f) continue;
+            if (!require_cjk || (TTF_GlyphIsProvided(f, 0x4e2d) && TTF_GlyphIsProvided(f, 0x042f))) return f;
+            TTF_CloseFont(f);
+        }
     }
     return NULL;
+}
+
+/* Menu order is independent of persisted language codes and enum values. */
+static const Language LANGUAGE_ORDER[LANG_COUNT] = {
+    LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
+};
+static const SDL_Rect LANGUAGE_BUTTON = {1510, 14, 360, 44};
+static const SDL_Rect LANGUAGE_MENU = {1510, 66, 360, LANG_COUNT * 44 + 16};
+
+static bool contains_point(SDL_Rect rect, int x, int y) {
+    SDL_Point point = {x, y};
+    return SDL_PointInRect(&point, &rect);
+}
+
+static void toggle_language_menu(WolodriveApp *app) {
+    app->language_menu_open = !app->language_menu_open;
+    if (app->language_menu_open) {
+        for (int i = 0; i < LANG_COUNT; i++) {
+            if ((int)LANGUAGE_ORDER[i] == SDL_AtomicGet(&app->language)) {
+                app->language_menu_index = i;
+                break;
+            }
+        }
+    }
+}
+
+static void select_menu_language(WolodriveApp *app) {
+    Language language = LANGUAGE_ORDER[app->language_menu_index];
+    app->language_menu_open = false;
+    sys_set_language(app, language);
+}
+
+/* SDL mouse events already use renderer logical coordinates, including after resizing. */
+static bool handle_language_input(WolodriveApp *app, const SDL_Event *ev) {
+    if (ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_l) {
+        if (!ev->key.repeat) toggle_language_menu(app);
+        return true;
+    }
+    if (ev->type == SDL_CONTROLLERBUTTONDOWN && ev->cbutton.button == SDL_CONTROLLER_BUTTON_X) {
+        toggle_language_menu(app);
+        return true;
+    }
+    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+        if (contains_point(LANGUAGE_BUTTON, ev->button.x, ev->button.y)) {
+            toggle_language_menu(app);
+            return true;
+        }
+        if (app->language_menu_open) {
+            int index = (ev->button.y - LANGUAGE_MENU.y - 8) / 44;
+            if (contains_point(LANGUAGE_MENU, ev->button.x, ev->button.y) &&
+                ev->button.y >= LANGUAGE_MENU.y + 8 &&
+                ev->button.y < LANGUAGE_MENU.y + 8 + LANG_COUNT * 44) {
+                app->language_menu_index = index;
+                select_menu_language(app);
+            } else {
+                app->language_menu_open = false;
+            }
+            return true;
+        }
+    }
+    if (!app->language_menu_open) return false;
+    if (ev->type == SDL_MOUSEMOTION && contains_point(LANGUAGE_MENU, ev->motion.x, ev->motion.y)) {
+        int y = ev->motion.y - LANGUAGE_MENU.y - 8;
+        if (y >= 0 && y < LANG_COUNT * 44) app->language_menu_index = y / 44;
+    }
+    if (ev->type == SDL_KEYDOWN) {
+        switch (ev->key.keysym.sym) {
+            case SDLK_UP: case SDLK_w:
+                app->language_menu_index = (app->language_menu_index + LANG_COUNT - 1) % LANG_COUNT;
+                break;
+            case SDLK_DOWN: case SDLK_s:
+                app->language_menu_index = (app->language_menu_index + 1) % LANG_COUNT;
+                break;
+            case SDLK_RETURN: case SDLK_SPACE:
+                select_menu_language(app);
+                break;
+            case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_b:
+                app->language_menu_open = false;
+                break;
+            default: break;
+        }
+    } else if (ev->type == SDL_CONTROLLERBUTTONDOWN) {
+        switch (ev->cbutton.button) {
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                app->language_menu_index = (app->language_menu_index + LANG_COUNT - 1) % LANG_COUNT;
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                app->language_menu_index = (app->language_menu_index + 1) % LANG_COUNT;
+                break;
+            case SDL_CONTROLLER_BUTTON_A:
+                select_menu_language(app);
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                app->language_menu_open = false;
+                break;
+            default: break;
+        }
+    }
+    return true; /* Keep catalog actions out of the open menu. */
 }
 
 static void fill_rect(SDL_Renderer *r, int x, int y, int w, int h,
@@ -122,6 +240,16 @@ static int draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text,
     }
     SDL_FreeSurface(surf);
     return drawn_w;
+}
+
+static void draw_single_line(SDL_Renderer *r, TTF_Font *font, const char *text,
+                             int x, int y, SDL_Color color, SDL_Rect clip) {
+    SDL_Rect previous;
+    bool clipped = SDL_RenderIsClipEnabled(r);
+    SDL_RenderGetClipRect(r, &previous);
+    SDL_RenderSetClipRect(r, &clip);
+    draw_text(r, font, text, x, y, color, 0);
+    SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
 }
 
 /* Rysuje elegancką plakietkę (Glassmorphism Badge) w rogu kafelka lub w Hero Bannerze */
@@ -279,6 +407,9 @@ bool ui_init(WolodriveApp *app) {
         fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
         return false;
     }
+    if (!TTF_GlyphIsProvided(app->font_body, 0x4e2d)) {
+        fprintf(stderr, "[WOLODRIVE WARN] Install Noto Sans CJK or provide assets/font_cjk.ttc for Chinese text.\n");
+    }
 
     app->active_row = 0;
     app->vertical_scroll_y = 0.0f;
@@ -349,6 +480,7 @@ static GameItem *get_focused_item(WolodriveApp *app) {
 }
 
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
+    if (handle_language_input(app, ev)) return;
     CarouselRow *row = &app->rows[app->active_row];
 
     if (ev->type == SDL_KEYDOWN) {
@@ -384,9 +516,6 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             case SDLK_F5:
                 catalog_start_async_sync(app);
                 break;
-            case SDLK_l:
-                if (!ev->key.repeat) sys_cycle_language(app);
-                break;
             case SDLK_ESCAPE:
                 app->running = false;
                 break;
@@ -414,9 +543,6 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 break;
             case SDL_CONTROLLER_BUTTON_B: /* [O] Circle na DualSense */
                 sys_cancel_action(app, get_focused_item(app));
-                break;
-            case SDL_CONTROLLER_BUTTON_X: /* Square on DualSense */
-                sys_cycle_language(app);
                 break;
             case SDL_CONTROLLER_BUTTON_Y: /* [Trójkąt] Triangle na DualSense */
                 catalog_start_async_sync(app);
@@ -707,7 +833,7 @@ static void render_carousels(WolodriveApp *app) {
                 draw_text(r, app->font_small, it->title,
                           draw_x + 12, draw_y + draw_h - 48, white, draw_w - 24);
 
-                char sub_info[64];
+                char sub_info[256];
                 if (it->state == STATE_DOWNLOADING) {
                     snprintf(sub_info, sizeof(sub_info), TR(app, TXT_PROGRESS), it->progress, it->size_gb);
                 } else if (it->state == STATE_INSTALLED) {
@@ -757,7 +883,7 @@ static void render_top_bar(WolodriveApp *app) {
     /* Logo WOLODRIVE po lewej stronie */
     draw_text(r, app->font_logo, "WOLODRIVE", 80, 17, red, 0);
 
-    char sync_info[160];
+    char sync_info[256];
     SDL_LockMutex(app->catalog_mutex);
     switch (app->sync_status_id) {
         case TXT_SYNC_SUBCATALOG:
@@ -778,23 +904,49 @@ static void render_top_bar(WolodriveApp *app) {
     }
     SDL_UnlockMutex(app->catalog_mutex);
 
-    draw_text(r, app->font_small, sync_info, 305, 27, muted, 650);
+    draw_single_line(r, app->font_small, sync_info, 305, 27, muted, (SDL_Rect){305, 14, 650, 44});
     char language_hint[96];
     snprintf(language_hint, sizeof(language_hint), TR(app, TXT_LANGUAGE),
              i18n_language_name((Language)SDL_AtomicGet(&app->language)));
-    draw_text(r, app->font_small, language_hint, 1490, 49, white, 390);
+    fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, LANGUAGE_BUTTON.w, LANGUAGE_BUTTON.h,
+              35, 35, 43, 255);
+    draw_border(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, LANGUAGE_BUTTON.w, LANGUAGE_BUTTON.h,
+                1, app->language_menu_open ? 229 : 110, 65, 75, 255);
+    draw_single_line(r, app->font_small, language_hint, LANGUAGE_BUTTON.x + 14, 27, white,
+                     (SDL_Rect){LANGUAGE_BUTTON.x + 12, 14, LANGUAGE_BUTTON.w - 90, 44});
+    draw_text(r, app->font_micro, "L / □", LANGUAGE_BUTTON.x + LANGUAGE_BUTTON.w - 65, 28, muted, 0);
 
     /* Prawa strona: /data, /mnt/ext0, status sieci i temperatura CPU/GPU */
     char telemetry[256];
     snprintf(telemetry, sizeof(telemetry),
-             "/data: %.1f GB   |   /mnt/ext0: %.1f GB   |   %s   |   CPU: %d°C  GPU: %d°C",
+             "/data: %.0f GB | ext0: %.0f GB | CPU: %d°C | GPU: %d°C",
              app->stats.data_free_gb,
              app->stats.ext0_free_gb,
-             app->stats.ip_address,
              app->stats.cpu_temp_c,
              app->stats.gpu_temp_c);
 
-    draw_text(r, app->font_small, telemetry, 980, 27, white, 0);
+    draw_single_line(r, app->font_micro, telemetry, 980, 28, white, (SDL_Rect){980, 14, 510, 44});
+}
+
+static void render_language_menu(WolodriveApp *app) {
+    if (!app->language_menu_open) return;
+    SDL_Renderer *r = app->renderer;
+    SDL_Color white = {245, 245, 250, 255};
+    SDL_Color muted = {170, 170, 180, 255};
+    draw_drop_shadow(r, LANGUAGE_MENU.x, LANGUAGE_MENU.y, LANGUAGE_MENU.w, LANGUAGE_MENU.h, 8, 8, 220);
+    fill_rect(r, LANGUAGE_MENU.x, LANGUAGE_MENU.y, LANGUAGE_MENU.w, LANGUAGE_MENU.h, 24, 24, 30, 255);
+    draw_border(r, LANGUAGE_MENU.x, LANGUAGE_MENU.y, LANGUAGE_MENU.w, LANGUAGE_MENU.h, 1, 90, 90, 100, 255);
+    for (int i = 0; i < LANG_COUNT; i++) {
+        int y = LANGUAGE_MENU.y + 8 + i * 44;
+        bool selected = SDL_AtomicGet(&app->language) == (int)LANGUAGE_ORDER[i];
+        if (i == app->language_menu_index) {
+            fill_rect(r, LANGUAGE_MENU.x + 4, y, LANGUAGE_MENU.w - 8, 44, 58, 58, 70, 255);
+            draw_border(r, LANGUAGE_MENU.x + 4, y, LANGUAGE_MENU.w - 8, 44, 1, 229, 9, 20, 255);
+        }
+        if (selected) fill_rect(r, LANGUAGE_MENU.x + 14, y + 16, 10, 10, 229, 9, 20, 255);
+        draw_text(r, app->font_body, i18n_language_name(LANGUAGE_ORDER[i]),
+                  LANGUAGE_MENU.x + 38, y + 10, selected ? white : muted, 0);
+    }
 }
 
 static void render_toast_notification(WolodriveApp *app) {
@@ -827,6 +979,7 @@ void ui_render(WolodriveApp *app) {
     render_vignette(r);
     render_top_bar(app);
     render_toast_notification(app);
+    render_language_menu(app);
 
     SDL_RenderPresent(r);
 }

@@ -49,7 +49,7 @@ const char *sys_format_short_badge(PackageFormat fmt) {
 }
 
 void sys_send_notification(WolodriveApp *app, const char *fmt, ...) {
-    char buffer[256];
+    char buffer[512];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -299,8 +299,8 @@ void sys_update_downloads(WolodriveApp *app, float dt) {
     }
 }
 
-void sys_cycle_language(WolodriveApp *app) {
-    Language language = (Language)((SDL_AtomicGet(&app->language) + 1) % LANG_COUNT);
+void sys_set_language(WolodriveApp *app, Language language) {
+    if (language < LANG_EN || language >= LANG_COUNT) return;
     SDL_AtomicSet(&app->language, language);
     bool saved = i18n_save_language(app->language_path, language);
     ui_rebuild_carousels(app);
