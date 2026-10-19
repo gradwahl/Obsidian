@@ -55,10 +55,10 @@ static TTF_Font *open_first_available_font(const char **candidates, int ptsize) 
 static const Language LANGUAGE_ORDER[LANG_COUNT] = {
     LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
 };
-static const SDL_Rect LANGUAGE_BUTTON = {14, 14, 360, 44};
-static const SDL_Rect LANGUAGE_MENU = {14, 66, 360, LANG_COUNT * 44 + 16};
 enum { RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 600,
        CARD_WIDTH = 350, CARD_HEIGHT = 198, CARD_GAP = 12, CARD_FOOTER = 44 };
+static const SDL_Rect LANGUAGE_BUTTON = {0, 24, RAIL_WIDTH, 90};
+static const SDL_Rect LANGUAGE_MENU = {14, 122, RAIL_WIDTH - 28, LANG_COUNT * 44 + 16};
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
 
@@ -856,11 +856,45 @@ static void render_sidebar(WolodriveApp *app) {
 
 
 
+static void render_language_control(WolodriveApp *app) {
+    SDL_Renderer *r = app->renderer;
+    Uint8 c = app->language_menu_open ? 245 : 160;
+    if (app->language_menu_open) {
+        fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, LANGUAGE_BUTTON.w - 1,
+                  LANGUAGE_BUTTON.h, 25, 25, 25, 255);
+        fill_rect(r, 0, LANGUAGE_BUTTON.y, 4, LANGUAGE_BUTTON.h, 229, 9, 20, 255);
+    }
+    /* Outline globe matches the sidebar icons without relying on a font glyph. */
+    int cx = 48, cy = LANGUAGE_BUTTON.y + 44;
+    SDL_SetRenderDrawColor(r, c, c, c, 255);
+    for (int ring = 0; ring < 2; ring++) {
+        SDL_Point points[33];
+        for (int i = 0; i <= 32; i++) {
+            float angle = (float)i * 6.2831853f / 32.0f;
+            points[i] = (SDL_Point){cx + (int)lroundf(cosf(angle) * (ring ? 7 : 16)),
+                                    cy + (int)lroundf(sinf(angle) * 16)};
+        }
+        SDL_RenderDrawLines(r, points, 33);
+    }
+    SDL_RenderDrawLine(r, cx - 16, cy, cx + 16, cy);
+    SDL_RenderDrawLine(r, cx - 13, cy - 8, cx + 13, cy - 8);
+    SDL_RenderDrawLine(r, cx - 13, cy + 8, cx + 13, cy + 8);
+    SDL_Rect label = {84, LANGUAGE_BUTTON.y + 24, RAIL_WIDTH - 128, 42};
+    draw_fitted_text(r, app->font_small,
+                     i18n_language_name((Language)SDL_AtomicGet(&app->language)),
+                     label, (SDL_Color){c, c, c, 255}, label, false);
+    int arrow_x = RAIL_WIDTH - 30;
+    int arrow_y = cy + (app->language_menu_open ? 4 : -4);
+    int tip_y = cy + (app->language_menu_open ? -4 : 4);
+    SDL_SetRenderDrawColor(r, c, c, c, 255);
+    SDL_RenderDrawLine(r, arrow_x - 5, arrow_y, arrow_x, tip_y);
+    SDL_RenderDrawLine(r, arrow_x, tip_y, arrow_x + 5, arrow_y);
+}
+
 static void render_top_bar(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
 
     SDL_Color red = {229, 9, 20, 255};
-    SDL_Color white = {245, 245, 245, 255};
     SDL_Color muted = {155, 155, 155, 255};
     draw_text(r, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
     draw_text(r, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
@@ -892,16 +926,7 @@ static void render_top_bar(WolodriveApp *app) {
 
     draw_single_line(r, app->font_micro, sync_info, CONTENT_X, 1032, muted,
                      (SDL_Rect){CONTENT_X, 1032, 880, 32});
-    char language_hint[96];
-    snprintf(language_hint, sizeof(language_hint), TR(app, TXT_LANGUAGE),
-             i18n_language_name((Language)SDL_AtomicGet(&app->language)));
-    fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, LANGUAGE_BUTTON.w, LANGUAGE_BUTTON.h,
-              35, 35, 43, 255);
-    draw_border(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, LANGUAGE_BUTTON.w, LANGUAGE_BUTTON.h,
-                1, app->language_menu_open ? 229 : 110, 65, 75, 255);
-    draw_single_line(r, app->font_small, language_hint, LANGUAGE_BUTTON.x + 14, 27, white,
-                     (SDL_Rect){LANGUAGE_BUTTON.x + 12, 14, LANGUAGE_BUTTON.w - 90, 44});
-    draw_text(r, app->font_micro, "L / □", LANGUAGE_BUTTON.x + LANGUAGE_BUTTON.w - 65, 28, muted, 0);
+    render_language_control(app);
 
     /* Prawa strona: /data, /mnt/ext0, status sieci i temperatura CPU/GPU */
     char telemetry[256];

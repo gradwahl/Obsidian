@@ -31,10 +31,11 @@ or an empty-state message. These navigation entries do not enable new backends.
 
 ## Languages
 
-Click the **language button at the top left** to choose Polish, English, French,
+Click the **globe and current language at the top left** to choose Polish, English, French,
 Dutch, German, Spanish, Italian, Chinese (Simplified), or Russian. The list shows
 each language's own name. Press **L** or **DualSense Square** to open or close the
-menu, use **Up/Down** or the **D-pad** to navigate, and press **Enter/Space** or
+menu. The control matches the sidebar entries and has an arrow for its dropdown;
+the dropdown stays inside the sidebar. Use **Up/Down** or the **D-pad** to navigate, and press **Enter/Space** or
 **Cross** to select. **Escape/Backspace** or **Circle** cancels; clicking outside
 also dismisses the menu. Switching updates the interface immediately and
 preserves catalog selection and downloads. Mouse selection follows the window's
