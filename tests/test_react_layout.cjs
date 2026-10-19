@@ -30,7 +30,7 @@ const { NativeViewport } = require('../src/components/NativeViewport.tsx');
 const { fittedFontSize } = require('../src/components/FittedText.tsx');
 const { GameDetailModal } = require('../src/components/GameDetailModal.tsx');
 const { LibraryBrowser } = require('../src/components/LibraryBrowser.tsx');
-const { isAvailableCatalogSource } = require('../src/catalog.ts');
+const { isAvailableCatalogSource, getLatestGames, metadataFromSources } = require('../src/catalog.ts');
 const sources = [
   { id: 'evox-coreos', url: 'https://example.test/broken.json' },
   { name: 'evoX-CoreOS' },
@@ -38,6 +38,41 @@ const sources = [
   ...['dlps', 'pippo', 'pfs', 'zer0'].map(id => ({ id, url: `https://example.test/${id}.json` }))
 ];
 assert.deepEqual(sources.filter(isAvailableCatalogSource).map(source => source.id), ['dlps', 'pippo', 'pfs', 'zer0']);
+
+const homeFilters = (sources) => ({ sources_limited: sources !== null,
+  sources: sources || [], disabled_formats: [] });
+const dated = (title, source, date) => ({
+  id_code: title, title, source_name: source, format: 'pkg',
+  is_game: true, is_dlc: false, catalog_added_at: date, platform: 'sony-ps5'
+});
+const homeFixture = [
+  dated('Dated A', 'Pegasus-DL', 20261020000000),
+  dated('Dated B', 'Pegasus-DL', 20261019000000),
+  dated('Dated C', 'Pegasus-DL', 20261018000000),
+  { ...dated('Axekin first', 'Axekin', 0), format: 'catalog', catalog_added_at: undefined },
+  { ...dated('Axekin second', 'Axekin', 0), format: 'catalog', catalog_added_at: undefined },
+  { ...dated('Other catalog', 'Other', 0), format: 'catalog', catalog_added_at: undefined },
+  { ...dated('DLC', 'Axekin', 0), is_game: false, is_dlc: true, format: 'catalog' }
+];
+const onlyAxekin = getLatestGames(homeFixture, homeFilters(['Axekin']));
+assert.deepEqual(onlyAxekin.map(game => game.title), ['Axekin first', 'Axekin second']);
+assert.deepEqual(getLatestGames(homeFixture, homeFilters(['Pegasus-DL']))
+  .map(game => game.title), ['Dated A', 'Dated B', 'Dated C']);
+const mixedHome = getLatestGames(homeFixture, homeFilters(null));
+assert.equal(mixedHome.length, 6);
+assert.equal(mixedHome[0].title, 'Dated A');
+assert.ok(mixedHome.slice(0, 3).some(game => game.source_name === 'Axekin'),
+  'Multiple sources must contribute to Home without requiring release dates');
+assert.ok(mixedHome.slice(0, 3).some(game => game.source_name === 'Other'));
+assert.equal(getLatestGames(homeFixture, homeFilters(['Unconfigured'])).length, 0);
+assert.equal(getLatestGames(homeFixture, { ...homeFilters(['Axekin']),
+  disabled_formats: ['catalog'] }).length, 0);
+const fullAxekin = metadataFromSources(require('../assets/catalogs/axekin.json').sources);
+const filteredAxekinHome = getLatestGames([...homeFixture, ...fullAxekin], homeFilters(['Axekin']));
+assert.equal(filteredAxekinHome.length, 128);
+assert.ok(filteredAxekinHome.every(game => game.source_name === 'Axekin'));
+assert.equal(filteredAxekinHome[2].title, fullAxekin[0].title);
+
 const { t } = require('../src/translations.ts');
 const native = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'src/native.css'), 'utf8');

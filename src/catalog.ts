@@ -115,21 +115,49 @@ export function getFilteredCatalog(catalog: GameItem[], filters: CatalogFilters)
 }
 
 export function getLatestGames(catalog: GameItem[], filters: CatalogFilters, limit = 128): GameItem[] {
-  const filtered = catalog.filter((it) => it.is_game && it.catalog_added_at && matchesFilters(it, filters));
+  if (limit <= 0) return [];
 
-  // Group by title per platform so newest copy is shown
-  const seen = new Map<string, GameItem>();
-  for (const it of filtered) {
-    const key = `${searchPlatform(it)}_${normalizeTitleKey(it.title)}`;
-    const current = seen.get(key);
-    if (!current || (it.catalog_added_at || 0) > (current.catalog_added_at || 0)) {
-      seen.set(key, it);
+  // "Latest" means newest timestamp within a source when one is supplied.
+  // Metadata-only sources do not claim release dates: retain their published
+  // listing order rather than manufacturing timestamps for them.
+  const groups = new Map<string, { game: GameItem; order: number }[]>();
+  catalog.forEach((item, order) => {
+    if (!item.is_game || item.is_dlc || !matchesFilters(item, filters)) return;
+    const source = groups.get(item.source_name) || [];
+    source.push({ game: item, order });
+    groups.set(item.source_name, source);
+  });
+
+  const sources = Array.from(groups, ([name, entries]) => {
+    entries.sort((a, b) => (b.game.catalog_added_at || 0) - (a.game.catalog_added_at || 0) ||
+      a.order - b.order);
+    return { name, entries, next: 0, newest: entries[0].game.catalog_added_at || 0 };
+  });
+  sources.sort((a, b) => b.newest - a.newest || a.name.localeCompare(b.name));
+
+  const selected: GameItem[] = [];
+  const seen = new Set<string>();
+  // Fair round-robin: when multiple sources are enabled, every source can
+  // contribute before the first one consumes the entire Home carousel.
+  let available = sources.length;
+  while (selected.length < limit && available > 0) {
+    available = 0;
+    for (const source of sources) {
+      const next = source.entries[source.next];
+      if (!next) continue;
+      available++;
+      source.next++;
+      const game = next.game;
+      const title = normalizeTitleKey(game.title);
+      const key = `${searchPlatform(game)}:${title || game.id_code}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        selected.push(game);
+        if (selected.length >= limit) break;
+      }
     }
   }
-
-  const list = Array.from(seen.values());
-  list.sort((a, b) => (b.catalog_added_at || 0) - (a.catalog_added_at || 0));
-  return list.slice(0, limit);
+  return selected;
 }
 
 export function getDistinctSources(catalog: GameItem[]): string[] {

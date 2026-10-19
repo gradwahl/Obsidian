@@ -55,6 +55,15 @@ of silently clearing entries; inaccessible or unsupported indexes may remain
 empty. Review each source's `status` and `note` fields. Importing metadata does
 not validate that a package is available, safe or legally redistributable.
 
+**Home** now displays games from all sources enabled in Settings, including
+undated, website-only indexes. When several sources are enabled, the carousel
+rotates among them instead of being filled by one dated Pegasus-DL feed.
+Within each source, genuinely dated additions appear newest first; records
+without a date retain the index's own order (not a claimed release date).
+Disabling a source or the `catalog` format removes those entries from Home.
+An Axekin-only source filter therefore displays Axekin listings only, once its
+metadata has loaded. An empty selection shows the filtered-empty message.
+
 The **React preview** bundles the small snapshot and loads the full Axekin
 index as a **separate deferred chunk**. Rebuild with `npm run build:static`
 after importing to update both. Only nearby cards are rendered in large console

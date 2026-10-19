@@ -257,37 +257,100 @@ static uint64_t parse_catalog_date(const char *text) {
     return day <= maximum ? value : 0;
 }
 
-static bool newer_game(const GameItem *a, const GameItem *b) {
-    if (a->catalog_added_at != b->catalog_added_at) return a->catalog_added_at > b->catalog_added_at;
-    int title_order = strcmp(a->title, b->title);
-    return title_order ? title_order < 0 : strcmp(a->id_code, b->id_code) < 0;
+typedef struct {
+    GameItem *item;
+    int order;
+} HomeCandidate;
+
+typedef struct {
+    const char *name;
+    int next, end;
+    uint64_t newest;
+} HomeSource;
+
+static int home_candidate_compare(const void *left, const void *right) {
+    const HomeCandidate *a = left, *b = right;
+    int source = SDL_strcasecmp(a->item->source_name, b->item->source_name);
+    if (source) return source;
+    if (a->item->catalog_added_at != b->item->catalog_added_at)
+        return a->item->catalog_added_at > b->item->catalog_added_at ? -1 : 1;
+    /* Undated catalog metadata stays in its original source listing order. */
+    return (a->order > b->order) - (a->order < b->order);
+}
+
+static int home_source_compare(const void *left, const void *right) {
+    const HomeSource *a = left, *b = right;
+    if (a->newest != b->newest) return a->newest > b->newest ? -1 : 1;
+    return SDL_strcasecmp(a->name, b->name);
+}
+
+static bool home_same_game(const GameItem *a, const GameItem *b) {
+    if (SDL_strcasecmp(a->title, b->title) != 0) return false;
+    if (a->platform[0] || b->platform[0])
+        return SDL_strcasecmp(a->platform, b->platform) == 0;
+    return SDL_strncasecmp(a->id_code, b->id_code, 4) == 0;
 }
 
 int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacity) {
-    int count = 0;
-    if (capacity <= 0) return 0;
+    if (!app || !items || capacity <= 0) return 0;
+
+    HomeCandidate *candidates = malloc(sizeof(*candidates) * (size_t)app->catalog_count);
+    HomeSource *sources = malloc(sizeof(*sources) * (size_t)app->catalog_count);
+    if (!candidates || !sources) {
+        free(candidates);
+        free(sources);
+        return 0;
+    }
+
+    int eligible = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
-        if (!item->is_game || !item->catalog_added_at || !settings_accepts_item(app, item)) continue;
-        /* Retain source packages in storage, but show one latest dated copy of
-           an identically named title per console family on Home. */
-        bool duplicate = false;
-        for (int j = 0; j < count; j++) {
-            if (SDL_strcasecmp(item->title, items[j]->title) != 0 ||
-                SDL_strncasecmp(item->id_code, items[j]->id_code, 4) != 0) continue;
-            if (!newer_game(item, items[j])) { duplicate = true; break; }
-            for (int k = j; k+1 < count; k++) items[k] = items[k+1];
-            count--;
-            break;
-        }
-        if (duplicate) continue;
-        int position = 0;
-        while (position < count && !newer_game(item, items[position])) position++;
-        if (position >= capacity) continue;
-        if (count < capacity) count++;
-        for (int j = count - 1; j > position; j--) items[j] = items[j - 1];
-        items[position] = item;
+        if (!item->is_game || item->is_dlc || !settings_accepts_item(app, item)) continue;
+        candidates[eligible++] = (HomeCandidate){item, i};
     }
+    if (eligible == 0) {
+        free(candidates);
+        free(sources);
+        return 0;
+    }
+
+    qsort(candidates, (size_t)eligible, sizeof(*candidates), home_candidate_compare);
+    int source_count = 0;
+    for (int i = 0; i < eligible; ) {
+        int end = i + 1;
+        const char *name = candidates[i].item->source_name;
+        while (end < eligible && SDL_strcasecmp(name, candidates[end].item->source_name) == 0)
+            end++;
+        sources[source_count++] = (HomeSource){name, i, end,
+                                              candidates[i].item->catalog_added_at};
+        i = end;
+    }
+    qsort(sources, (size_t)source_count, sizeof(*sources), home_source_compare);
+
+    int count = 0;
+    bool available = true;
+    while (count < capacity && available) {
+        available = false;
+        /* Round-robin each enabled source, so even undated indexes such as
+           Axekin appear next to dated Pegasus packages on Home. */
+        for (int i = 0; i < source_count && count < capacity; i++) {
+            HomeSource *source = &sources[i];
+            if (source->next >= source->end) continue;
+            available = true;
+            GameItem *item = candidates[source->next++].item;
+            bool duplicate = false;
+            for (int j = 0; j < count; j++) {
+                if (home_same_game(item, items[j])) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) items[count++] = item;
+        }
+    }
+
+    free(candidates);
+    free(sources);
     return count;
 }
 
@@ -369,8 +432,14 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     snprintf(target->title, sizeof(target->title), "%s", title);
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
-    if (category && category[0]) target->is_game = strcasecmp(category, "game") == 0;
-    if (category && category[0]) target->is_dlc = strcasecmp(category, "dlc") == 0;
+    if (category && category[0]) {
+        target->is_game = strcasecmp(category, "game") == 0;
+        target->is_dlc = strcasecmp(category, "dlc") == 0;
+    } else if (fmt == FMT_CATALOG) {
+        /* Compact curated game indexes omit their redundant category key. */
+        target->is_game = true;
+        target->is_dlc = false;
+    }
     char parent[32] = {0};
     if (json_extract_string(object_start, object_end, "baseTitleId", parent, sizeof(parent)) ||
         json_extract_string(object_start, object_end, "parentTitleId", parent, sizeof(parent)))

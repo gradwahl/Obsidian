@@ -981,7 +981,7 @@ static void test_latest_catalog_games(void) {
     assert(parse_catalog_json(app, json, "First source", NULL, NULL, 0) == 6);
     ui_rebuild_carousels(app);
     CarouselRow *home = &app->rows[VIEW_HOME];
-    assert(home->item_count == 2 && app->rows[VIEW_GAMES].item_count == 6);
+    assert(home->item_count == 4 && app->rows[VIEW_GAMES].item_count == 6);
     assert(strcmp(home->items[0]->title, "New game") == 0);
     assert(strcmp(home->items[1]->title, "Older game") == 0);
     home->selected_col = 1;
@@ -992,7 +992,7 @@ static void test_latest_catalog_games(void) {
         "{\"titleId\":\"NEWEST\",\"title\":\"Newest game\",\"category\":\"game\",\"createdAt\":\"2026-10-19T00:00:00Z\"}]}";
     assert(parse_catalog_json(app, later, "Later source", NULL, NULL, 0) == 2);
     ui_rebuild_carousels(app);
-    assert(home->item_count == 3 && strcmp(home->items[0]->title, "Newest game") == 0);
+    assert(home->item_count == 5 && strcmp(home->items[0]->title, "Newest game") == 0);
     assert(home->items[home->selected_col] == selected);
     assert(home->items[1]->catalog_added_at == 20261018211429ULL);
 
@@ -1010,16 +1010,32 @@ static void test_latest_catalog_games(void) {
     ui_rebuild_carousels(app);
     assert(home->item_count == MAX_ITEMS_PER_ROW);
     assert(home->items[0] == &app->catalog[300]);
-    for (int i = 1; i < home->item_count; i++) {
-        assert(home->items[i - 1]->catalog_added_at >= home->items[i]->catalog_added_at);
+    bool saw_first = false, saw_later = false, saw_undated_source = false;
+    for (int i = 0; i < home->item_count; i++) {
+        saw_first |= strcmp(home->items[i]->source_name, "First source") == 0;
+        saw_later |= strcmp(home->items[i]->source_name, "Later source") == 0;
+        saw_undated_source |= home->items[i]->source_name[0] == '\0';
     }
-    /* Missing dates never turn seed order into a supposed latest-release feed. */
+    assert(saw_first && saw_later && saw_undated_source);
+    /* A source-filtered, undated Home still displays its games in feed order.
+       No false timestamps are synthesized or shown as release dates. */
     for (int i = 0; i < app->catalog_count; i++) app->catalog[i].catalog_added_at = 0;
+    app->filters.sources_limited = true;
+    app->filters.source_count = 1;
+    SDL_strlcpy(app->filters.sources[0], "First source", sizeof(app->filters.sources[0]));
     ui_rebuild_carousels(app);
-    assert(home->item_count == 0 && home->selected_col == 0);
+    assert(home->item_count == 4);
+    for (int i = 0; i < home->item_count; i++)
+        assert(strcmp(home->items[i]->source_name, "First source") == 0);
+    SDL_strlcpy(app->filters.sources[0], "Unknown source", sizeof(app->filters.sources[0]));
+    ui_rebuild_carousels(app);
+    assert(home->item_count == 0);
+    app->filters.sources_limited = false;
+    ui_rebuild_carousels(app);
+    assert(home->item_count == MAX_ITEMS_PER_ROW);
     SDL_DestroyMutex(app->catalog_mutex);
     free(app);
-    puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection passed.");
+    puts("Home: dated source order, undated fallback, fair sources, enabled-only filters and selection passed.");
 }
 
 static void test_vsync_request(void) {
@@ -1215,6 +1231,25 @@ static void test_additional_source_snapshot(void) {
     int previous_count = app->catalog_count;
     assert(load_additional_catalog(app, &sources) == 0);
     assert(app->catalog_count == previous_count && sources == 17);
+    /* A source-only Home includes the real 20k Axekin metadata entries. */
+    app->filters.sources_limited = true;
+    app->filters.source_count = 1;
+    SDL_strlcpy(app->filters.sources[0], "Axekin", sizeof(app->filters.sources[0]));
+    GameItem *home_items[MAX_ITEMS_PER_ROW];
+    int home_count = catalog_latest_games_locked(app, home_items, MAX_ITEMS_PER_ROW);
+    assert(home_count == MAX_ITEMS_PER_ROW);
+    for (int i = 0; i < home_count; i++) {
+        assert(strcmp(home_items[i]->source_name, "Axekin") == 0);
+        assert(home_items[i]->catalog_added_at == 0);
+    }
+    app->filters.sources_limited = false;
+    home_count = catalog_latest_games_locked(app, home_items, MAX_ITEMS_PER_ROW);
+    bool saw_axekin = false, saw_other = false;
+    for (int i = 0; i < home_count; i++) {
+        saw_axekin |= strcmp(home_items[i]->source_name, "Axekin") == 0;
+        saw_other |= strcmp(home_items[i]->source_name, "Axekin") != 0;
+    }
+    assert(saw_axekin && saw_other);
     SDL_DestroyMutex(app->catalog_mutex);
     free(app);
     puts("Additional public metadata snapshot: source labels, imported games, console match and non-installable state passed.");
