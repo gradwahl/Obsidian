@@ -21,8 +21,10 @@ Linux stores the choice in SDL's user preference directory (normally
 for the current session and a notification explains that it could not be saved.
 
 Built-in descriptions, labels, notifications and catalog sync status are
-translated. Game titles and descriptions received from remote catalogs are
-displayed as supplied by their publishers. This setting changes the app's
+translated. Game titles and descriptions received from remote catalogs keep
+their publisher's language. Description markup is converted to plain text:
+HTML tags are removed, paragraphs are separated, and character entities and
+JSON Unicode escapes are decoded. This setting changes the app's
 interface language; it does not change the language inside games.
 
 Translations live in `src/translations.def` as UTF-8 text with stable `TextId`
@@ -53,6 +55,19 @@ selection, cancellation, glyph coverage for every translation, and SDL rendering
 with a dummy video driver. They use a temporary preferences
 directory. Set `WOLODRIVE_TEST_SCREENSHOTS=1` when running `make test` to save
 screenshots for each language in `build/`.
+
+Regression tests also check description cleanup and prevent false installation
+claims. Gradient coverage is checked at four window sizes with opaque and
+translucent drawing, including the fallback for older rendering backends.
+
+## Package availability
+
+This build browses remote catalogs and caches covers. Package downloading,
+installation and launching are not implemented yet. All catalog entries start
+as available; sample installed states and timer-driven download progress have
+been removed. Selecting a package action explains that it is unavailable and
+does not claim a download or installation succeeded. Remote catalog metadata
+and cached cover images are not evidence that a game is installed.
 
 For PS5, configure `PS5_PAYLOAD_SDK` and run `make ps5`.
 

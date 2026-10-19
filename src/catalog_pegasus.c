@@ -1,4 +1,5 @@
 #include "wolodrive.h"
+#include "text.h"
 #include <curl/curl.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -164,21 +165,7 @@ static bool json_extract_string(const char *obj_start, const char *obj_end, cons
         if (colon < obj_end && *colon == ':') {
             const char *val = skip_ws(colon + 1, obj_end);
             if (val < obj_end && *val == '"') {
-                val++;
-                size_t i = 0;
-                while (val < obj_end && *val != '"' && i + 1 < out_sz) {
-                    if (*val == '\\' && val + 1 < obj_end) {
-                        val++;
-                        if (*val == 'n') out[i++] = ' ';
-                        else if (*val == '"' || *val == '\\' || *val == '/') out[i++] = *val;
-                        else out[i++] = *val;
-                    } else {
-                        out[i++] = *val;
-                    }
-                    val++;
-                }
-                out[i] = '\0';
-                return (i > 0);
+                return text_decode_json_string(val + 1, obj_end, out, out_sz);
             }
         }
         p = hit + pat_len;
@@ -311,8 +298,8 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
 
-    target->description_id = (desc && desc[0]) ? TEXT_COUNT : TXT_DESCRIPTION_FALLBACK;
-    snprintf(target->description, sizeof(target->description), "%s", desc ? desc : "");
+    text_plain_description(desc, target->description, sizeof(target->description));
+    target->description_id = target->description[0] ? TEXT_COUNT : TXT_DESCRIPTION_FALLBACK;
 
     if (dl_url && dl_url[0]) {
         snprintf(target->download_url, sizeof(target->download_url), "%s", dl_url);
@@ -383,7 +370,7 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
         char title[128]      = {0};
         char id_code[32]     = {0};
         char version[32]     = {0};
-        char desc[384]       = {0};
+        char desc[4096]      = {0};
         char cover_url[512]  = {0};
         char dl_url[512]     = {0};
         char fmt_str[32]     = {0};

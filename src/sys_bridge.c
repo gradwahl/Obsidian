@@ -120,7 +120,7 @@ void sys_update_stats(SystemStats *stats) {
 
 static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
                            TextId description_id, const char *path, const char *cover_url,
-                           float size_gb, PackageFormat fmt, PackageState state, float progress,
+                           float size_gb, PackageFormat fmt,
                            uint8_t r, uint8_t g, uint8_t b) {
     if (app->catalog_count >= MAX_CATALOG_ITEMS) return;
     GameItem *it = &app->catalog[app->catalog_count++];
@@ -137,8 +137,8 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
 
     it->size_gb  = size_gb;
     it->format   = fmt;
-    it->state    = state;
-    it->progress = progress;
+    it->state    = STATE_AVAILABLE;
+    it->progress = 0.0f;
     it->cover_r  = r;
     it->cover_g  = g;
     it->cover_b  = b;
@@ -169,61 +169,61 @@ void sys_init(WolodriveApp *app) {
         TXT_DESC_SPIDER_MAN_2,
         "/data/homebrew/PPSA08338/PPSA08338.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202306/1219/1c7b75d8ed9271516546560d219ad0b22ee0a263b4537bd8.png",
-        86.4f, FMT_EXFAT, STATE_AVAILABLE, 0.0f, 185, 20, 32);
+        86.4f, FMT_EXFAT, 185, 20, 32);
 
     add_seed_entry(app, "PPSA04610", "God of War Ragnarok",
         TXT_DESC_GOD_OF_WAR,
         "/data/homebrew/PPSA04610/PPSA04610.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202207/1210/4xJ8XB3bi888QTLZYdl7Oi0s.png",
-        104.2f, FMT_EXFAT, STATE_DOWNLOADING, 42.5f, 26, 82, 148);
+        104.2f, FMT_EXFAT, 26, 82, 148);
 
     add_seed_entry(app, "PPSA01341", "Demon's Souls Remake",
         TXT_DESC_DEMONS_SOULS,
         "/data/homebrew/PPSA01341",
         "https://image.api.playstation.com/vulcan/img/rnd/202011/1717/GemRaOZaCMhGxQ9dRhnQQyT5.png",
-        53.8f, FMT_FFPKG, STATE_AVAILABLE, 0.0f, 110, 78, 38);
+        53.8f, FMT_FFPKG, 110, 78, 38);
 
     add_seed_entry(app, "PPSA07950", "Stellar Blade",
         TXT_DESC_STELLAR_BLADE,
         "/data/homebrew/PPSA07950/PPSA07950.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202401/2211/40e7cfd126a11fe5118310ebce6d9b3a23e7cab2717217c8.png",
-        34.7f, FMT_EXFAT, STATE_AVAILABLE, 0.0f, 22, 118, 132);
+        34.7f, FMT_EXFAT, 22, 118, 132);
 
     add_seed_entry(app, "PPSA01552", "Ratchet & Clank: Rift Apart",
         TXT_DESC_RATCHET_AND_CLANK,
         "/data/homebrew/PPSA01552",
         "https://image.api.playstation.com/vulcan/ap/rnd/202101/2921/DwVjpbKOsFOyPdNzmSTSWuxG.png",
-        33.6f, FMT_FFPKG, STATE_INSTALLED, 100.0f, 136, 42, 165);
+        33.6f, FMT_FFPKG, 136, 42, 165);
 
     add_seed_entry(app, "PPSA10665", "Astro Bot",
         TXT_DESC_ASTRO_BOT,
         "/mnt/ext0/homebrew/PPSA10665.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202405/2409/dc90a668a7effb6fb9b2cf55fb9cd6f7c26856c504ef1e54.png",
-        37.9f, FMT_EXFAT, STATE_AVAILABLE, 0.0f, 32, 96, 205);
+        37.9f, FMT_EXFAT, 32, 96, 205);
 
     add_seed_entry(app, "CUSA30410", "Bloodborne GOTY (60 FPS Patch)",
         TXT_DESC_BLOODBORNE,
         "/data/pkg/CUSA30410_bloodborne_60fps.pkg",
         "https://image.api.playstation.com/cdn/UP9000/CUSA00900_00/b5Qrdv032c226K9f0n37P4v2s0F17H4E.png",
-        36.2f, FMT_PKG, STATE_DOWNLOADING, 78.0f, 82, 28, 46);
+        36.2f, FMT_PKG, 82, 28, 46);
 
     add_seed_entry(app, "CUSA03041", "Red Dead Redemption 2",
         TXT_DESC_RED_DEAD_REDEMPTION,
         "/mnt/ext0/pkg/CUSA03041_rdr2.pkg",
         "https://image.api.playstation.com/cdn/UP1004/CUSA03041_00/Hpl5MtwQgOVF9vJqlfui6SDB5Jl4oBSq.png",
-        105.0f, FMT_PKG, STATE_AVAILABLE, 0.0f, 168, 62, 24);
+        105.0f, FMT_PKG, 168, 62, 24);
 
     add_seed_entry(app, "CUSA18017", "Ghost of Tsushima Director's Cut",
         TXT_DESC_GHOST_OF_TSUSHIMA,
         "/data/pkg/CUSA18017_got.pkg",
         "https://image.api.playstation.com/vulcan/ap/rnd/202106/2322/c16gs6a7lbAYzPf7ZTikbH1c.png",
-        59.1f, FMT_PKG, STATE_AVAILABLE, 0.0f, 112, 108, 42);
+        59.1f, FMT_PKG, 112, 108, 42);
 
     add_seed_entry(app, "CUSA00900", "Driveclub Complete Edition",
         TXT_DESC_DRIVECLUB,
         "/data/pkg/CUSA00900_driveclub.pkg",
         "https://image.api.playstation.com/cdn/EP9000/CUSA00003_00/4b3c01e6b1d4525a1fb42ef213b6dcac867527f32bc8cf43.png",
-        31.4f, FMT_PKG, STATE_INSTALLED, 100.0f, 152, 28, 78);
+        31.4f, FMT_PKG, 152, 28, 78);
 
     sys_update_stats(&app->stats);
     sys_send_notification(app, TR(app, TXT_STARTED), WOLODRIVE_NAME, WOLODRIVE_VERSION);
@@ -232,26 +232,9 @@ void sys_init(WolodriveApp *app) {
 void sys_trigger_action(WolodriveApp *app, GameItem *item) {
     if (!item) return;
 
-    SDL_LockMutex(app->catalog_mutex);
-    if (item->state == STATE_AVAILABLE) {
-        item->state = STATE_DOWNLOADING;
-        item->progress = 2.0f;
-        app->catalog_dirty = true;
-        SDL_UnlockMutex(app->catalog_mutex);
-        sys_send_notification(app, TR(app, TXT_DOWNLOAD_STARTED), item->title, item->id_code);
-    } else if (item->state == STATE_DOWNLOADING) {
-        float p = item->progress;
-        SDL_UnlockMutex(app->catalog_mutex);
-        sys_send_notification(app, TR(app, TXT_DOWNLOAD_ACTIVE), item->title, p);
-    } else {
-        PackageFormat fmt = item->format;
-        SDL_UnlockMutex(app->catalog_mutex);
-        if (fmt == FMT_EXFAT || fmt == FMT_FFPKG) {
-            sys_send_notification(app, TR(app, TXT_MOUNTED), item->id_code, item->install_path);
-        } else {
-            sys_send_notification(app, TR(app, TXT_PACKAGE_READY), item->id_code);
-        }
-    }
+    /* Catalog metadata and elapsed time are not evidence of installation.
+       Until a real backend exists, actions must not simulate success. */
+    sys_send_notification(app, TR(app, TXT_ACTION_UNAVAILABLE));
 }
 
 void sys_cancel_action(WolodriveApp *app, GameItem *item) {
@@ -269,33 +252,6 @@ void sys_cancel_action(WolodriveApp *app, GameItem *item) {
         app->active_row = 0;
         app->rows[0].selected_col = 0;
         sys_send_notification(app, TR(app, TXT_RETURNED));
-    }
-}
-
-void sys_update_downloads(WolodriveApp *app, float dt) {
-    bool finished_any = false;
-    char finished_title[128] = {0};
-    char finished_id[32] = {0};
-
-    SDL_LockMutex(app->catalog_mutex);
-    for (int i = 0; i < app->catalog_count; i++) {
-        GameItem *it = &app->catalog[i];
-        if (it->state == STATE_DOWNLOADING) {
-            it->progress += dt * 5.5f;
-            if (it->progress >= 100.0f) {
-                it->progress = 100.0f;
-                it->state = STATE_INSTALLED;
-                app->catalog_dirty = true;
-                finished_any = true;
-                snprintf(finished_title, sizeof(finished_title), "%s", it->title);
-                snprintf(finished_id, sizeof(finished_id), "%s", it->id_code);
-            }
-        }
-    }
-    SDL_UnlockMutex(app->catalog_mutex);
-
-    if (finished_any) {
-        sys_send_notification(app, TR(app, TXT_COMPLETE), finished_title, finished_id);
     }
 }
 

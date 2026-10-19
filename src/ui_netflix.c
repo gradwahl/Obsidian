@@ -172,18 +172,37 @@ static void fill_vertical_gradient(SDL_Renderer *r, int x, int y, int w, int h,
                                    uint8_t r1, uint8_t g1, uint8_t b1, uint8_t a1,
                                    uint8_t r2, uint8_t g2, uint8_t b2, uint8_t a2, int steps) {
     if (steps <= 0 || h <= 0 || w <= 0) return;
-    if (steps > h) steps = h;
-    for (int i = 0; i < steps; i++) {
-        float t = (float)i / (float)(steps - 1);
-        int slice_y = y + (i * h) / steps;
-        int next_y  = y + ((i + 1) * h) / steps;
-        int slice_h = next_y - slice_y;
-        uint8_t cr = (uint8_t)(r1 + (r2 - r1) * t);
-        uint8_t cg = (uint8_t)(g1 + (g2 - g1) * t);
-        uint8_t cb = (uint8_t)(b1 + (b2 - b1) * t);
-        uint8_t ca = (uint8_t)(a1 + (a2 - a1) * t);
-        fill_rect(r, x, slice_y, w, slice_h, cr, cg, cb, ca);
+    /* Separate integer slices leave gaps when the renderer scales them. Draw
+       one continuous surface so every pixel is covered exactly once. */
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    SDL_Color top = {r1, g1, b1, a1}, bottom = {r2, g2, b2, a2};
+    SDL_Vertex vertices[] = {
+        {{(float)x, (float)y}, top, {0, 0}},
+        {{(float)(x + w), (float)y}, top, {0, 0}},
+        {{(float)(x + w), (float)(y + h)}, bottom, {0, 0}},
+        {{(float)x, (float)(y + h)}, bottom, {0, 0}}
+    };
+    const int indices[] = {0, 1, 2, 0, 2, 3};
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    if (SDL_RenderGeometry(r, NULL, vertices, 4, indices, 6) == 0) return;
+#endif
+    /* Compatibility path for older SDL builds or backends without geometry. */
+    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, 1, h, 32, SDL_PIXELFORMAT_RGBA32);
+    if (!surface) return;
+    for (int i = 0; i < h; i++) {
+        float t = h > 1 ? (float)i / (float)(h - 1) : 0.0f;
+        Uint32 pixel = SDL_MapRGBA(surface->format,
+            (Uint8)(r1 + (r2 - r1) * t), (Uint8)(g1 + (g2 - g1) * t),
+            (Uint8)(b1 + (b2 - b1) * t), (Uint8)(a1 + (a2 - a1) * t));
+        *(Uint32 *)((Uint8 *)surface->pixels + i * surface->pitch) = pixel;
     }
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(r, surface);
+    SDL_FreeSurface(surface);
+    if (!texture) return;
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_Rect destination = {x, y, w, h};
+    SDL_RenderCopy(r, texture, NULL, &destination);
+    SDL_DestroyTexture(texture);
 }
 
 /* Wielowarstwowy, miękki cień (Drop Shadow) pod kafelkiem */

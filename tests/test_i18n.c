@@ -115,13 +115,13 @@ static void test_live_switching(void) {
         assert(!app->language_menu_open);
         assert(SDL_AtomicGet(&app->language) == (int)expected);
         assert(app->rows[0].items[app->rows[0].selected_col] == selected);
-        assert(app->catalog[1].state == STATE_DOWNLOADING);
-        assert(app->catalog[1].progress == 42.5f);
+        assert(app->catalog[1].state == STATE_AVAILABLE);
+        assert(app->catalog[1].progress == 0.0f);
         assert(strcmp(app->rows[0].title, TR(app, TXT_ROW_RECENT)) == 0);
         assert(i18n_load_language(app->language_path, LANG_COUNT) == expected);
         sys_trigger_action(app, selected);
-        assert(strstr(app->toast_message, selected->title));
-        sys_cancel_action(app, selected);
+        assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
+        assert(selected->state == STATE_AVAILABLE && selected->progress == 0.0f);
         app->sync_status_id = TXT_SYNC_SUBCATALOG;
         app->sync_current = 1;
         app->sync_total = 3;

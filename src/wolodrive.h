@@ -160,7 +160,6 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...);
 void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);
 void sys_cancel_action(WolodriveApp *app, GameItem *item);
-void sys_update_downloads(WolodriveApp *app, float dt);
 const char *sys_format_to_string(PackageFormat fmt);
 const char *sys_format_short_badge(PackageFormat fmt);
 

@@ -101,7 +101,6 @@ int main(int argc, char *argv[]) {
             app.last_stats_update = now;
         }
 
-        sys_update_downloads(&app, dt);
         ui_update_animations(&app, dt);
         ui_render(&app);
     }

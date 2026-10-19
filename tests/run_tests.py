@@ -27,3 +27,9 @@ with tempfile.TemporaryDirectory(prefix="wolodrive-i18n-") as data_dir:
         env={**os.environ, "XDG_DATA_HOME": data_dir, "SDL_VIDEODRIVER": "dummy"},
         check=True,
     )
+
+    subprocess.run(
+        ["./build/test_regressions"],
+        env={**os.environ, "XDG_DATA_HOME": data_dir, "SDL_VIDEODRIVER": "dummy"},
+        check=True,
+    )
