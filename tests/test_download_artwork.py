@@ -29,6 +29,15 @@ class DownloadArtworkTests(unittest.TestCase):
                 root = f"http://127.0.0.1:{self.server.server_port}"
                 if self.path == "/sources.json":
                     data = {"sources": [{"name": "Fixture", "url": root + "/catalog.json"}]}
+                elif self.path == "/removed-sources.json":
+                    data = {"sources": [
+                        {"id": "evox-coreos", "url": root + "/broken-id.json"},
+                        {"name": "evoX-CoreOS", "url": root + "/broken-name.json"},
+                        {"url": root + "/evoX-CoreOS/catalog.json"},
+                        *[{"id": name, "url": root + "/" + name + ".json"}
+                          for name in ("dlps", "pippo", "pfs", "zer0")]]}
+                elif self.path in ("/dlps.json", "/pippo.json", "/pfs.json", "/zer0.json"):
+                    data = {"games": []}
                 elif self.path == "/catalog.json":
                     data = {"name": "Fixture", "games": [
                         {"titleId": "PPSA12345", "title": "中文 Game", "boxArtUrl": root + "/box",
@@ -53,6 +62,15 @@ class DownloadArtworkTests(unittest.TestCase):
         cls.server.shutdown()
         cls.thread.join()
         cls.server.server_close()
+
+    def test_removed_source_is_never_requested(self):
+        self.requests.clear()
+        _images, errors = artwork.collect([self.root + "/removed-sources.json"])
+        self.assertEqual(errors, [])
+        for name in ("dlps", "pippo", "pfs", "zer0"):
+            self.assertEqual(self.requests["/" + name + ".json"], 1)
+        for blocked in ("/broken-id.json", "/broken-name.json", "/evoX-CoreOS/catalog.json"):
+            self.assertEqual(self.requests[blocked], 0)
 
     def test_hash_and_file_types(self):
         self.assertEqual(artwork.cache_name("hello"), "a430d84680aabd0b.art")

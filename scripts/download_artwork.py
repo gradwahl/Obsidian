@@ -56,6 +56,8 @@ def collect(catalogs):
     errors = []
     while pending:
         url = pending.pop(0)
+        if "/evox-coreos/" in url.lower():
+            continue
         if url in visited:
             continue
         if len(visited) >= 64:
@@ -74,6 +76,9 @@ def collect(catalogs):
                 for item in value:
                     walk(item, source)
             elif isinstance(value, dict):
+                if any(str(value.get(key, "")).lower() == "evox-coreos" for key in ("id", "name")) or any(
+                        "/evox-coreos/" in str(value.get(key, "")).lower() for key in ("url", "sourceUrl", "catalogUrl")):
+                    return
                 containers = [value[k] for k in ("packages", "games", "sources", "catalogs") if k in value]
                 if containers:
                     for container in containers:

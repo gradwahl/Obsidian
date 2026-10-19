@@ -477,12 +477,22 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
         bool has_dl = json_extract_download_link(obj_start, obj_end, dl_url, sizeof(dl_url));
 
         /* Jeśli obiekt wskazuje na zewnętrzny pod-katalog JSON (w default-sources.json) */
-        if (subcatalog_urls && subcatalog_count && *subcatalog_count < max_subcatalogs) {
+        if (subcatalog_urls && subcatalog_count) {
             char sub_url[512] = {0};
             if (!json_extract_string(obj_start, obj_end, "catalogUrl", sub_url, sizeof(sub_url))) {
                 if (!json_extract_string(obj_start, obj_end, "sourceUrl", sub_url, sizeof(sub_url))) {
                     json_extract_string(obj_start, obj_end, "url", sub_url, sizeof(sub_url));
                 }
+            }
+            /* evoX-CoreOS is broken; do not re-add it from the upstream manifest. */
+            char source_id[64] = {0}, source_name[64] = {0};
+            json_extract_string(obj_start, obj_end, "id", source_id, sizeof(source_id));
+            json_extract_string(obj_start, obj_end, "name", source_name, sizeof(source_name));
+            if (strcasecmp(source_id, "evox-coreos") == 0 ||
+                strcasecmp(source_name, "evox-coreos") == 0 ||
+                strcasestr(sub_url, "/evox-coreos/") != NULL) {
+                p = obj_end + 1;
+                continue;
             }
             if (strncmp(sub_url, "http", 4) == 0 &&
                 (strcasestr(sub_url, ".json") != NULL || (!has_id && !has_cover))) {
@@ -493,10 +503,13 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
                         break;
                     }
                 }
-                if (!dup) {
+                if (!dup && *subcatalog_count < max_subcatalogs) {
                     snprintf(subcatalog_urls[*subcatalog_count], 512, "%s", sub_url);
                     (*subcatalog_count)++;
                 }
+                /* Manifest descriptors are source references, not packages. */
+                p = obj_end + 1;
+                continue;
             }
         }
 

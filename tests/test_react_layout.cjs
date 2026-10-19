@@ -30,6 +30,14 @@ const { NativeViewport } = require('../src/components/NativeViewport.tsx');
 const { fittedFontSize } = require('../src/components/FittedText.tsx');
 const { GameDetailModal } = require('../src/components/GameDetailModal.tsx');
 const { LibraryBrowser } = require('../src/components/LibraryBrowser.tsx');
+const { isAvailableCatalogSource } = require('../src/catalog.ts');
+const sources = [
+  { id: 'evox-coreos', url: 'https://example.test/broken.json' },
+  { name: 'evoX-CoreOS' },
+  { sourceUrl: 'https://example.test/evoX-CoreOS/catalog.json' },
+  ...['dlps', 'pippo', 'pfs', 'zer0'].map(id => ({ id, url: `https://example.test/${id}.json` }))
+];
+assert.deepEqual(sources.filter(isAvailableCatalogSource).map(source => source.id), ['dlps', 'pippo', 'pfs', 'zer0']);
 const { t } = require('../src/translations.ts');
 const native = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'src/native.css'), 'utf8');

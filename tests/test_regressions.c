@@ -1149,9 +1149,39 @@ static void test_text_cache(void) {
     puts("Text cache: reuse, UTF-8, wrapping, fonts, colors, translation changes, bounded eviction and cleanup passed.");
 }
 
+static void test_removed_catalog_source(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    char urls[24][512];
+    int count = 0;
+    const char *manifest = "{\"sources\":["
+        "{\"id\":\"evox-coreos\",\"url\":\"https://example.test/broken-id.json\"},"
+        "{\"name\":\"evoX-CoreOS\",\"url\":\"https://example.test/broken-name.json\"},"
+        "{\"catalogUrl\":\"https://example.test/evoX-CoreOS/catalog.json\"},"
+        "{\"id\":\"dlps\",\"url\":\"https://example.test/dlps.json\"},"
+        "{\"id\":\"pippo\",\"url\":\"https://example.test/pippo.json\"},"
+        "{\"id\":\"pfs\",\"url\":\"https://example.test/pfs.json\"},"
+        "{\"id\":\"zer0\",\"url\":\"https://example.test/zer0.json\"}]}";
+    parse_catalog_json(app, manifest, "Test", urls, &count, 24);
+    assert(count == 4);
+    assert(app->catalog_count == 0); /* Source metadata must not become game/source rows. */
+    const char *allowed[] = {"dlps", "pippo", "pfs", "zer0"};
+    for (int i = 0; i < count; i++) {
+        char expected[128];
+        snprintf(expected, sizeof(expected), "https://example.test/%s.json", allowed[i]);
+        assert(strcmp(urls[i], expected) == 0);
+    }
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Removed evoX-CoreOS references are excluded; all four remaining sources are retained.");
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
+    test_removed_catalog_source();
     test_artwork_metadata();
     test_truthful_catalog_state();
     test_native_artwork_bounds();

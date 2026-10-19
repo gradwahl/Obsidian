@@ -9,7 +9,7 @@ import { LibraryBrowser } from './components/LibraryBrowser';
 import { SettingsView } from './components/SettingsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
-import { INITIAL_CATALOG, getLatestGames, getDistinctSources, matchesFilters } from './catalog';
+import { INITIAL_CATALOG, getLatestGames, getDistinctSources, matchesFilters, isAvailableCatalogSource } from './catalog';
 import { t } from './translations';
 
 export function App() {
@@ -171,7 +171,7 @@ export function App() {
       );
       if (res.ok) {
         const manifest = await res.json();
-        const sourcesCount = manifest.sources?.length || 5;
+        const sourcesCount = Array.isArray(manifest.sources) ? manifest.sources.filter(isAvailableCatalogSource).length : 4;
         setSyncStatus(
           t(
             language,
@@ -194,11 +194,11 @@ export function App() {
         );
       } else {
         setSyncStatus(t(language, 'TXT_READY'));
-        showToast(t(language, 'TXT_SYNC_DONE', catalog.length, 5, 244, catalog.length));
+        showToast(t(language, 'TXT_SYNC_DONE', catalog.length, 4, 244, catalog.length));
       }
     } catch {
       setSyncStatus(t(language, 'TXT_READY'));
-      showToast(t(language, 'TXT_SYNC_DONE', catalog.length, 5, 244, catalog.length));
+      showToast(t(language, 'TXT_SYNC_DONE', catalog.length, 4, 244, catalog.length));
     } finally {
       setSyncInProgress(false);
     }

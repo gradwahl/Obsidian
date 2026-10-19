@@ -3,6 +3,11 @@ import rawCatalog from './catalogData.json';
 
 export const INITIAL_CATALOG: GameItem[] = (rawCatalog as GameItem[]) || [];
 
+export function isAvailableCatalogSource(source: { id?: string; name?: string; url?: string; catalogUrl?: string; sourceUrl?: string }): boolean {
+  return source.id?.toLowerCase() !== 'evox-coreos' && source.name?.toLowerCase() !== 'evox-coreos' &&
+    ![source.url, source.catalogUrl, source.sourceUrl].some(url => url?.toLowerCase().includes('/evox-coreos/'));
+}
+
 export function normalizeTitleKey(title: string): string {
   let s = title.trim();
   // Strip package format tags like [exfat], [ffpkg], [pkg]

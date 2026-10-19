@@ -4,6 +4,12 @@ SDL2 homebrew catalog interface for Linux and PS5.
 
 ## React web preview
 
+Catalog sources: DLPS Catalog, Pippo .exFAT, PFS Catalog, and ZER0GAME Catalog.
+The broken evoX-CoreOS source is excluded from native catalog discovery, the
+artwork downloader, and React's manifest source count, even if upstream lists it.
+React still uses its bundled catalog; fetching the manifest does not import the
+remote catalogs into the browser.
+
 This branch also includes the React browser interface from `experimental`, alongside
 the SDL2 app. The native application continues to use `make` and the C sources;
 the browser preview uses the TypeScript/React sources and separate npm commands.
