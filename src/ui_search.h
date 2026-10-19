@@ -63,6 +63,7 @@ static void search_rebuild_locked(WolodriveApp *app) {
     app->search_count = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
+        if (!settings_accepts_item(app, item)) continue;
         if (!search_contains(item->title, app->search_query) && !search_contains(item->id_code, app->search_query)) continue;
         bool duplicate = false;
         uint64_t hash = search_title_hash(item);
@@ -76,7 +77,7 @@ static void search_rebuild_locked(WolodriveApp *app) {
     }
     app->search_selected = 0;
     for (int i = 0; i < app->search_count; i++)
-        if (previous && search_same_game(app->search_results[i], previous)) {
+        if (previous && settings_accepts_item(app, previous) && search_same_game(app->search_results[i], previous)) {
             app->search_selected = i;
             app->search_results[i] = previous;
         }
@@ -228,7 +229,9 @@ static void render_search(WolodriveApp *app) {
         if (!app->sidebar_focus && app->search_results_focus && i == app->search_selected)
             draw_border(r, box.x - 3, box.y - 3, box.w + 6, box.h + 6, 3,245,245,245,255);
     }
-    if (!app->search_count) draw_text(r, app->font_body, TR(app, TXT_SEARCH_EMPTY), 820, 230, muted, 950);
+    if (!app->search_count) draw_text(r, app->font_body,
+        TR(app, app->filter_source[0] || app->filter_format ? TXT_SETTINGS_NO_MATCHES : TXT_SEARCH_EMPTY),
+        820, 230, muted, 950);
     if (app->search_count) {
         snprintf(count, sizeof(count), "%d / %d", app->search_selected + 1, app->search_count);
         draw_text(r, app->font_micro, count, 820, 950, muted, 0);

@@ -331,7 +331,19 @@ int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacit
     if (capacity <= 0) return 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
-        if (!item->is_game || !item->catalog_added_at) continue;
+        if (!item->is_game || !item->catalog_added_at || !settings_accepts_item(app, item)) continue;
+        /* Retain source packages in storage, but show one latest dated copy of
+           an identically named title per console family on Home. */
+        bool duplicate = false;
+        for (int j = 0; j < count; j++) {
+            if (SDL_strcasecmp(item->title, items[j]->title) != 0 ||
+                SDL_strncasecmp(item->id_code, items[j]->id_code, 4) != 0) continue;
+            if (!newer_game(item, items[j])) { duplicate = true; break; }
+            for (int k = j; k+1 < count; k++) items[k] = items[k+1];
+            count--;
+            break;
+        }
+        if (duplicate) continue;
         int position = 0;
         while (position < count && !newer_game(item, items[position])) position++;
         if (position >= capacity) continue;
@@ -415,9 +427,10 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     /* Sprawdź czy gra o tym samym ID lub tytule już istnieje – jeśli tak, zaktualizuj dane */
     GameItem *target = NULL;
     for (int i = 0; i < app->catalog_count; i++) {
-        if ((id_code[0] && strcasecmp(app->catalog[i].id_code, id_code) == 0 &&
-             strcasecmp(app->catalog[i].title, title) == 0) ||
-            strcasecmp(app->catalog[i].title, title) == 0) {
+        if (strcasecmp(app->catalog[i].title, title) == 0 &&
+            strcasecmp(app->catalog[i].source_name, catalog_name && catalog_name[0] ? catalog_name : "Pegasus-DL") == 0 &&
+            strcasecmp(app->catalog[i].id_code, id_code && id_code[0] ? id_code : "PPSA00001") == 0 &&
+            app->catalog[i].format == fmt) {
             target = &app->catalog[i];
             break;
         }

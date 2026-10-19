@@ -64,6 +64,7 @@ typedef enum {
     VIEW_PAYLOADS,
     VIEW_DOWNLOADS,
     VIEW_SEARCH,
+    VIEW_SETTINGS,
     VIEW_COUNT
 } SidebarView;
 #define TOTAL_ROWS              VIEW_COUNT
@@ -147,6 +148,10 @@ typedef struct {
 typedef struct {
     SDL_atomic_t language;
     char language_path[512];
+    char settings_path[512];
+    char filter_source[64]; /* Empty means all sources. */
+    int filter_format;     /* 0=all; otherwise PackageFormat + 1. */
+    int settings_selection;
     bool language_menu_open;
     int language_menu_index;
     TranslationService *translations;
@@ -208,6 +213,9 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...);
 void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);
 void sys_cancel_action(WolodriveApp *app, GameItem *item);
+bool settings_accepts_item(const WolodriveApp *app, const GameItem *item);
+bool settings_load(WolodriveApp *app);
+bool settings_save(const WolodriveApp *app);
 const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt);
 const char *sys_format_short_badge(PackageFormat fmt);
 

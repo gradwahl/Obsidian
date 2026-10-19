@@ -20,7 +20,7 @@ preview: linux
 build-linux:
 	@mkdir -p build assets/covers
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 \
-	    src/main.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
+	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -o build/wolodrive \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` \
 	    -lm -lpthread
@@ -29,15 +29,15 @@ build-linux:
 test:
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
+	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -o build/test_i18n \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_regressions.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c \
+	    tests/test_regressions.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c \
 	    -o build/test_regressions \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_translation.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c \
+	    tests/test_translation.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c \
 	    -o build/test_translation \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
 	python3 tests/run_tests.py
@@ -50,7 +50,7 @@ ps5:
 	fi
 	clang --target=x86_64-scei-ps5 -D_GNU_SOURCE -O2 -Wall -D__PS5__ \
 	    -I"${PS5_PAYLOAD_SDK}/include" -I"${PS5_PAYLOAD_SDK}/include/SDL2" \
-	    src/main.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
+	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -L"${PS5_PAYLOAD_SDK}/lib" \
 	    -lSDL2 -lSDL2_ttf -lSDL2_image -lfreetype -lpng -ljpeg -lwebp -lcurl -lssl -lcrypto -lz -lpthread -lkernel -lm \
 	    -o build/wolodrive.elf

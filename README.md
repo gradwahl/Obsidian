@@ -14,12 +14,12 @@ composition depends on the available source image.
 Use **Left/Right** or the controller **D-pad** to select a game. Press **Left**
 again at the first card or leftmost grid column to focus the far-left sidebar.
 Only while the sidebar has its white focus outline, **Up/Down**
-switch between **Search**, **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**, and
-**Downloads**. Press **Right / Enter / Cross** to return to the content without
+switch between **Search**, **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**,
+**Downloads**, and **Settings**. Press **Right / Enter / Cross** to return to the content without
 changing its selection. Up/Down within content stays in the current section;
 at the top of a grid, Up keeps focus in the grid.
 Each sidebar entry has a text label and an icon: magnifier, house, gamepad,
-joystick, folder, chip, and download arrow. Click an entry to switch sections,
+joystick, folder, chip, download arrow, and settings sliders. Click an entry to switch sections,
 or click a cover to open its game panel. **Enter/Space** or controller **Cross**
 also opens the focused game's panel. Download and installation availability is described
 below. Each category remembers its selection; the row scrolls to bring that game
@@ -51,6 +51,29 @@ same results. Package actions are inside the **Install** tab.
 In the search grid, **Escape / Circle** focuses the sidebar. **F5** refreshes the
 catalog. The search query persists when switching sections; typing letters there
 does not trigger catalog shortcuts. The globe and **Square** still open languages.
+
+### Settings and catalog filters
+
+**Settings**, directly below Downloads, filters the catalog by download source
+and package format. Source choices use the loaded catalog's website/source labels;
+choose **All sources** to show every source. Formats are **All formats**,
+**.exfat**, **Folder (.ffpkg)**, and **.pkg**. Both filters apply together to Home,
+Games/Roms and its console counts, Downloads, Search, and Install/DLC package cards.
+Filtering happens before the 128-item list limits and Search's duplicate grouping.
+All source and format packages are retained in the catalog; re-syncing updates
+only the matching source/format/title-ID/title record. Home still shows the newest
+dated copy of an identically named game per console family.
+
+Focus Settings with **Right / Enter / Cross** from the sidebar. **Up/Down** selects
+Source, Format, or **Reset filters**. **Right / Enter / Cross** cycles the selected
+option; click its **< / >** controls to cycle in either direction. **Left / Circle**
+returns to the sidebar. Changes apply immediately and save automatically to
+`filters` beside the saved language preference (SDL's user preference directory on
+desktop, `/data/homebrew/wolodrive/filters` on PS5). Save failures are reported while
+keeping the session's changes. Missing or invalid files default to all sources
+and formats. A saved source missing from the current catalog stays selected until
+changed; empty lists explain how to reset the filters. Source choices always come
+from the full loaded catalog, including sources hidden by the current filters.
 
 ### Game panels
 
@@ -259,6 +282,12 @@ package availability, explicit DLC relationships, screenshot-link parsing and
 filtering, empty states and modal close/return behavior. Saved SDL renders were
 inspected for layout, and the panel with real artwork and readable details was
 inspected in WSLg. Live interaction checks were interrupted by Escape.
+Settings regressions cover combined source/format filters before list limits and
+grouping, source package retention, console counts, selection bounds, saved and
+malformed preferences, unavailable sources, reset, and mouse/keyboard/controller
+input. The Settings layout was inspected in saved SDL renders and in WSLg;
+live source-selection checks were interrupted by Escape. Native Windows and PS5
+builds and a separate native Linux graphical session remain unverified.
 The Linux build and automated search checks were run through WSL. Native Windows
 and PS5 builds and a separate native Linux graphical session remain unverified;
 the WSLg Search screen's visual and live interaction checks were interrupted.

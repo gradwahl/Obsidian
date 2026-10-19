@@ -32,6 +32,7 @@ static int game_entries(WolodriveApp *app, GameItem **entries) {
     SDL_LockMutex(app->catalog_mutex);
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *candidate = &app->catalog[i];
+        if (!settings_accepts_item(app, candidate)) continue;
         bool related_dlc = candidate->is_dlc && !base->is_dlc &&
             base->id_code[0] && strcmp(base->id_code, "PPSA00001") != 0 &&
             SDL_strcasecmp(candidate->parent_title_id[0] ? candidate->parent_title_id : candidate->id_code,

@@ -68,8 +68,9 @@ static void test_truthful_catalog_state(void) {
         "{\"titleId\":\"PPSA08338\",\"title\":\"Marvel's Spider-Man 2\","
         "\"description\":\"<p>Notes: &amp; \\u4e2d\\u6587</p>\",\"installed\":true},"
         "{\"titleId\":\"TEST00001\",\"title\":\"Remote test\",\"description\":\"<p> </p>\",\"state\":\"installed\"}]}";
+    int imported_start = app->catalog_count;
     assert(parse_catalog_json(app, json, "Test", NULL, NULL, 0) == 2);
-    assert(strcmp(app->catalog[0].description, "Notes: & 中文") == 0);
+    assert(strcmp(app->catalog[imported_start].description, "Notes: & 中文") == 0);
     assert(app->catalog[app->catalog_count - 1].description_id == TXT_DESCRIPTION_FALLBACK);
     for (int i = 0; i < app->catalog_count; i++) {
         assert(app->catalog[i].state == STATE_AVAILABLE && app->catalog[i].progress == 0.0f);
@@ -337,6 +338,112 @@ static void test_game_details(WolodriveApp *app) {
     ui_handle_input(app, &event);
     assert(!app->detail_open);
     puts("Shared game panel: all entry points, four tabs, install truthfulness, related DLC, screenshot metadata and modal return passed.");
+}
+
+static void test_settings(WolodriveApp *app) {
+    char original_path[512];
+    SDL_strlcpy(original_path, app->settings_path, sizeof(original_path));
+    SDL_strlcpy(app->settings_path, "build/filter-test.preferences", sizeof(app->settings_path));
+    const char *exfat = "{\"games\":[{\"titleId\":\"PPSA88888\",\"title\":\"SettingsGame\",\"category\":\"game\",\"format\":\"exfat\",\"createdAt\":\"2026-10-19T00:00:00Z\"}]}";
+    const char *folder = "{\"games\":[{\"titleId\":\"PPSA88888\",\"title\":\"SettingsGame\",\"category\":\"game\",\"format\":\"ffpkg\",\"createdAt\":\"2026-10-19T00:00:00Z\"}]}";
+    const char *pkg = "{\"games\":[{\"titleId\":\"PPSA88888\",\"title\":\"SettingsGame\",\"category\":\"game\",\"format\":\"pkg\",\"createdAt\":\"2026-10-19T00:00:00Z\"}]}";
+    int first = app->catalog_count;
+    assert(parse_catalog_json(app, exfat, "Source Alpha", NULL, NULL, 0) == 1);
+    assert(parse_catalog_json(app, folder, "Source Beta", NULL, NULL, 0) == 1);
+    assert(parse_catalog_json(app, pkg, "Source Alpha", NULL, NULL, 0) == 1);
+    assert(app->catalog_count == first+3);
+    assert(parse_catalog_json(app, exfat, "Source Alpha", NULL, NULL, 0) == 1);
+    assert(app->catalog_count == first+3); /* Re-sync updates only its own package. */
+    GameItem *alpha = &app->catalog[first], *beta = &app->catalog[first+1];
+    app->detail_open = false;
+    app->search_query[0] = '\0';
+    search_edit(app, "SettingsGame", false);
+    assert(app->search_count == 1);
+    SDL_strlcpy(app->filter_source, "Source Beta", sizeof(app->filter_source));
+    app->active_row = VIEW_HOME;
+    app->rows[VIEW_GAMES].selected_col = 127;
+    ui_rebuild_carousels(app);
+    assert(app->search_count == 1 && app->search_results[0] == beta);
+    assert(app->rows[VIEW_HOME].item_count == 1 && app->rows[VIEW_HOME].items[0] == beta);
+    assert(app->rows[VIEW_GAMES].item_count == 1 && app->rows[VIEW_GAMES].selected_col == 0);
+    app->active_row = VIEW_GAMES;
+    app->library_company = 0;
+    app->library_console_selection = 4;
+    app->library_depth = LIBRARY_GAMES;
+    ui_rebuild_carousels(app);
+    assert(app->rows[VIEW_GAMES].item_count == 1);
+    assert(library_console_game_count(app, library_console_at(0, 4)) == 1);
+    ui_open_game(app, beta);
+    GameItem *entries[MAX_CATALOG_ITEMS];
+    assert(game_entries(app, entries) == 1 && entries[0] == beta);
+    app->detail_open = false;
+    select_sidebar_view(app, VIEW_DOWNLOADS);
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_SETTINGS && app->sidebar_focus);
+    assert(sidebar_target(VIEW_SETTINGS).y == sidebar_target(VIEW_DOWNLOADS).y + 90);
+    event.key.keysym.sym = SDLK_RIGHT;
+    ui_handle_input(app, &event);
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->settings_selection == 1 && !app->sidebar_focus);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(app->filter_format == 1 && !app->search_count && !app->rows[VIEW_HOME].item_count);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app, &event);
+    assert(app->filter_format == 2 && app->search_count == 1);
+    app->filter_format = 3;
+    settings_changed(app);
+    assert(!app->search_count);
+    app->filter_source[0] = '\0';
+    settings_changed(app);
+    assert(app->search_count == 1 && app->search_results[0] == &app->catalog[first+2]);
+    /* Preferences round-trip, malformed input fallback and missing sources. */
+    SDL_strlcpy(app->filter_source, "A source\n中文", sizeof(app->filter_source));
+    assert(settings_save(app));
+    app->filter_source[0] = '\0'; app->filter_format = 0;
+    assert(settings_load(app) && app->filter_format == 3 && strcmp(app->filter_source, "A source\n中文") == 0);
+    FILE *bad = fopen(app->settings_path, "wb");
+    assert(bad); fputs("WOLODRIVE_FILTERS_1\n99\n4000\n", bad); fclose(bad);
+    assert(!settings_load(app) && !app->filter_source[0] && !app->filter_format);
+    SDL_strlcpy(app->filter_source, "Unavailable source", sizeof(app->filter_source));
+    ui_rebuild_carousels(app);
+    assert(!app->search_count);
+    settings_cycle_source(app, 1);
+    assert(!app->filter_source[0]); /* Missing saved source can always return to All. */
+    /* Mouse reset restores every source and format, keeping the source packages. */
+    app->filter_format = 1;
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = settings_target(2).x+20;
+    event.button.y = settings_target(2).y+20;
+    ui_handle_input(app, &event);
+    assert(!app->filter_source[0] && !app->filter_format && settings_accepts_item(app, alpha));
+    assert(app->search_count == 1);
+    ui_render(app);
+    if (getenv("WOLODRIVE_TEST_SCREENSHOTS")) {
+        int w, h;
+        SDL_GetRendererOutputSize(app->renderer, &w, &h);
+        SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+        assert(surface && SDL_RenderReadPixels(app->renderer, NULL, surface->format->format, surface->pixels, surface->pitch) == 0);
+        assert(SDL_SaveBMP(surface, "build/settings-preview.bmp") == 0);
+        SDL_FreeSurface(surface);
+    }
+    assert(remove(app->settings_path) == 0);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+    ui_handle_input(app, &event);
+    assert(app->sidebar_focus);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_DOWNLOADS);
+    SDL_strlcpy(app->settings_path, original_path, sizeof(app->settings_path));
+    puts("Settings: sidebar order, source/format intersections, package retention, selection, input, persistence, missing sources and reset passed.");
 }
 
 static void test_tv_catalog_navigation(void) {
@@ -705,6 +812,7 @@ static void test_tv_catalog_navigation(void) {
     puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
     test_search(app);
     test_game_details(app);
+    test_settings(app);
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);
     SDL_DestroyWindow(app->window);

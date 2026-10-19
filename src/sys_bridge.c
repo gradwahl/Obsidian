@@ -155,14 +155,17 @@ void sys_init(WolodriveApp *app) {
 #ifdef __PS5__
     mkdir(WOLODRIVE_DATA_PATH, 0755);
     snprintf(app->language_path, sizeof(app->language_path), "%s/language", WOLODRIVE_DATA_PATH);
+    snprintf(app->settings_path, sizeof(app->settings_path), "%s/filters", WOLODRIVE_DATA_PATH);
 #else
     char *pref_path = SDL_GetPrefPath("Wolodrive", "Wolodrive");
     if (pref_path) {
         snprintf(app->language_path, sizeof(app->language_path), "%slanguage", pref_path);
+        snprintf(app->settings_path, sizeof(app->settings_path), "%sfilters", pref_path);
         SDL_free(pref_path);
     }
 #endif
     SDL_AtomicSet(&app->language, i18n_load_language(app->language_path, i18n_detect_language()));
+    settings_load(app);
     app->sync_status_id = TXT_READY;
     if (app->window) SDL_SetWindowTitle(app->window, TR(app, TXT_WINDOW_TITLE));
 
