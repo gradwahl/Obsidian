@@ -2,6 +2,27 @@
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
+### Full public catalogue coverage
+
+A source-by-source completeness audit is maintained in
+[`docs/source_index_coverage.md`](docs/source_index_coverage.md).
+In addition to Axekin, the static web preview now loads complete public
+WordPress indexes (SuperPSX, DownloadGamePSP, Ziperto), TSV indexes
+(NoPayStation, PSN-Content), Archive.org public collections (AlvRo and
+maelly_pooh) and RomsTime's public game sitemap. GFS and RomHeaven are fully
+indexed in the main `additional.json` snapshot using
+`python scripts/import_sources.py --limit 64 --full-small`.
+
+**Platform compatibility:** these new full indexes only retain Games/Roms
+consoles, excluding Vita, PC games and unsupported categories. The website
+sources use category/sitemap/platform labels, not guessed console names.
+Full website indexes are deferred chunks in the React preview. The **native
+app is still bounded** by a 26,000-entry in-memory catalogue and only uses the
+smaller snapshots for these additional sources; bringing every new item into
+the native app requires a compact or disk-backed catalogue, not merely a
+larger fixed array. The audit lists six sources whose enumeration remains
+unverified. No package downloads or license material are stored.
+
 ### Additional public website catalogs (metadata only)
 
 The curated `config/additional_sources.json` file registers 17 website feeds and

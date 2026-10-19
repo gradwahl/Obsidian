@@ -520,6 +520,59 @@ def gfs(source, limit):
     return rows[:limit], True
 
 
+def gfs_full(source, page_size=100):
+    """Read every page of every public GFS pack, verifying the total count."""
+    rows = []
+    coverage = {}
+    for pack in source["packs"]:
+        first = json.loads(fetch(source["url"] + "api/packages?" +
+                                 urllib.parse.urlencode({"page": 1, "limit": page_size, "pack": pack})))
+        total = int(first.get("total", -1))
+        pages = int(first.get("totalPages", 0))
+        if total < 0 or pages < 1 or pages > 200:
+            raise ValueError("GFS page count missing or unexpectedly large")
+        all_items = list(first.get("packages", []))
+        for page in range(2, pages + 1):
+            result = json.loads(fetch(source["url"] + "api/packages?" +
+                                      urllib.parse.urlencode({"page": page, "limit": page_size, "pack": pack})))
+            if int(result.get("page", page)) != page:
+                raise ValueError(f"GFS {pack} returned mismatched page {page}")
+            if int(result.get("total", -1)) != total:
+                raise ValueError(f"GFS {pack} changed during pagination")
+            all_items.extend(result.get("packages", []))
+        if len(all_items) != total:
+            raise ValueError(f"GFS {pack} partial: {len(all_items)}/{total}")
+        coverage[pack] = {"pages": pages, "items": total}
+        for item in all_items:
+            if not item.get("title") or not item.get("id"):
+                continue
+            # GFS currently publishes PS5 packs. Do not treat them as every
+            # platform just because their title includes a console keyword.
+            result = record(source, item["title"], source["url"],
+                            identity="EXT-" + hashlib.sha256(
+                                (source["id"] + str(item["id"]) + pack).encode()).hexdigest()[:20],
+                            system="sony-ps5", cover=item.get("posterUrl") or "",
+                            size=item.get("sizeBytes") or 0)
+            result["version"] = str(item.get("version") or "") + " / " + pack
+            rows.append(result)
+    return rows, {"packs": coverage, "indexed": len(rows)}
+
+
+def romheaven_full(source):
+    """Consume the complete published CSV and verify its playable rows."""
+    rows, more = romheaven(source, 100000)
+    if more:
+        raise ValueError("RomHeaven CSV unexpectedly exceeded full importer capacity")
+    text = fetch(source["feed_url"])
+    data = list(csv.DictReader(io.StringIO(text)))
+    expected = sum(bool((row.get("filename") or "").strip() and
+                        (row.get("display_name") or row.get("filename") or "").strip())
+                   for row in data)
+    if len(rows) != expected:
+        raise ValueError(f"RomHeaven incomplete: {len(rows)}/{expected}")
+    return rows, {"csvRecords": len(data), "indexed": len(rows)}
+
+
 def archive(source, limit):
     uploader = ""
     if source.get("seed_identifier"):
@@ -581,6 +634,8 @@ def main(argv=None):
     parser.add_argument("--limit", type=int, default=256, help="Maximum metadata entries per source (1-400)")
     parser.add_argument("--full-axekin", action="store_true",
                         help="Index every Axekin page into a separate, console-filtered snapshot")
+    parser.add_argument("--full-small", action="store_true",
+                        help="Exhaustively index GFS and RomHeaven with verified totals")
     args = parser.parse_args(argv)
     if not 1 <= args.limit <= 400:
         parser.error("--limit must be between 1 and 400 to preserve native catalog capacity")
@@ -590,6 +645,25 @@ def main(argv=None):
     old = {item["id"]: item for item in previous["sources"]}
     with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(lambda source: import_source(source, args.limit, old.get(source["id"])), sources))
+    if args.full_small:
+        for source_id, importer in (("gfs", gfs_full), ("romheaven", romheaven_full)):
+            source = next(item for item in sources if item["id"] == source_id)
+            print(f"{source['name']}: fetching every published record...", flush=True)
+            rows, coverage = importer(source)
+            for result in results:
+                if result["id"] == source_id:
+                    result.update(packages=rows, status="ready", entryLimit=len(rows),
+                                  coverage=coverage, note="Complete published structured index")
+                    break
+    else:
+        # A routine bounded refresh must not silently erase previously verified
+        # exhaustive snapshots.
+        for i, source in enumerate(results):
+            previous_source = old.get(source["id"])
+            if (source["id"] in {"gfs", "romheaven"} and previous_source and
+                    previous_source.get("coverage") and
+                    previous_source.get("status") == "ready"):
+                results[i] = previous_source
     if args.full_axekin:
         axekin_source = next(source for source in sources if source["id"] == "axekin")
         print("Axekin: crawling full catalogue (only Games/Roms consoles)...", flush=True)
@@ -620,6 +694,17 @@ def main(argv=None):
                 result.update(packages=[], status=metadata.get("status", "ready"),
                               note=f"Full Games/Roms-filtered index: {full_count} entries in axekin.json")
                 break
+    # The native app uses a fixed-size array. Reject index expansions instead
+    # of writing a catalogue that silently truncates titles on PS5/Linux.
+    axekin_count = 0
+    if axekin_file.exists():
+        axekin_count = len(json.loads(axekin_file.read_text(encoding="utf8"))["sources"][0]["packages"])
+    capacity_match = re.search(r"#define MAX_CATALOG_ITEMS\s+(\d+)",
+                               (ROOT / "src/wolodrive.h").read_text(encoding="utf8"))
+    capacity = int(capacity_match.group(1)) if capacity_match else 0
+    total_entries = axekin_count + sum(len(source["packages"]) for source in results)
+    if total_entries + 512 > capacity:
+        raise ValueError(f"Catalogue would exceed native capacity: {total_entries}+512 > {capacity}")
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".json.tmp")
     temporary.write_text(json.dumps({"schemaVersion": 1, "sources": results}, ensure_ascii=False, indent=2) + "\n", encoding="utf8", newline="\n")

@@ -35,7 +35,10 @@ class SourceImportTests(unittest.TestCase):
         self.assertEqual(self.snapshot["schemaVersion"], 1)
         for source in self.snapshot["sources"]:
             self.assertIn(source["status"], {"ready", "partial", "empty", "error", "stale"})
-            self.assertLessEqual(len(source["packages"]), 400)
+            if source["id"] == "gfs":
+                self.assertEqual(len(source["packages"]), source["coverage"]["indexed"])
+            else:
+                self.assertLessEqual(len(source["packages"]), 400)
             self.assertTrue(source["website"].startswith("https://"))
             for item in source["packages"]:
                 self.assertEqual(item["format"], "catalog")

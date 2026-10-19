@@ -50,6 +50,39 @@ export function App() {
       .catch(error => console.warn('Axekin metadata unavailable:', error));
     return () => { active = false; };
   }, []);
+  // Full website/TSV/archive indexes have their own deferred chunks. The
+  // bounded native-compatible snapshot remains the initial fallback.
+  useEffect(() => {
+    let active = true;
+    const loads = [
+      import('../assets/catalogs/superpsx.json'),
+      import('../assets/catalogs/downloadgamepsp.json'),
+      import('../assets/catalogs/ziperto.json'),
+      import('../assets/catalogs/nopaystation.json'),
+      import('../assets/catalogs/psn-content.json'),
+      import('../assets/catalogs/alvro.json'),
+      import('../assets/catalogs/maelly-pooh.json'),
+      import('../assets/catalogs/romstime.json')
+    ];
+    Promise.allSettled(loads).then(results => {
+      if (!active) return;
+      for (const result of results) {
+        if (result.status !== 'fulfilled') {
+          console.warn('A website index was unavailable:', result.reason);
+          continue;
+        }
+        const entries = metadataFromSources(result.value.default.sources);
+        if (!entries.length) continue;
+        const names = new Set(entries.map(entry => entry.source_name));
+        setCatalog(existing => [
+          ...existing.filter(item => !names.has(item.source_name)),
+          ...entries
+        ]);
+      }
+    });
+    return () => { active = false; };
+  }, []);
+
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string>(() =>
     t(language, 'TXT_READY')

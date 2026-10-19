@@ -18,6 +18,7 @@ interface SnapshotEntry {
   coverUrl?: string;
   sourceUrl?: string;
   sizeBytes?: number;
+  createdAt?: string; // Public WordPress post date (UTC), not game release date.
 }
 interface SnapshotSource {
   name?: string;
@@ -34,6 +35,8 @@ export function metadataFromSources(sources: SnapshotSource[]): GameItem[] {
     source_name: source.name!,
     is_game: true,
     is_dlc: false,
+    catalog_added_at: /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(item.createdAt || '')
+      ? Number(item.createdAt!.replace(/\D/g, '').slice(0, 14)) : undefined,
     screenshot_urls: [],
     description: item.description || 'Catalog metadata only; no installer is provided.',
     source_url: item.sourceUrl?.startsWith('https://') ? item.sourceUrl : SOURCE_WEBSITES[source.name!],

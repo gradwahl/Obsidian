@@ -39,10 +39,16 @@ def main():
             links = re.findall(r'(?:src|href)="(/[^\"]+)"', html)
             assert any(link.endswith(".js") for link in links)
             assert any(link.endswith(".css") for link in links)
-            axekin_chunks = list((PREVIEW / "assets").glob("axekin-*.js"))
-            assert len(axekin_chunks) == 1, "Full Axekin data must be a single deferred JS chunk"
+            # Verify every full source index is delivered as a separate JS chunk.
+            full_sources = (
+                "axekin", "superpsx", "downloadgamepsp", "ziperto",
+                "nopaystation", "psn-content", "alvro", "maelly-pooh", "romstime"
+            )
             assert not (PREVIEW / "assets/catalogs").exists(), "No duplicate raw catalog JSON in preview"
-            links.extend("/assets/" + chunk.name for chunk in axekin_chunks)
+            for source in full_sources:
+                chunks = list((PREVIEW / "assets").glob(source + "-*.js"))
+                assert len(chunks) == 1, f"Missing/duplicated full index: {source}"
+                links.extend("/assets/" + chunk.name for chunk in chunks)
             for name in sorted(set(links + ["/" + path for path in artwork])):
                 with urllib.request.urlopen(base + name) as response:
                     assert response.read() == (PREVIEW / name.lstrip("/")).read_bytes(), name
