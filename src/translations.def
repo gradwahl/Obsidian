@@ -1,4 +1,12 @@
 /* UTF-8: id, English, Polish, Spanish, French, Dutch, German, Italian, Chinese (Simplified), Russian. */
+TEXT(TXT_NAV_HOME, "Home", "Start", "Inicio", "Accueil", "Start", "Startseite", "Home", "主页", "Главная")
+TEXT(TXT_NAV_GAMES, "Games/Roms", "Gry/ROM-y", "Juegos/ROMs", "Jeux/ROMs", "Games/ROMs", "Spiele/ROMs", "Giochi/ROM", "游戏/ROM", "Игры/ROM")
+TEXT(TXT_NAV_EMULATORS, "Emulators", "Emulatory", "Emuladores", "Émulateurs", "Emulators", "Emulatoren", "Emulatori", "模拟器", "Эмуляторы")
+TEXT(TXT_NAV_FILES, "Files", "Pliki", "Archivos", "Fichiers", "Bestanden", "Dateien", "File", "文件", "Файлы")
+TEXT(TXT_NAV_PAYLOADS, "Payloads", "Payloady", "Payloads", "Payloads", "Payloads", "Payloads", "Payload", "载荷", "Пейлоады")
+TEXT(TXT_NAV_DOWNLOADS, "Downloads", "Pobrane", "Descargas", "Téléchargements", "Downloads", "Downloads", "Download", "下载", "Загрузки")
+TEXT(TXT_SECTION_UNAVAILABLE, "This section is not available in this build yet.", "Ta sekcja nie jest jeszcze dostępna w tej wersji.", "Esta sección aún no está disponible en esta versión.", "Cette section n’est pas encore disponible dans cette version.", "Deze sectie is nog niet beschikbaar in deze versie.", "Dieser Bereich ist in dieser Version noch nicht verfügbar.", "Questa sezione non è ancora disponibile in questa versione.", "此版本尚不支持此功能。", "Этот раздел пока недоступен в этой версии.")
+TEXT(TXT_NO_DOWNLOADS, "No downloads yet.", "Brak pobranych plików.", "Aún no hay descargas.", "Aucun téléchargement pour le moment.", "Nog geen downloads.", "Noch keine Downloads.", "Nessun download per ora.", "暂无下载。", "Загрузок пока нет.")
 TEXT(TXT_NO_PACKAGES, "No games in this category.", "Brak gier w tej kategorii.", "No hay juegos en esta categoría.", "Aucun jeu dans cette catégorie.", "Geen games in deze categorie.", "Keine Spiele in dieser Kategorie.", "Nessun gioco in questa categoria.", "此分类暂无游戏。", "В этой категории пока нет игр.")
 TEXT(TXT_CONTROLLER, "DualSense controller connected", "Podłączono kontroler DualSense", "Mando DualSense conectado", "Manette DualSense connectée", "DualSense-controller aangesloten", "DualSense-Controller verbunden", "Controller DualSense connesso", "DualSense 控制器已连接", "Контроллер DualSense подключён")
 TEXT(TXT_COVER_LOADING, "DOWNLOADING COVER...", "POBIERANIE OKŁADKI...", "DESCARGANDO PORTADA...", "TÉLÉCHARGEMENT DE LA JAQUETTE...", "HOES DOWNLOADEN...", "COVER WIRD GELADEN...", "DOWNLOAD COPERTINA...", "正在下载封面...", "ЗАГРУЗКА ОБЛОЖКИ...")

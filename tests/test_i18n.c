@@ -119,7 +119,12 @@ static void test_live_switching(void) {
         assert(app->rows[0].items[app->rows[0].selected_col] == selected);
         assert(app->catalog[1].state == STATE_AVAILABLE);
         assert(app->catalog[1].progress == 0.0f);
-        assert(strcmp(app->rows[0].title, TR(app, TXT_ROW_RECENT)) == 0);
+        assert(strcmp(app->rows[VIEW_HOME].title, TR(app, TXT_NAV_HOME)) == 0);
+        assert(strcmp(app->rows[VIEW_GAMES].title, TR(app, TXT_NAV_GAMES)) == 0);
+        assert(strcmp(app->rows[VIEW_EMULATORS].title, TR(app, TXT_NAV_EMULATORS)) == 0);
+        assert(strcmp(app->rows[VIEW_FILES].title, TR(app, TXT_NAV_FILES)) == 0);
+        assert(strcmp(app->rows[VIEW_PAYLOADS].title, TR(app, TXT_NAV_PAYLOADS)) == 0);
+        assert(strcmp(app->rows[VIEW_DOWNLOADS].title, TR(app, TXT_NAV_DOWNLOADS)) == 0);
         assert(i18n_load_language(app->language_path, LANG_COUNT) == expected);
         sys_trigger_action(app, selected);
         assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);

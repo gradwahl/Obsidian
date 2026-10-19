@@ -57,13 +57,13 @@ static const Language LANGUAGE_ORDER[LANG_COUNT] = {
 };
 static const SDL_Rect LANGUAGE_BUTTON = {1510, 14, 360, 44};
 static const SDL_Rect LANGUAGE_MENU = {1510, 66, 360, LANG_COUNT * 44 + 16};
-static const SDL_Rect DESCRIPTION_AREA = {142, 320, 690, 142};
-static const SDL_Rect DESCRIPTION_BUTTON = {142, 478, 330, 42};
-enum { RAIL_WIDTH = 104, CONTENT_X = 142, CARDS_Y = 600,
+enum { RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 600,
        CARD_WIDTH = 350, CARD_HEIGHT = 198, CARD_GAP = 12, CARD_FOOTER = 44 };
+static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
+static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
 
 static SDL_Rect sidebar_target(int row) {
-    return (SDL_Rect){0, 366 + row * 90, RAIL_WIDTH, 90};
+    return (SDL_Rect){0, 240 + row * 90, RAIL_WIDTH, 90};
 }
 
 static SDL_Rect card_target(WolodriveApp *app, int col) {
@@ -269,17 +269,18 @@ static void draw_single_line(SDL_Renderer *r, TTF_Font *font, const char *text,
     SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
 }
 
-/* Fit long translated actions inside the card without dropping their ending. */
-static void draw_card_action(SDL_Renderer *r, TTF_Font *font, const char *text,
-                             SDL_Rect card, SDL_Color color, SDL_Rect clip) {
+/* Keep translated navigation and action labels complete within their bounds. */
+static void draw_fitted_text(SDL_Renderer *r, TTF_Font *font, const char *text,
+                             SDL_Rect bounds, SDL_Color color, SDL_Rect clip, bool centered) {
     SDL_Surface *surface = TTF_RenderUTF8_Blended(font, text, color);
     if (!surface) return;
     SDL_Texture *texture = SDL_CreateTextureFromSurface(r, surface);
     if (texture) {
-        float scale = fminf(1.0f, (float)(card.w - 24) / surface->w);
+        float scale = fminf(1.0f, fminf((float)bounds.w / surface->w,
+                                      (float)bounds.h / surface->h));
         int w = (int)(surface->w * scale), h = (int)(surface->h * scale);
-        SDL_Rect destination = {card.x + (card.w - w) / 2,
-                                card.y + CARD_HEIGHT + (CARD_FOOTER - h) / 2, w, h};
+        SDL_Rect destination = {bounds.x + (centered ? (bounds.w - w) / 2 : 0),
+                                bounds.y + (bounds.h - h) / 2, w, h};
         SDL_Rect previous;
         bool clipped = SDL_RenderIsClipEnabled(r);
         SDL_RenderGetClipRect(r, &previous);
@@ -426,10 +427,12 @@ void ui_cleanup(WolodriveApp *app) {
 
 void ui_rebuild_carousels(WolodriveApp *app) {
     const char *titles[TOTAL_ROWS] = {
-        TR(app, TXT_ROW_RECENT),
-        TR(app, TXT_ROW_PS5),
-        TR(app, TXT_ROW_PS4),
-        TR(app, TXT_ROW_DOWNLOADS)
+        TR(app, TXT_NAV_HOME),
+        TR(app, TXT_NAV_GAMES),
+        TR(app, TXT_NAV_EMULATORS),
+        TR(app, TXT_NAV_FILES),
+        TR(app, TXT_NAV_PAYLOADS),
+        TR(app, TXT_NAV_DOWNLOADS)
     };
 
     SDL_LockMutex(app->catalog_mutex);
@@ -442,18 +445,17 @@ void ui_rebuild_carousels(WolodriveApp *app) {
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *it = &app->catalog[i];
 
-        if (app->rows[0].item_count < MAX_ITEMS_PER_ROW) {
-            app->rows[0].items[app->rows[0].item_count++] = it;
+        if (app->rows[VIEW_HOME].item_count < MAX_ITEMS_PER_ROW) {
+            app->rows[VIEW_HOME].items[app->rows[VIEW_HOME].item_count++] = it;
         }
-        if ((it->format == FMT_EXFAT || it->format == FMT_FFPKG) && app->rows[1].item_count < MAX_ITEMS_PER_ROW) {
-            app->rows[1].items[app->rows[1].item_count++] = it;
-        }
-        if (it->format == FMT_PKG && app->rows[2].item_count < MAX_ITEMS_PER_ROW) {
-            app->rows[2].items[app->rows[2].item_count++] = it;
+        /* The existing catalog has no reliable emulator/file/payload/ROM type.
+           Keep those views explicit rather than guessing from package titles. */
+        if (app->rows[VIEW_GAMES].item_count < MAX_ITEMS_PER_ROW) {
+            app->rows[VIEW_GAMES].items[app->rows[VIEW_GAMES].item_count++] = it;
         }
         if ((it->state == STATE_DOWNLOADING || it->state == STATE_INSTALLED) &&
-            app->rows[3].item_count < MAX_ITEMS_PER_ROW) {
-            app->rows[3].items[app->rows[3].item_count++] = it;
+            app->rows[VIEW_DOWNLOADS].item_count < MAX_ITEMS_PER_ROW) {
+            app->rows[VIEW_DOWNLOADS].items[app->rows[VIEW_DOWNLOADS].item_count++] = it;
         }
     }
 
@@ -670,6 +672,12 @@ static const char *action_label(WolodriveApp *app, GameItem *item) {
     return TR(app, TXT_DOWNLOAD);
 }
 
+static const char *empty_view_message(WolodriveApp *app) {
+    if (app->active_row == VIEW_EMULATORS || app->active_row == VIEW_FILES ||
+        app->active_row == VIEW_PAYLOADS) return TR(app, TXT_SECTION_UNAVAILABLE);
+    return TR(app, app->active_row == VIEW_DOWNLOADS ? TXT_NO_DOWNLOADS : TXT_NO_PACKAGES);
+}
+
 static void render_hero_banner(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     GameItem *hero = get_focused_item(app);
@@ -678,7 +686,7 @@ static void render_hero_banner(WolodriveApp *app) {
     if (!hero) {
         draw_text(r, app->font_hero_title, app->rows[app->active_row].title,
                   CONTENT_X, 150, white, 900);
-        draw_text(r, app->font_body, TR(app, TXT_NO_PACKAGES), CONTENT_X, 320, muted, 690);
+        draw_text(r, app->font_body, empty_view_message(app), CONTENT_X, 320, muted, 690);
         return;
     }
 
@@ -737,7 +745,6 @@ static void render_carousels(WolodriveApp *app) {
     CarouselRow *row = &app->rows[app->active_row];
     draw_text(r, app->font_row_title, row->title, CONTENT_X, 552, white, 0);
     if (!row->item_count) {
-        draw_text(r, app->font_body, TR(app, TXT_NO_PACKAGES), CONTENT_X, CARDS_Y, muted, 1000);
         return;
     }
     SDL_Rect clip = {RAIL_WIDTH + 20, CARDS_Y - 5, SCREEN_WIDTH - RAIL_WIDTH - 20,
@@ -766,8 +773,9 @@ static void render_carousels(WolodriveApp *app) {
         else snprintf(status, sizeof(status), "%s  /  %.1f GB", sys_format_short_badge(item->format), item->size_gb);
         SDL_Rect footer_clip = {SDL_max(card.x + 8, clip.x), footer_y, 0, CARD_FOOTER};
         footer_clip.w = SDL_max(0, SDL_min(card.x + card.w - 8, SCREEN_WIDTH) - footer_clip.x);
-        draw_card_action(r, app->font_small, status, card,
-                         selected ? (SDL_Color){0, 0, 0, 255} : muted, footer_clip);
+        draw_fitted_text(r, app->font_small, status,
+                         (SDL_Rect){card.x + 12, footer_y, card.w - 24, CARD_FOOTER},
+                         selected ? (SDL_Color){0, 0, 0, 255} : muted, footer_clip, true);
         if (item->state == STATE_DOWNLOADING) {
             int progress = (int)(card.w * fminf(100.0f, fmaxf(0.0f, item->progress)) / 100.0f);
             fill_rect(r, card.x, footer_y - 4, progress, 4, 229, 9, 20, 255);
@@ -790,21 +798,53 @@ static void render_sidebar(WolodriveApp *app) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
         Uint8 c = selected ? 245 : 160;
-        int x = 38, y = target.y + 30;
-        if (selected) fill_rect(r, 0, target.y, 4, target.h, 229, 9, 20, 255);
-        if (row == 0) {
+        int x = 32, y = target.y + 28;
+        if (selected) {
+            fill_rect(r, 0, target.y, RAIL_WIDTH - 1, target.h, 25, 25, 25, 255);
+            fill_rect(r, 0, target.y, 4, target.h, 229, 9, 20, 255);
+        }
+        SDL_Color color = {c, c, c, 255};
+        SDL_Rect label = {84, target.y + 24, RAIL_WIDTH - 100, 42};
+        draw_fitted_text(r, app->font_small, app->rows[row].title, label, color, label, false);
+        if (row == VIEW_HOME) {
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             SDL_RenderDrawLine(r, x - 2, y + 12, x + 14, y - 1);
             SDL_RenderDrawLine(r, x + 14, y - 1, x + 30, y + 12);
             draw_border(r, x + 2, y + 12, 24, 20, 2, c, c, c, 255);
             fill_rect(r, x + 11, y + 21, 7, 11, c, c, c, 255);
-        } else if (row == 1 || row == 2) {
-            draw_border(r, x, y + 2, 30, 23, 2, c, c, c, 255);
-            fill_rect(r, x + 12, y + 25, 6, 5, c, c, c, 255);
-            fill_rect(r, x + 6, y + 30, 18, 2, c, c, c, 255);
-            draw_text(r, app->font_micro, row == 1 ? "5" : "4", x + 10, y + 1,
-                      (SDL_Color){c, c, c, 255}, 0);
-        } else {
+        } else if (row == VIEW_GAMES) {
+            SDL_Point outline[] = {{x + 4, y + 5}, {x + 26, y + 5},
+                {x + 30, y + 10}, {x + 34, y + 29}, {x + 27, y + 30},
+                {x + 21, y + 23}, {x + 9, y + 23}, {x + 3, y + 30},
+                {x - 4, y + 29}, {x, y + 10}, {x + 4, y + 5}};
+            SDL_SetRenderDrawColor(r, c, c, c, 255);
+            SDL_RenderDrawLines(r, outline, sizeof(outline) / sizeof(outline[0]));
+            fill_rect(r, x + 4, y + 13, 10, 2, c, c, c, 255);
+            fill_rect(r, x + 8, y + 9, 2, 10, c, c, c, 255);
+            fill_rect(r, x + 22, y + 11, 3, 3, c, c, c, 255);
+            fill_rect(r, x + 26, y + 16, 3, 3, c, c, c, 255);
+        } else if (row == VIEW_EMULATORS) {
+            draw_border(r, x, y + 25, 32, 8, 2, c, c, c, 255);
+            fill_rect(r, x + 14, y + 11, 3, 14, c, c, c, 255);
+            draw_border(r, x + 10, y + 2, 11, 11, 2, c, c, c, 255);
+        } else if (row == VIEW_FILES) {
+            SDL_Point folder[] = {{x, y + 7}, {x + 12, y + 7},
+                {x + 17, y + 12}, {x + 32, y + 12}, {x + 32, y + 31},
+                {x, y + 31}, {x, y + 7}};
+            SDL_SetRenderDrawColor(r, c, c, c, 255);
+            SDL_RenderDrawLines(r, folder, sizeof(folder) / sizeof(folder[0]));
+            fill_rect(r, x + 2, y + 15, 28, 2, c, c, c, 255);
+        } else if (row == VIEW_PAYLOADS) {
+            draw_border(r, x + 6, y + 6, 22, 22, 2, c, c, c, 255);
+            draw_border(r, x + 12, y + 12, 10, 10, 2, c, c, c, 255);
+            for (int pin = 0; pin < 3; pin++) {
+                int offset = 10 + pin * 6;
+                fill_rect(r, x + offset, y + 1, 2, 5, c, c, c, 255);
+                fill_rect(r, x + offset, y + 28, 2, 5, c, c, c, 255);
+                fill_rect(r, x + 1, y + offset, 5, 2, c, c, c, 255);
+                fill_rect(r, x + 28, y + offset, 5, 2, c, c, c, 255);
+            }
+        } else if (row == VIEW_DOWNLOADS) {
             fill_rect(r, x + 13, y, 3, 22, c, c, c, 255);
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             SDL_RenderDrawLine(r, x + 6, y + 15, x + 14, y + 23);
@@ -824,10 +864,10 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_Color muted = {155, 155, 155, 255};
     draw_text(r, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
     draw_text(r, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
-    draw_single_line(r, app->font_micro, TR(app, TXT_BACK_HINT), 520, 984, muted,
-                     (SDL_Rect){520, 984, 260, 30});
-    draw_single_line(r, app->font_micro, TR(app, TXT_REFRESH_HINT), 800, 984, muted,
-                     (SDL_Rect){800, 984, 600, 30});
+    draw_single_line(r, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
+                     (SDL_Rect){CONTENT_X + 378, 984, 260, 30});
+    draw_single_line(r, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 658, 984, muted,
+                     (SDL_Rect){CONTENT_X + 658, 984, 600, 30});
 
     char sync_info[256];
     SDL_LockMutex(app->catalog_mutex);
@@ -851,7 +891,7 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_UnlockMutex(app->catalog_mutex);
 
     draw_single_line(r, app->font_micro, sync_info, CONTENT_X, 1032, muted,
-                     (SDL_Rect){CONTENT_X, 1032, 1040, 32});
+                     (SDL_Rect){CONTENT_X, 1032, 880, 32});
     char language_hint[96];
     snprintf(language_hint, sizeof(language_hint), TR(app, TXT_LANGUAGE),
              i18n_language_name((Language)SDL_AtomicGet(&app->language)));

@@ -12,14 +12,22 @@ portrait covers are cropped to fill the landscape backdrop and cards, so their
 composition depends on the available source image.
 
 Use **Left/Right** or the controller **D-pad** to select a game. **Up/Down**
-switch between Recently added, PS5, PS4, and Downloads, including empty categories.
-Click a sidebar icon to switch categories, or click a cover to select it. Click
+switch between **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**, and
+**Downloads**. Each sidebar entry has a text label and an icon: house, gamepad,
+joystick, folder, chip, and download arrow. Click an entry to switch sections,
+or click a cover to select it. Click
 the selected card's white action footer, press **Enter/Space**, or press controller
 **Cross** to request its action. Download and installation availability is described
 below. Each category remembers its selection; the row scrolls to bring that game
 to the left edge. **Backspace / Circle** returns to the start or cancels an active
 download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
 information are shown along the bottom. Language controls remain at the top right.
+
+Home and Games/Roms currently browse the same existing package catalog, including
+both PS4 and PS5 formats. ROM browsing, emulator management, the file browser, and
+payload management are not implemented; the corresponding sections explicitly
+show that they are unavailable. Downloads shows downloading and installed entries,
+or an empty-state message. These navigation entries do not enable new backends.
 
 ## Languages
 

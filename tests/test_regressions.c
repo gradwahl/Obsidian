@@ -77,7 +77,7 @@ static void test_truthful_catalog_state(void) {
         assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
     }
     ui_rebuild_carousels(app);
-    assert(app->rows[3].item_count == 0);
+    assert(app->rows[VIEW_DOWNLOADS].item_count == 0);
     SDL_DestroyMutex(app->catalog_mutex);
     free(app);
     puts("No seeded installations, fake progress, or installation claims from remote metadata.");
@@ -154,14 +154,19 @@ static void test_tv_catalog_navigation(void) {
     assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
     assert(get_focused_item(app)->state == STATE_AVAILABLE);
 
-    /* All four categories remain reachable, even with no installed games. */
+    /* All six views remain reachable, including the unimplemented sections. */
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
     for (int r = 1; r < TOTAL_ROWS; r++) {
         ui_handle_input(app, &event);
         assert(app->active_row == r);
+        if (r >= VIEW_EMULATORS && r <= VIEW_PAYLOADS) {
+            assert(!get_focused_item(app));
+            assert(strcmp(empty_view_message(app), TR(app, TXT_SECTION_UNAVAILABLE)) == 0);
+        }
     }
     assert(!get_focused_item(app));
+    assert(strcmp(empty_view_message(app), TR(app, TXT_NO_DOWNLOADS)) == 0);
     app->toast_expire_tick = 0;
     ui_render(app); /* Empty category must clear the previous game's artwork. */
     SDL_Surface *pixel = SDL_CreateRGBSurfaceWithFormat(0, 1, 1, 32, SDL_PIXELFORMAT_RGBA32);
@@ -180,6 +185,21 @@ static void test_tv_catalog_navigation(void) {
     event.button.y = sidebar_target(0).y + 40;
     ui_handle_input(app, &event);
     assert(app->active_row == 0 && app->rows[0].selected_col == 2);
+    for (int r = 0; r < VIEW_COUNT; r++) {
+        event.button.y = sidebar_target(r).y + 40;
+        ui_handle_input(app, &event);
+        assert(app->active_row == r);
+    }
+    event.button.y = sidebar_target(VIEW_HOME).y + 40;
+    ui_handle_input(app, &event);
+    assert(app->rows[VIEW_GAMES].item_count == app->rows[VIEW_HOME].item_count);
+    bool ps4_present = false, ps5_present = false;
+    for (int i = 0; i < app->rows[VIEW_GAMES].item_count; i++) {
+        GameItem *item = app->rows[VIEW_GAMES].items[i];
+        if (item->format == FMT_PKG) ps4_present = true;
+        else ps5_present = true;
+    }
+    assert(ps4_present && ps5_present);
     ui_render(app);
     /* Description's moved Original button still responds to mouse input. */
     get_focused_item(app)->description_id = TEXT_COUNT;
@@ -194,7 +214,7 @@ static void test_tv_catalog_navigation(void) {
     free(app);
     IMG_Quit();
     TTF_Quit();
-    puts("TV sidebar, keyboard/controller navigation, scrolled mouse selection, action footer and empty category passed.");
+    puts("Six labeled sidebar views, keyboard/controller/mouse navigation, mixed game formats, action footer and empty states passed.");
 }
 
 int main(void) {

@@ -54,7 +54,16 @@
 
 #define MAX_CATALOG_ITEMS       256
 #define MAX_ITEMS_PER_ROW       128
-#define TOTAL_ROWS              4
+typedef enum {
+    VIEW_HOME,
+    VIEW_GAMES,
+    VIEW_EMULATORS,
+    VIEW_FILES,
+    VIEW_PAYLOADS,
+    VIEW_DOWNLOADS,
+    VIEW_COUNT
+} SidebarView;
+#define TOTAL_ROWS              VIEW_COUNT
 #define MAX_DESCRIPTION_BYTES   4096
 
 typedef enum {
