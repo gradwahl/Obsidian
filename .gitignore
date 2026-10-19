@@ -1,4 +1,6 @@
 build/
+node_modules/
+dist/
 __pycache__/
 assets/covers/*.art
 assets/covers/*.tmp

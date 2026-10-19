@@ -2,6 +2,78 @@
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
+## React web preview
+
+This branch also includes the React browser interface from `experimental`, alongside
+the SDL2 app. The native application continues to use `make` and the C sources;
+the browser preview uses the TypeScript/React sources and separate npm commands.
+The browser UI is a separate preview with a bundled catalog, not a web connection
+to the native app. Native renderer fixes and native-only features do not automatically
+carry over to React. Package downloads/installations are unavailable in the web UI.
+
+### Start without Node or Vite
+
+The committed `static-preview/` folder contains compiled HTML, JavaScript, CSS,
+the catalog, and versioned artwork. A host such as AI Studio can serve this folder
+directly at the URL root, listening on `0.0.0.0:3000`.
+
+From the repository in native Windows PowerShell:
+
+```powershell
+python -m http.server 3000 --bind 0.0.0.0 --directory static-preview
+```
+
+From Linux or WSL:
+
+```bash
+# For this checkout in WSL:
+cd /mnt/c/Users/Callum/Documents/GitHub/wolodrive
+python3 -m http.server 3000 --bind 0.0.0.0 --directory static-preview
+```
+
+Open `http://localhost:3000` in a browser, or the host's forwarded preview URL.
+Stop the server with Ctrl+C. No Node installation is needed to serve this folder.
+Use HTTP rather than opening `index.html` with `file://`. Serve at the URL root
+because artwork uses `/assets/` URLs. The bundled catalog and versioned artwork
+are local; remote covers, screenshots, and manifest requests require network access.
+Six catalog cover paths have no versioned file: CUSA00900, CUSA18017, CUSA30410,
+PPSA04610, PPSA07950, and PPSA10665. Local untracked artwork caches are excluded.
+
+### Develop and rebuild React
+
+Install Node.js 20+ (22 recommended), npm, and Git on Windows or Linux, then run:
+
+```bash
+npm ci
+npm run dev
+```
+
+The Vite development server listens on `0.0.0.0:3000`. Stop any static server on
+that port first. Keep Windows and Linux npm installations separate; native npm
+dependencies in `node_modules/` must match the OS running the build.
+
+```bash
+npm run lint          # TypeScript checks
+npm run build         # Standalone production output in dist/
+npm run build:static  # Regenerate the committed static-preview/ folder
+python3 tests/check_static_preview.py  # Use python on Windows
+```
+
+Commit regenerated `static-preview/` files with React source changes. Both build
+commands include versioned artwork, so their output can be hosted independently.
+The preview duplicates about 36 MB of artwork for this purpose. Node/npm are
+development dependencies of the React interface, not prerequisites for the native
+SDL2 builds. This addition does not establish native Windows executable or PS5
+build support; existing limitations below still apply. Browser appearance and
+interactions require manual verification on Windows, native Linux, and WSL/WSLg;
+builds and HTTP tests alone do not establish graphical correctness.
+
+Integration validation (19 October 2026): React production/static builds,
+TypeScript checks, and Node-free static HTTP delivery passed on native Windows
+and Arch Linux under WSL. The native Linux build and full `make test` suite also
+passed through WSL. Vite reports a JavaScript bundle-size warning. No manual
+graphical checks, native Windows executable build, or PS5 SDK build were completed.
+
 ## TV catalog interface
 
 The interface follows the supplied Netflix TV reference: a dark left navigation

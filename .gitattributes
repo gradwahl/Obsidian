@@ -1,0 +1,5 @@
+/index.html text eol=lf
+/static-preview/**/*.js text eol=lf
+/static-preview/**/*.css text eol=lf
+/static-preview/index.html text eol=lf
+/tests/check_static_preview.py text eol=lf
