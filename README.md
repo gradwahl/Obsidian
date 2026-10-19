@@ -78,7 +78,24 @@ unset IGDB_CLIENT_SECRET IGDB_CLIENT_ID
 The script enforces a maximum of roughly **3 queries per second**, below
 IGDB's 4-request-per-second limit, with retry/backoff. It searches missing
 titles only, deduplicates by console/title and resumes via ignored local
-cache `.cache/wolodrive-artwork/igdb-results.json`. The output
+cache `.cache/wolodrive-artwork/igdb-results.json`. IGDB queries now
+remove **only trailing source distribution metadata**: `PS4`/`PS5` suffixes
+for the matching console, region/language tags (such as `[EU] [EN]`),
+bracketed update versions (such as `[1.05]`), and eShop/update markers.
+Sequels, subtitles, `Deluxe Edition` and `Console Edition` remain part of
+the actual game name. Exact cleaned-title AND matching-console checks are
+still mandatory before any cover is accepted.
+
+**If you already completed a batch before this title-cleanup improvement**,
+rerun the *same* command. Previously cached `not-found` and `review` entries
+are automatically retried **once when the cleaned query changes**. Previously
+matched entries are retained, so do not delete the cache or use
+`--retry-unmatched` just to apply this update. `--dry-run` shows how many
+old searches qualify for retry without using credentials. Some entries may
+still be missing if IGDB only lists a different edition or doesn't list that
+title for its actual console.
+
+The output
 `assets/artwork/igdb-covers.json` contains approved cover image links, not
 credentials. Repeat `--max-queries 500` batches or use
 `--platforms nintendo-switch,sony-ps4,sony-ps5` to prioritise consoles.

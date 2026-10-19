@@ -80,6 +80,66 @@ class IGDBTests(unittest.TestCase):
         self.assertIn(b"never-log-this-value", seen[0].data)
         self.assertGreaterEqual(clk.now, .35)
 
+    def test_source_packaging_suffixes_not_part_of_igdb_game_name(self):
+        samples = [
+            ("sony-ps4", "Carto - [US] [EN] [1.04]", "Carto"),
+            ("sony-ps4", "Citizen Sleeper - [EU] [EN] [1.05]", "Citizen Sleeper"),
+            ("sony-ps4", "Crash Bandicoot N Sane Trilogy - [EU] [EN] [1.07]",
+             "Crash Bandicoot N Sane Trilogy"),
+            ("sony-ps4", "Wolfenstein II The New Colossus - [EU] [EN] [1.07]",
+             "Wolfenstein II The New Colossus"),
+            ("sony-ps4", "WWE 2K Battlegrounds - [US] [EN] [16.00]",
+             "WWE 2K Battlegrounds"),
+            ("sony-ps5", "Phasmophobia PS5", "Phasmophobia"),
+            ("sony-ps5", "SteamWorld Heist II PS5", "SteamWorld Heist II"),
+            ("sony-ps5", "LEGO Builders Journey PS5", "LEGO Builders Journey"),
+            ("sony-ps5", "WRC 10 Deluxe Edition PS5", "WRC 10 Deluxe Edition"),
+            ("sony-ps5", "Don't Starve Together Console Edition PS5",
+             "Don't Starve Together Console Edition"),
+            ("nintendo-switch", "Example Switch NSP [Update] (eShop)", "Example"),
+            ("sony-ps5", "Example PS4", "Example PS4"),
+            ("sony-ps4", "Resident Evil 4 Remake", "Resident Evil 4 Remake"),
+        ]
+        for platform, raw, expected in samples:
+            with self.subTest(title=raw):
+                self.assertEqual(igdb.search_title(platform, raw), expected)
+        self.assertNotEqual(igdb.identity("sony-ps5", "Phasmophobia PS5"),
+                            igdb.identity("sony-ps5", "Phasmophobia"))
+        row = {"id": 2, "name": "Phasmophobia", "platforms": [167],
+               "cover": {"image_id": "coabcde"}}
+        self.assertEqual(igdb.select_match("sony-ps5", "Phasmophobia PS5", [row], 167)
+                         ["status"], "matched")
+        self.assertEqual(igdb.select_match("sony-ps4", "Phasmophobia PS5", [row], 48)
+                         ["status"], "not-found")
+
+    def test_old_failed_lookups_retry_cleaned_name_only_once(self):
+        cache = {"schemaVersion": 1, "results": {
+            "sony-ps5|phasmophobiaps5": {"status": "not-found"},
+            "sony-ps5|endlessdungeon": {"status": "not-found"},
+            "sony-ps5|visageps5": {"status": "matched", "provider": "igdb-exact-platform-title",
+                                   "url": "https://images.igdb.com/igdb/image/upload/t_cover_big/coabcde.jpg",
+                                   "confidence": 95},
+        }}
+        names = {
+            "sony-ps5|phasmophobiaps5": ("sony-ps5", "Phasmophobia PS5"),
+            "sony-ps5|endlessdungeon": ("sony-ps5", "Endless Dungeon"),
+            "sony-ps5|visageps5": ("sony-ps5", "Visage PS5"),
+        }
+        class Fake:
+            def __init__(self): self.searched = []
+            def search(self, title, platform_id):
+                self.searched.append((title, platform_id))
+                return [{"id": 23, "name": "Phasmophobia", "platforms": [167],
+                         "cover": {"image_id": "coabcde"}}] if title == "Phasmophobia" else []
+        with tempfile.TemporaryDirectory() as folder:
+            fake = Fake()
+            with patch.object(igdb, "CACHE", Path(folder) / "igdb.json"):
+                self.assertEqual(igdb.scan(fake, names, cache, 20, {"sony-ps5": 167}), 1)
+                self.assertEqual(fake.searched, [("Phasmophobia", 167)])
+                self.assertEqual(cache["results"]["sony-ps5|phasmophobiaps5"]["status"], "matched")
+                self.assertEqual(igdb.scan(fake, names, cache, 20, {"sony-ps5": 167}), 0)
+            self.assertEqual(cache["results"]["sony-ps5|visageps5"]["status"], "matched")
+
     def test_cache_resume_and_export(self):
         cache = {"schemaVersion": 1, "results": {}}
         class Fake:

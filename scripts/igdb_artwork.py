@@ -59,8 +59,50 @@ PLATFORM_NAMES = {
 }
 
 def identity(platform, title):
-    """Same console + exact cleaned title. Never join different platforms."""
+    """Same console + original cleaned title. Never join different platforms."""
     return platform + "|" + normalize(title)
+
+
+# Distribution labels and update versions are not part of the game name.
+# This is deliberately restricted to trailing metadata so that sequels,
+# remasters, subtitles and Deluxe/Console editions remain distinct.
+REGION_LANGUAGE = re.compile(
+    r"\s*\[(?:US|USA|EU|EUR|UK|JP|JPN|ASIA|WORLD|"
+    r"EN|ENG|FR|FRE|DE|GER|ES|SPA|IT|ITA|PT|RU|RUS|JA|JPN|"
+    r"MULTI\d*|ENGLISH|FRENCH|GERMAN|SPANISH)\]\s*$", re.I)
+PATCH_VERSION = re.compile(r"\s*\[(?:v)?\d{1,3}(?:\.\d{1,3}){1,3}\]\s*$", re.I)
+CONSOLE_SUFFIX = {
+    "sony-ps3": re.compile(r"\s+(?:PS3|PlayStation 3)$", re.I),
+    "sony-ps4": re.compile(r"\s+(?:PS4|PlayStation 4)$", re.I),
+    "sony-ps5": re.compile(r"\s+(?:PS5|PlayStation 5)$", re.I),
+    "sony-psp": re.compile(r"\s+(?:PSP|PlayStation Portable)$", re.I),
+    "nintendo-switch": re.compile(r"\s+(?:Switch NSP(?:/XCI)?|Switch XCI|Nintendo Switch)$", re.I),
+    "nintendo-3ds": re.compile(r"\s+(?:3DS CIA|3DS)$", re.I),
+}
+
+
+def search_title(platform, title):
+    """Drop only known trailing source metadata; preserve game identity."""
+    value = str(title or "").strip()
+    if not value:
+        return ""
+    # Strip storefront/distribution tags only when trailing, then repeat:
+    # e.g. "Citizen Sleeper - [EU] [EN] [1.05]" -> "Citizen Sleeper".
+    # Do not strip DLC labels or editions; DLC needs manual identification.
+    for _ in range(12):
+        previous = value
+        value = re.sub(r"\s*\((?:eShop|update)\)\s*$", "", value, flags=re.I)
+        value = re.sub(r"\s*\[(?:Update|eShop)\]\s*$", "", value, flags=re.I)
+        value = PATCH_VERSION.sub("", value)
+        value = REGION_LANGUAGE.sub("", value)
+        suffix = CONSOLE_SUFFIX.get(platform)
+        if suffix:
+            value = suffix.sub("", value)
+        value = re.sub(r"\s*[-–—]\s*$", "", value).strip()
+        if value == previous:
+            break
+    return value
+
 
 def load_json(path, default):
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else default
@@ -107,7 +149,7 @@ def select_match(platform, title, candidates, platform_id):
     """Require unambiguous exact cleaned name, same IGDB platform, cover."""
     if not platform_id:
         return {"status": "skipped-platform"}
-    expected = normalize(title)
+    expected = normalize(search_title(platform, title))
     candidates_with_cover = []
     for game in candidates:
         if not isinstance(game, dict) or normalize(game.get("name")) != expected:
@@ -210,13 +252,31 @@ def scan(client, names, cache, max_queries=50, console_ids=None, progress=None):
     entries = cache.setdefault("results", {})
     examined = 0
     for key, (platform, title) in names.items():
-        if key in entries or platform not in console_ids:
+        if platform not in console_ids:
             continue
+        clean = search_title(platform, title)
+        previous = entries.get(key)
+        if previous:
+            if previous.get("status") == "matched":
+                continue
+            if previous.get("status") in {"not-found", "review"}:
+                # A legacy failed search used the noisy catalogue title.
+                # Retry it exactly once if removing distribution labels
+                # actually changes the query. Successful matches stay saved.
+                last_query = previous.get("searchedTitle", title)
+                if normalize(last_query) == normalize(clean):
+                    continue
+            else:
+                continue
         if examined >= max_queries:
             break
-        result = select_match(platform, title, client.search(title, console_ids[platform]),
+        if not clean or len(clean) < 3 or re.search(r"\[(?:DLC|Addon|Add-on)\]", clean, re.I):
+            entries[key] = {"status": "skipped-metadata", "searchedTitle": clean}
+            atomic_json(CACHE, cache)
+            continue
+        result = select_match(platform, clean, client.search(clean, console_ids[platform]),
                               console_ids[platform])
-        entries[key] = result
+        entries[key] = {**result, "searchedTitle": clean}
         examined += 1
         if progress:
             progress(examined, key, result["status"])
@@ -259,9 +319,27 @@ def main(argv=None):
         for key in candidates:
             if cache["results"].get(key, {}).get("status") in {"not-found", "review"}:
                 del cache["results"][key]
-    pending = [key for key in candidates if key not in cache["results"]]
+    def needs_query(key):
+        row = cache["results"].get(key)
+        if row is None:
+            return True
+        if row.get("status") not in {"not-found", "review"}:
+            return False
+        original = candidates[key][1]
+        return normalize(row.get("searchedTitle", original)) != normalize(
+            search_title(candidates[key][0], original))
+
+    pending = [key for key in candidates if needs_query(key)]
+    retries = sum(key in cache["results"] for key in pending)
     print(f"Unique uncovered game/platform titles: {len(candidates):,}; "
-          f"cached: {len(candidates)-len(pending):,}; pending: {len(pending):,}", flush=True)
+          f"pending: {len(pending):,} (including {retries:,} improved-title retries); "
+          f"already processed: {len(candidates)-len(pending):,}", flush=True)
+    if args.dry_run:
+        changes = [(name, search_title(platform, name)) for platform, name in candidates.values()
+                   if normalize(name) != normalize(search_title(platform, name))]
+        print(f"Titles with removable source suffixes: {len(changes):,}")
+        for old, new in changes[:8]:
+            print(f"  {old!r} -> {new!r}")
     print("Pending by console:", dict(Counter(key.split("|", 1)[0] for key in pending).most_common(12)))
     if args.dry_run:
         return 0
