@@ -30,6 +30,7 @@ const { NativeViewport } = require('../src/components/NativeViewport.tsx');
 const { fittedFontSize } = require('../src/components/FittedText.tsx');
 const { GameDetailModal } = require('../src/components/GameDetailModal.tsx');
 const { LibraryBrowser } = require('../src/components/LibraryBrowser.tsx');
+const { Sidebar } = require('../src/components/Sidebar.tsx');
 const { t } = require('../src/translations.ts');
 const native = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'src/native.css'), 'utf8');
@@ -105,4 +106,13 @@ const library = render(React.createElement(LibraryBrowser, { isEmulatorsView: fa
   language: 'en', onOpenGame: noop, onRefresh: noop, syncInProgress: false,
   filters: { sources_limited: false, sources: [], disabled_formats: [] } }));
 assert.equal((library.match(/class="tv-library-tile /g) || []).length, 8);
+const sidebar = render(React.createElement(Sidebar, {
+  currentView: 'home', onSelectView: noop, language: 'pl',
+  onSelectLanguage: noop, languageMenuOpen: false, setLanguageMenuOpen: noop,
+  isSidebarFocused: true
+}));
+assert.ok(sidebar.includes('tv-sidebar-expanded'));
+assert.ok(sidebar.includes(t('pl', 'TXT_NAV_HOME')));
+assert.ok(sidebar.includes(t('pl', 'TXT_NAV_GAMES')));
+assert.ok(sidebar.includes(t('pl', 'TXT_NAV_SETTINGS')));
 console.log('PASS: native layout geometry, viewport fitting, portrait/platform covers, selection, empty state, library page, and game-panel SSR');
