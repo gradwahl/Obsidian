@@ -61,3 +61,14 @@ with tempfile.TemporaryDirectory(prefix="wolodrive-i18n-") as data_dir:
         assert {r["target"] for r in requests} == {"en", "pl", "es", "fr", "nl", "de", "it", "zh", "ru"}
         assert not any(r["q"] == "queued old" for r in server.requests)
         assert sum(r["q"] == "error" for r in server.requests) == 1
+
+from artwork_server import artwork_server
+with tempfile.TemporaryDirectory(prefix="wolodrive-artwork-") as artwork_dir:
+    with artwork_server() as (server, requests):
+        subprocess.run([str(Path("build/test_artwork").resolve())],
+            env={**os.environ, "SDL_VIDEODRIVER": "dummy",
+                 "WOLODRIVE_ARTWORK_TEST_DIR": artwork_dir,
+                 "WOLODRIVE_ARTWORK_TEST_URL": f"http://127.0.0.1:{server.server_port}"}, check=True)
+        assert requests.count("/good") == 1, requests
+        assert requests.count("/changed") == 1, requests
+        assert requests.count("/retry") == 2, requests

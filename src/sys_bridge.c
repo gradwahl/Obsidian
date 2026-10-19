@@ -133,7 +133,6 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
     it->description_id = description_id;
     snprintf(it->install_path, sizeof(it->install_path), "%s", path);
     snprintf(it->cover_url, sizeof(it->cover_url), "%s", cover_url ? cover_url : "");
-    snprintf(it->cover_local_path, sizeof(it->cover_local_path), "%s/%s.cover", COVERS_CACHE_DIR, id);
 
     it->size_gb  = size_gb;
     it->format   = fmt;
@@ -144,10 +143,6 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
     it->cover_g  = g;
     it->cover_b  = b;
 
-    struct stat st;
-    if (stat(it->cover_local_path, &st) == 0 && st.st_size > 256) {
-        it->cover_ready_on_disk = true;
-    }
 }
 
 void sys_init(WolodriveApp *app) {

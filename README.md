@@ -8,8 +8,9 @@ The interface follows the supplied Netflix TV reference: a dark left navigation
 rail, selected-game artwork across the background, a readable title and description,
 and horizontal rows of landscape covers. The selected cover has a white border
 and action footer. WoloDrive uses its own branding and the catalog's game artwork;
-portrait covers are cropped to fill the landscape backdrop and cards, so their
-composition depends on the available source image.
+square icons and portrait covers are shown in full on cards against a matching
+gradient. Wide card artwork fills the card. Backgrounds prefer separate widescreen
+artwork, with a softened, darkened cover fallback when none is supplied.
 
 Use **Left/Right** or the controller **D-pad** to select a game. Press **Left**
 again at the first card or leftmost grid column to focus the far-left sidebar.
@@ -117,9 +118,44 @@ the first card follows the newest addition. Without dated catalog data, Home
 shows a refresh prompt instead of calling the built-in sample games new releases.
 
 The catalog holds up to 4096 entries, accommodating the current default sources;
-sources beyond that limit are not retained. Cover prefetch prioritizes Home's
-latest games and the first 128 games for each supported console (PS4 and PS5),
-downloading at most 384 distinct covers per sync.
+sources beyond that limit are not retained. Artwork loads independently of catalog
+sync: selection first, visible cards next, then a small nearby window. Search and
+game panels use the same cache, including games beyond the former prefetch limit.
+
+## Game artwork
+
+Catalog entries retain `posterUrl` / `coverUrl` / `cover` / `image` as cover
+fallbacks and `iconUrl` / `icon` as square icons. Optional `landscapeUrl`, `cardUrl`
+or `bannerUrl` supplies card artwork; `backdropUrl`, `backgroundUrl` or `heroUrl`
+supplies a separate backdrop. Screenshots are never substituted for these fields.
+Cards prefer landscape artwork, then icons, then covers; backgrounds prefer their
+own artwork, then landscape art, then a softened cover/icon. Failed preferred
+artwork falls back to the cover/icon while retrying in the background.
+
+Images download and decode in an SDL worker; texture creation stays on the UI
+thread. URL-keyed files in `assets/covers/*.art` share downloads across package
+variants and change automatically when the URL changes. Existing title-ID `.cover`
+files are left untouched and are no longer used as downloads, because they cannot
+identify their source URL. Corrupt cached images are downloaded again and validated
+by decoding before replacing the cache file. Failed images retry after 30 seconds
+while requested. HTTPS verification remains enabled. Downloads are limited to
+16 MiB and 12 seconds each. Decoded images fit within 1920×1080, pending decoded
+surfaces are limited to three, and textures use a 48 MiB LRU budget across 64 slots.
+Disk files persist for offline reuse; they currently have no automatic size limit.
+
+For local replacements, add PNG, JPG or WebP files under `assets/artwork/`:
+
+- `PPSA12345.card.png` replaces the card image.
+- `PPSA12345.backdrop.jpg` replaces the backdrop.
+- `PPSA12345.png` is a shared fallback for both roles.
+
+Use the exact catalog title ID, including case on Linux. Role-specific files take
+precedence over shared files; extension order is PNG, JPG, WebP. Adding/removing
+files or changing their modification time/size updates the requested artwork.
+Local replacements and downloaded cache files are ignored by Git. On PS5 the
+cache is `/data/homebrew/wolodrive/covers` and replacements belong under
+`/data/homebrew/wolodrive/artwork`. The worker joins before SDL/image shutdown.
+
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
 **Sega**, **Nintendo**, **Atari**, **SNK**, **NEC**, **Bandai**, **Other consoles**, and
@@ -320,7 +356,8 @@ For PS5, configure `PS5_PAYLOAD_SDK` and run `make ps5`.
 
 Native Windows remains a project requirement, but the repository currently has
 no native Windows build target. Existing platform gaps include POSIX storage
-queries, pthread catalog workers, and GNU string functions. The Windows preview
+queries and GNU string functions. Artwork and catalog workers use SDL threads;
+this does not resolve the remaining native Windows build gaps. The Windows preview
 below runs the Linux build through WSL; it does not verify a native Windows
 executable. A separate native Linux graphical session is also required to verify
 Linux display behavior independently of WSLg.
@@ -341,3 +378,12 @@ SDL_RENDER_DRIVER=software ./build/wolodrive
 ```
 
 If the app reports missing fonts, install Noto Sans CJK as described above.
+
+Artwork validation: the Linux build and automated suite run through WSL, including
+local HTTP fixtures for cache corruption, retries, URL changes, package sharing,
+separate/soft backgrounds, local overrides, fitting, GPU eviction and shutdown.
+Native Windows builds/launch, PS5 builds (SDK unavailable), and a separate native
+Linux graphical session remain unverified in this environment.
+Visible WSLg covers, softened backgrounds and readable text were inspected during
+this change. Final live navigation checks were stopped with the physical Escape
+key; no further Computer Use actions were taken, so they remain incomplete.

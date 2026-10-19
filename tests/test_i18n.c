@@ -76,6 +76,8 @@ static void test_live_switching(void) {
     assert(strcmp(info.name, "software") == 0);
     setenv("LC_ALL", "en_US.UTF-8", 1);
     sys_init(app);
+    /* General UI checks stay offline; test_artwork exercises the real downloader. */
+    for (int i = 0; i < app->catalog_count; i++) app->catalog[i].cover_url[0] = 0;
     /* Dated game fixtures keep Home populated without contacting live sources. */
     for (int i = 0; i < app->catalog_count; i++) {
         app->catalog[i].is_game = true;

@@ -55,7 +55,6 @@
 
 #define MAX_CATALOG_ITEMS       4096
 #define MAX_ITEMS_PER_ROW       128
-#define MAX_COVER_PREFETCH      (MAX_ITEMS_PER_ROW * 3)
 typedef enum {
     VIEW_HOME,
     VIEW_GAMES,
@@ -98,8 +97,10 @@ typedef struct {
     char description[MAX_DESCRIPTION_BYTES]; /* Original plain-text catalog description. */
     char install_path[256];     /* Docelowa ścieżka na PS5 */
     char download_url[512];     /* Bezpośredni link do pakietu z katalogu JSON */
-    char cover_url[512];        /* URL okładki (posterUrl / coverUrl / iconUrl) */
-    char cover_local_path[256]; /* Lokalna ścieżka w assets/covers/ */
+    char cover_url[512];       /* Portrait cover/icon fallback. */
+    char icon_url[512];        /* Square game icon. */
+    char landscape_url[512];   /* Wide card artwork, kept separate from the cover. */
+    char backdrop_url[512];    /* Wide hero/background artwork. */
 
     float size_gb;              /* Rozmiar w GB */
     PackageFormat format;       /* .exfat / .ffpkg / .pkg */
@@ -110,11 +111,6 @@ typedef struct {
     uint8_t cover_g;
     uint8_t cover_b;
 
-    bool cover_ready_on_disk;   /* Flaga ustawiana przez wątek pobierający po zapisie pliku */
-    bool cover_load_attempted;  /* Czy wątek UI próbował już wczytać teksturę */
-    SDL_Texture *cover_tex;     /* Tekstura okładki w VRAM (SDL2_image) */
-    int cover_w;
-    int cover_h;
 } GameItem;
 
 typedef struct {
@@ -161,6 +157,8 @@ typedef struct {
     int settings_column;
     bool language_menu_open;
     int language_menu_index;
+    struct ArtworkCache *artwork;
+    SDL_Thread *catalog_thread;
     TranslationService *translations;
     GameItem *description_item;
     bool show_original_description;
@@ -183,7 +181,6 @@ typedef struct {
     TextId sync_status_id;
     int sync_current, sync_total, sync_sources;
     char sync_title[128];
-    int covers_cached_count;
 
     CarouselRow rows[TOTAL_ROWS];
     int active_row;
@@ -230,7 +227,7 @@ const char *sys_format_short_badge(PackageFormat fmt);
 
 /* Warstwa katalogu Pegasus-DL i cache'u okładek (src/catalog_pegasus.c) */
 void catalog_start_async_sync(WolodriveApp *app);
-void catalog_free_textures(WolodriveApp *app);
+void catalog_stop_sync(WolodriveApp *app);
 /* Caller holds catalog_mutex; returns newest dated games up to capacity. */
 int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacity);
 

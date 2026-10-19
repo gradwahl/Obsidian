@@ -1,7 +1,6 @@
 #include "wolodrive.h"
 #include "text.h"
 #include <curl/curl.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,29 +23,6 @@ static size_t write_mem_cb(void *contents, size_t size, size_t nmemb, void *user
     mem->size += realsize;
     mem->data[mem->size] = '\0';
     return realsize;
-}
-
-static size_t write_file_cb(void *ptr, size_t size, size_t nmemb, void *stream) {
-    return fwrite(ptr, size, nmemb, (FILE *)stream);
-}
-
-static void ensure_directories(void) {
-#ifdef __PS5__
-    mkdir("/data/homebrew", 0777);
-    mkdir(WOLODRIVE_DATA_PATH, 0777);
-    mkdir(COVERS_CACHE_DIR, 0777);
-#else
-    mkdir("assets", 0777);
-    mkdir(COVERS_CACHE_DIR, 0777);
-#endif
-}
-
-static bool file_exists_and_valid(const char *path) {
-    struct stat st;
-    if (stat(path, &st) == 0 && st.st_size > 256) {
-        return true;
-    }
-    return false;
 }
 
 static char *http_get_string(const char *url) {
@@ -80,47 +56,6 @@ static char *http_get_string(const char *url) {
         return NULL;
     }
     return chunk.data;
-}
-
-static bool http_download_file(const char *url, const char *dest_path) {
-    if (!url || strncmp(url, "http", 4) != 0) return false;
-    if (file_exists_and_valid(dest_path)) return true;
-
-    char tmp_path[300];
-    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", dest_path);
-
-    FILE *fp = fopen(tmp_path, "wb");
-    if (!fp) return false;
-
-    CURL *curl = curl_easy_init();
-    if (!curl) {
-        fclose(fp);
-        remove(tmp_path);
-        return false;
-    }
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file_cb);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Wolodrive/2.0 (PS5-13.60; CoverCache)");
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 8L);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-
-    CURLcode res = curl_easy_perform(curl);
-    long http_code = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-    curl_easy_cleanup(curl);
-    fclose(fp);
-
-    if (res == CURLE_OK && http_code >= 200 && http_code < 300 && file_exists_and_valid(tmp_path)) {
-        rename(tmp_path, dest_path);
-        return true;
-    }
-    remove(tmp_path);
-    return false;
 }
 
 /* ============================================================================
@@ -258,19 +193,6 @@ static void generate_color_from_id(const char *id, uint8_t *r, uint8_t *g, uint8
     *b = palette[idx][2];
 }
 
-static void sanitize_filename(const char *input, char *output, size_t max_len) {
-    size_t j = 0;
-    for (size_t i = 0; input[i] != '\0' && j + 1 < max_len; i++) {
-        char c = input[i];
-        if (isalnum((unsigned char)c) || c == '_' || c == '-') {
-            output[j++] = c;
-        } else {
-            output[j++] = '_';
-        }
-    }
-    output[j] = '\0';
-}
-
 static PackageFormat detect_package_format(const char *id_code, const char *dl_url, const char *fmt_str) {
     if (fmt_str && fmt_str[0]) {
         if (strcasestr(fmt_str, "exfat")) return FMT_EXFAT;
@@ -350,30 +272,6 @@ int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacit
         if (count < capacity) count++;
         for (int j = count - 1; j > position; j--) items[j] = items[j - 1];
         items[position] = item;
-    }
-    return count;
-}
-
-/* Prioritize Home, then the supported consoles' visible catalog rows. */
-static int cover_prefetch_locked(WolodriveApp *app, GameItem **items) {
-    int count = catalog_latest_games_locked(app, items, MAX_ITEMS_PER_ROW);
-    for (int company = 0; company < library_company_count(); company++) {
-        const LibraryCompany *brand = library_company_at(company);
-        for (int c = 0; c < brand->console_count; c++) {
-            const LibraryConsole *console = &brand->consoles[c];
-            if (!console->title_id_prefix) continue;
-            int matched = 0;
-            for (int i = 0; i < app->catalog_count && matched < MAX_ITEMS_PER_ROW; i++) {
-                GameItem *item = &app->catalog[i];
-                if (!item->is_game || !library_console_matches_id(console, item->id_code)) continue;
-                matched++;
-                bool duplicate = false;
-                for (int j = 0; j < count; j++) {
-                    if (items[j] == item) { duplicate = true; break; }
-                }
-                if (!duplicate && count < MAX_COVER_PREFETCH) items[count++] = item;
-            }
-        }
     }
     return count;
 }
@@ -458,6 +356,22 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
         json_extract_string(object_start, object_end, "parentTitleId", parent, sizeof(parent)))
         SDL_strlcpy(target->parent_title_id, parent, sizeof(target->parent_title_id));
     json_extract_screenshots(object_start, object_end, target);
+    const char *icon = json_object_value(object_start, object_end, "iconUrl");
+    if (!icon) icon = json_object_value(object_start, object_end, "icon");
+    target->icon_url[0] = 0;
+    if (icon && *icon == '"') text_decode_json_string(icon+1, object_end, target->icon_url, sizeof(target->icon_url));
+    const char *landscape_keys[] = {"landscapeUrl", "cardUrl", "bannerUrl"};
+    const char *backdrop_keys[] = {"backdropUrl", "backgroundUrl", "heroUrl"};
+    target->landscape_url[0] = target->backdrop_url[0] = 0;
+    for (int i = 0; i < 3; i++) {
+        const char *value = json_object_value(object_start, object_end, landscape_keys[i]);
+        if (value && *value == '"' && text_decode_json_string(value+1, object_end, target->landscape_url, sizeof(target->landscape_url)) && target->landscape_url[0]) break;
+    }
+    for (int i = 0; i < 3; i++) {
+        const char *value = json_object_value(object_start, object_end, backdrop_keys[i]);
+        if (value && *value == '"' && text_decode_json_string(value+1, object_end, target->backdrop_url, sizeof(target->backdrop_url)) && target->backdrop_url[0]) break;
+    }
+
     /* A newer source for the same game counts as its newest catalog addition. */
     if (added_at > target->catalog_added_at) target->catalog_added_at = added_at;
 
@@ -467,9 +381,7 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     if (dl_url && dl_url[0]) {
         snprintf(target->download_url, sizeof(target->download_url), "%s", dl_url);
     }
-    if (cover_url && cover_url[0]) {
-        snprintf(target->cover_url, sizeof(target->cover_url), "%s", cover_url);
-    }
+    SDL_strlcpy(target->cover_url, cover_url ? cover_url : "", sizeof(target->cover_url));
 
     target->format  = fmt;
     target->size_gb = (size_gb > 0.05f) ? size_gb : 42.5f;
@@ -483,14 +395,6 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     }
 
     generate_color_from_id(target->id_code, &target->cover_r, &target->cover_g, &target->cover_b);
-
-    char clean_id[64];
-    sanitize_filename(target->id_code, clean_id, sizeof(clean_id));
-    snprintf(target->cover_local_path, sizeof(target->cover_local_path), "%s/%s.cover", COVERS_CACHE_DIR, clean_id);
-
-    if (file_exists_and_valid(target->cover_local_path)) {
-        target->cover_ready_on_disk = true;
-    }
 
     app->catalog_dirty = true;
     SDL_UnlockMutex(app->catalog_mutex);
@@ -615,9 +519,8 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
     return games_added;
 }
 
-static void *catalog_sync_worker(void *userdata) {
+static int catalog_sync_worker(void *userdata) {
     WolodriveApp *app = (WolodriveApp *)userdata;
-    ensure_directories();
 
     SDL_LockMutex(app->catalog_mutex);
     app->sync_in_progress = true;
@@ -650,53 +553,11 @@ static void *catalog_sync_worker(void *userdata) {
         }
     }
 
-    /* Krok 2: Pobieranie i cache'owanie okładek do assets/covers/ dla wszystkich pozycji w katalogu */
-    int cached_ok = 0;
-    int total_items = 0;
-    GameItem *cover_items[MAX_COVER_PREFETCH];
-
-    SDL_LockMutex(app->catalog_mutex);
-    total_items = cover_prefetch_locked(app, cover_items);
-    SDL_UnlockMutex(app->catalog_mutex);
-
-    for (int i = 0; i < total_items && app->running; i++) {
-        char url[512] = {0};
-        char local_path[256] = {0};
-        char title[128] = {0};
-
-        SDL_LockMutex(app->catalog_mutex);
-        snprintf(url, sizeof(url), "%s", cover_items[i]->cover_url);
-        snprintf(local_path, sizeof(local_path), "%s", cover_items[i]->cover_local_path);
-        snprintf(title, sizeof(title), "%s", cover_items[i]->title);
-        SDL_UnlockMutex(app->catalog_mutex);
-
-        if (url[0] != '\0') {
-            if (!file_exists_and_valid(local_path)) {
-                SDL_LockMutex(app->catalog_mutex);
-                app->sync_status_id = TXT_SYNC_COVER;
-                app->sync_current = i + 1;
-                app->sync_total = total_items;
-                snprintf(app->sync_title, sizeof(app->sync_title), "%s", title);
-                SDL_UnlockMutex(app->catalog_mutex);
-
-                http_download_file(url, local_path);
-            }
-
-            if (file_exists_and_valid(local_path)) {
-                SDL_LockMutex(app->catalog_mutex);
-                cover_items[i]->cover_ready_on_disk = true;
-                cached_ok++;
-                app->covers_cached_count = cached_ok;
-                SDL_UnlockMutex(app->catalog_mutex);
-            }
-        }
-    }
-
     SDL_LockMutex(app->catalog_mutex);
     app->sync_in_progress = false;
     app->sync_status_id = TXT_SYNC_DONE;
-    app->sync_current = cached_ok;
-    app->sync_total = total_items;
+    app->sync_current = 0;
+    app->sync_total = 0;
     app->sync_sources = subcatalog_count;
     app->catalog_dirty = true;
     SDL_UnlockMutex(app->catalog_mutex);
@@ -704,11 +565,11 @@ static void *catalog_sync_worker(void *userdata) {
     if (remote_games_total > 0) {
         sys_send_notification(app, TR(app, TXT_SYNC_LOADED), remote_games_total);
     } else {
-        sys_send_notification(app, TR(app, TXT_SYNC_CACHED),
-                              subcatalog_count, cached_ok);
+        sys_send_notification(app, TR(app, TXT_SYNC_DONE),
+                              app->catalog_count, subcatalog_count);
     }
 
-    return NULL;
+    return 0;
 }
 
 void catalog_start_async_sync(WolodriveApp *app) {
@@ -721,21 +582,16 @@ void catalog_start_async_sync(WolodriveApp *app) {
     app->sync_in_progress = true;
     SDL_UnlockMutex(app->catalog_mutex);
 
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, catalog_sync_worker, app) == 0) {
-        pthread_detach(tid);
-    } else {
+    if (app->catalog_thread) SDL_WaitThread(app->catalog_thread, NULL);
+    app->catalog_thread = SDL_CreateThread(catalog_sync_worker, "catalog", app);
+    if (!app->catalog_thread) {
         SDL_LockMutex(app->catalog_mutex);
         app->sync_in_progress = false;
         SDL_UnlockMutex(app->catalog_mutex);
     }
 }
 
-void catalog_free_textures(WolodriveApp *app) {
-    for (int i = 0; i < app->catalog_count; i++) {
-        if (app->catalog[i].cover_tex) {
-            SDL_DestroyTexture(app->catalog[i].cover_tex);
-            app->catalog[i].cover_tex = NULL;
-        }
-    }
+void catalog_stop_sync(WolodriveApp *app) {
+    if (app->catalog_thread) SDL_WaitThread(app->catalog_thread, NULL);
+    app->catalog_thread = NULL;
 }

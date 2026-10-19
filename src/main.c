@@ -112,6 +112,8 @@ int main(int argc, char *argv[]) {
 
     exit_code = 0;
 cleanup:
+    app->running = false;
+    catalog_stop_sync(app);
     translation_destroy(app->translations);
     ui_cleanup(app);
     if (app->catalog_mutex) SDL_DestroyMutex(app->catalog_mutex);

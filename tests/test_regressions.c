@@ -54,12 +54,38 @@ static void test_description_text(void) {
     puts("HTML tags/entities, JSON Unicode and UTF-8 truncation passed.");
 }
 
+static void test_artwork_metadata(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    const char *json = "{\"games\":[{\"titleId\":\"PPSA12345\",\"title\":\"Art test\","
+        "\"posterUrl\":\"https://example.test/poster\",\"iconUrl\":\"https://example.test/icon\","
+        "\"landscapeUrl\":\"https://example.test/card\",\"backdropUrl\":\"https://example.test/hero\","
+        "\"screenshots\":[{\"url\":\"https://example.test/shot\",\"backdropUrl\":\"wrong\"}]}]}";
+    assert(parse_catalog_json(app,json,"Art",NULL,NULL,0) == 1);
+    GameItem *item = &app->catalog[0];
+    assert(strcmp(item->cover_url,"https://example.test/poster") == 0);
+    assert(strcmp(item->icon_url,"https://example.test/icon") == 0);
+    assert(strcmp(item->landscape_url,"https://example.test/card") == 0);
+    assert(strcmp(item->backdrop_url,"https://example.test/hero") == 0);
+    json = "{\"games\":[{\"titleId\":\"PPSA12345\",\"title\":\"Art test\","
+        "\"cardUrl\":\"https://example.test/new-card\",\"backgroundUrl\":\"https://example.test/new-hero\"}]}";
+    assert(parse_catalog_json(app,json,"Art",NULL,NULL,0) == 1 && app->catalog_count == 1);
+    assert(!item->cover_url[0] && !item->icon_url[0]);
+    assert(strcmp(item->landscape_url,"https://example.test/new-card") == 0);
+    assert(strcmp(item->backdrop_url,"https://example.test/new-hero") == 0);
+    SDL_DestroyMutex(app->catalog_mutex); free(app);
+    puts("Artwork metadata roles, direct-member parsing and refresh invalidation passed.");
+}
+
 static void test_truthful_catalog_state(void) {
     WolodriveApp *app = calloc(1, sizeof(*app));
     assert(app);
     app->catalog_mutex = SDL_CreateMutex();
     assert(app->catalog_mutex);
     sys_init(app);
+    /* General UI checks stay offline; test_artwork exercises the real downloader. */
+    for (int i = 0; i < app->catalog_count; i++) app->catalog[i].cover_url[0] = 0;
     assert(app->catalog_count > 0);
     for (int i = 0; i < app->catalog_count; i++) {
         assert(app->catalog[i].state == STATE_AVAILABLE && app->catalog[i].progress == 0.0f);
@@ -487,6 +513,8 @@ static void test_tv_catalog_navigation(void) {
     assert(app->catalog_mutex && app->window);
     assert(ui_create_renderer(app));
     sys_init(app);
+    /* General UI checks stay offline; test_artwork exercises the real downloader. */
+    for (int i = 0; i < app->catalog_count; i++) app->catalog[i].cover_url[0] = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         app->catalog[i].is_game = true;
         app->catalog[i].catalog_added_at = 20261018120000ULL - (uint64_t)i * 10000;
@@ -950,25 +978,19 @@ static void test_latest_catalog_games(void) {
     for (int i = 1; i < home->item_count; i++) {
         assert(home->items[i - 1]->catalog_added_at >= home->items[i]->catalog_added_at);
     }
-    GameItem *covers[MAX_COVER_PREFETCH];
-    int count = cover_prefetch_locked(app, covers);
-    assert(count <= MAX_COVER_PREFETCH && covers[0] == home->items[0]);
-    for (int i = 0; i < home->item_count; i++) assert(covers[i] == home->items[i]);
-    for (int i = 0; i < count; i++) {
-        for (int j = i + 1; j < count; j++) assert(covers[i] != covers[j]);
-    }
     /* Missing dates never turn seed order into a supposed latest-release feed. */
     for (int i = 0; i < app->catalog_count; i++) app->catalog[i].catalog_added_at = 0;
     ui_rebuild_carousels(app);
     assert(home->item_count == 0 && home->selected_col == 0);
     SDL_DestroyMutex(app->catalog_mutex);
     free(app);
-    puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection and bounded cover priority passed.");
+    puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection passed.");
 }
 
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
+    test_artwork_metadata();
     test_truthful_catalog_state();
     test_native_artwork_bounds();
     test_latest_catalog_games();

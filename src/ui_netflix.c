@@ -1,4 +1,5 @@
 #include "wolodrive.h"
+#include "artwork.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -328,48 +329,28 @@ static void draw_fitted_text(SDL_Renderer *r, TTF_Font *font, const char *text,
     SDL_FreeSurface(surface);
 }
 
-static void ensure_cover_texture_loaded(WolodriveApp *app, GameItem *it) {
-    if (!it || it->cover_tex != NULL || !it->cover_ready_on_disk || it->cover_load_attempted) {
-        return;
-    }
-    it->cover_load_attempted = true;
-
-    SDL_Surface *surf = IMG_Load(it->cover_local_path);
-    if (surf) {
-        it->cover_tex = SDL_CreateTextureFromSurface(app->renderer, surf);
-        it->cover_w   = surf->w;
-        it->cover_h   = surf->h;
-        SDL_FreeSurface(surf);
-    }
-}
-
-/* Renderuje teksturę okładki z zachowaniem proporcji (Center-Crop Cover Fit) lub stylowy Placeholder Wolodrive */
 static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
                                         int x, int y, int w, int h, bool is_hero) {
     SDL_Renderer *r = app->renderer;
-    ensure_cover_texture_loaded(app, it);
-
-    if (it->cover_tex && it->cover_w > 0 && it->cover_h > 0) {
-        float dst_aspect = (float)w / (float)h;
-        float src_aspect = (float)it->cover_w / (float)it->cover_h;
-        SDL_Rect src_rect;
-
-        if (src_aspect > dst_aspect) {
-            /* Obraz szerszy niż kafelek – przytnij boki */
-            src_rect.h = it->cover_h;
-            src_rect.w = (int)(it->cover_h * dst_aspect);
-            src_rect.x = (it->cover_w - src_rect.w) / 2;
-            src_rect.y = 0;
-        } else {
-            /* Obraz wyższy niż kafelek (np. pionowy plakat PS5) – wytnij środek-górę */
-            src_rect.w = it->cover_w;
-            src_rect.h = (int)(it->cover_w / dst_aspect);
-            src_rect.x = 0;
-            src_rect.y = (it->cover_h - src_rect.h) / 4;
-        }
-
-        SDL_Rect dst_rect = { x, y, w, h };
-        SDL_RenderCopy(r, it->cover_tex, &src_rect, &dst_rect);
+    int width = 0, height = 0;
+    SDL_Texture *texture = artwork_get(app, it, is_hero, is_hero ? 100 : 80, &width, &height);
+    if (!texture && is_hero) texture = artwork_get(app, it, false, 100, &width, &height);
+    if (texture && width > 0 && height > 0) {
+        SDL_Rect box = {x, y, w, h};
+        SDL_Color color = artwork_background(app, texture);
+        fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, 255,
+                               color.r/8, color.g/8, color.b/8, 255, 24);
+        bool crop = is_hero || (double)width / height >= 1.5;
+        SDL_Rect destination = artwork_fit(width, height, box, crop);
+        SDL_Rect previous;
+        bool clipped = SDL_RenderIsClipEnabled(r);
+        SDL_RenderGetClipRect(r, &previous);
+        SDL_Rect intersection = box;
+        if (clipped) SDL_IntersectRect(&box, &previous, &intersection);
+        SDL_RenderSetClipRect(r, &intersection);
+        SDL_RenderCopy(r, texture, NULL, &destination);
+        if (is_hero) fill_rect(r, x, y, w, h, 0, 0, 0, 70);
+        SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
     } else {
         /* Elegancki, stylowy Placeholder z logo WOLODRIVE i gradientem bazowym */
         fill_vertical_gradient(r, x, y, w, h,
@@ -386,11 +367,7 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
         draw_text(r, is_hero ? app->font_row_title : app->font_small,
                   "WOLODRIVE", x + 18, y + h / 2 - (is_hero ? 28 : 22), watermark_col, 0);
 
-        if (it->cover_url[0] != '\0' && !it->cover_ready_on_disk) {
-            draw_text(r, app->font_micro, TR(app, TXT_COVER_LOADING), x + 18, y + h / 2 + 4, sub_col, 0);
-        } else {
-            draw_text(r, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
-        }
+        draw_text(r, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
     }
 }
 
@@ -452,7 +429,7 @@ bool ui_init(WolodriveApp *app) {
 }
 
 void ui_cleanup(WolodriveApp *app) {
-    catalog_free_textures(app);
+    artwork_destroy(app);
     for (int i = 0; i < app->library_artwork_count; i++) {
         if (app->library_artwork[i].texture) SDL_DestroyTexture(app->library_artwork[i].texture);
     }
@@ -1147,7 +1124,7 @@ static void render_top_bar(WolodriveApp *app) {
             break;
         case TXT_SYNC_DONE:
             snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_DONE),
-                     app->catalog_count, app->sync_sources, app->sync_current, app->sync_total);
+                     app->catalog_count, app->sync_sources);
             break;
         default:
             snprintf(sync_info, sizeof(sync_info), "%s", TR(app, app->sync_status_id));
@@ -1384,6 +1361,20 @@ static void render_library_grid(WolodriveApp *app) {
 
 void ui_render(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
+
+    /* Queue selection first, followed by visible cards and a small nearby window. */
+    if (app->detail_open && app->detail_item) artwork_prefetch(app, app->detail_item, 110);
+    if (app->active_row == VIEW_SEARCH) {
+        if (app->search_count) artwork_prefetch(app, app->search_results[app->search_selected], 100);
+        int start = app->search_selected / SEARCH_PAGE * SEARCH_PAGE;
+        for (int i = SDL_max(0, start-3); i < SDL_min(app->search_count, start+SEARCH_PAGE+3); i++)
+            artwork_prefetch(app, app->search_results[i], i >= start && i < start+SEARCH_PAGE ? 80 : 10);
+    } else {
+        CarouselRow *row = &app->rows[app->active_row];
+        if (row->item_count) artwork_prefetch(app, row->items[row->selected_col], 100);
+        for (int i = SDL_max(0, row->selected_col-2); i < SDL_min(row->item_count, row->selected_col+7); i++)
+            artwork_prefetch(app, row->items[i], 10);
+    }
 
     /* The presented backbuffer is undefined; clear before drawing scaled layers. */
     SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
