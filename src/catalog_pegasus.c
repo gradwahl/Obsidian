@@ -277,6 +277,7 @@ int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacit
 }
 
 static void json_extract_screenshots(const char *start, const char *end, GameItem *item) {
+    item->screenshot_count = 0;
     const char *array = json_object_value(start, end, "screenshots");
     if (!array) array = json_object_value(start, end, "screenshotUrls");
     if (!array) return;
@@ -356,6 +357,14 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
         json_extract_string(object_start, object_end, "parentTitleId", parent, sizeof(parent)))
         SDL_strlcpy(target->parent_title_id, parent, sizeof(target->parent_title_id));
     json_extract_screenshots(object_start, object_end, target);
+    const char *media_keys[] = {"launchboxUrl", "playstationUrl"};
+    char *media_destinations[] = {target->launchbox_url, target->playstation_url};
+    for (int media = 0; media < 2; media++) {
+        media_destinations[media][0] = 0;
+        const char *value = json_object_value(object_start, object_end, media_keys[media]);
+        if (value && *value == '"') text_decode_json_string(value+1, object_end, media_destinations[media], 512);
+    }
+
     const char *boxart = json_object_value(object_start, object_end, "boxArtUrl");
     if (!boxart) boxart = json_object_value(object_start, object_end, "boxartUrl");
     if (!boxart) boxart = json_object_value(object_start, object_end, "boxCoverUrl");

@@ -1,5 +1,6 @@
 #include "wolodrive.h"
 #include "artwork.h"
+#include "screenshots.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -449,6 +450,7 @@ bool ui_init(WolodriveApp *app) {
 }
 
 void ui_cleanup(WolodriveApp *app) {
+    screenshots_destroy(app->screenshots); app->screenshots = NULL;
     artwork_destroy(app);
     for (int i = 0; i < app->library_artwork_count; i++) {
         if (app->library_artwork[i].texture) SDL_DestroyTexture(app->library_artwork[i].texture);

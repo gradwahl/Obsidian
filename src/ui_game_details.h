@@ -11,6 +11,7 @@ static SDL_Rect game_entry_target(int index) {
 }
 static void ui_open_game(WolodriveApp *app, GameItem *item) {
     if (!item) return;
+    app->screenshot_viewer = false;
     app->detail_item = item;
     app->detail_parent = NULL;
     app->detail_open = true;
@@ -44,14 +45,11 @@ static int game_entries(WolodriveApp *app, GameItem **entries) {
     return count;
 }
 static void game_open_screenshot(WolodriveApp *app, int index) {
-    GameItem *item = app->detail_item;
-    if (index < 0 || index >= item->screenshot_count) return;
-    const char *url = item->screenshot_urls[index];
-    if (strncmp(url, "https://", 8) != 0 && strncmp(url, "http://", 7) != 0) return;
-#if !defined(__PS5__) && SDL_VERSION_ATLEAST(2, 0, 14)
-    if (SDL_OpenURL(url) == 0) return;
-#endif
-    sys_send_notification(app, TR(app, TXT_GAME_SCREENSHOT_UNAVAILABLE));
+    ScreenshotSet shots;
+    screenshots_get(app,app->detail_item,&shots);
+    if (index < 0 || index >= shots.count) return;
+    app->detail_selection = index;
+    app->screenshot_viewer = true;
 }
 static void game_activate_entry(WolodriveApp *app, GameItem **entries, int count) {
     if (app->detail_selection < 0 || app->detail_selection >= count) return;
@@ -63,15 +61,24 @@ static void game_activate_entry(WolodriveApp *app, GameItem **entries, int count
     } else if (app->detail_tab == GAME_SCREENSHOTS) game_open_screenshot(app, app->detail_selection);
 }
 static void game_select_tab(WolodriveApp *app, int tab) {
+    app->screenshot_viewer = false;
     app->detail_tab = tab;
     app->detail_selection = app->detail_scroll = 0;
     app->detail_content_focus = false;
 }
 static void handle_game_details_input(WolodriveApp *app, const SDL_Event *ev) {
     GameItem *entries[MAX_CATALOG_ITEMS];
-    int count = app->detail_tab == GAME_SCREENSHOTS ? app->detail_item->screenshot_count : game_entries(app, entries);
+    ScreenshotSet shots = {0};
+    if (app->detail_tab == GAME_SCREENSHOTS) screenshots_get(app,app->detail_item,&shots);
+    int count = app->detail_tab == GAME_SCREENSHOTS ? shots.count : game_entries(app, entries);
     app->detail_selection = count ? SDL_min(app->detail_selection, count - 1) : 0;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+        if (app->screenshot_viewer) {
+            if (contains_point((SDL_Rect){1820,20,60,60},ev->button.x,ev->button.y)) app->screenshot_viewer = false;
+            else if (count && ev->button.x < 110) app->detail_selection = (app->detail_selection+count-1)%count;
+            else if (count && ev->button.x > 1810) app->detail_selection = (app->detail_selection+1)%count;
+            return;
+        }
         if (contains_point(GAME_CLOSE, ev->button.x, ev->button.y)) { app->detail_open = false; return; }
         for (int tab = 0; tab < GAME_TAB_COUNT; tab++)
             if (contains_point(game_tab_target(tab), ev->button.x, ev->button.y)) { game_select_tab(app, tab); return; }
@@ -113,7 +120,15 @@ static void handle_game_details_input(WolodriveApp *app, const SDL_Event *ev) {
         }
     } else if (ev->type == SDL_MOUSEWHEEL) {
         int direction = ev->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
-        app->detail_scroll = SDL_max(0, app->detail_scroll - ev->wheel.y * direction * 40);
+        if (app->screenshot_viewer && count && ev->wheel.y)
+            app->detail_selection = (app->detail_selection + (ev->wheel.y * direction > 0 ? count-1 : 1)) % count;
+        else app->detail_scroll = SDL_max(0, app->detail_scroll - ev->wheel.y * direction * 40);
+        return;
+    }
+    if (app->screenshot_viewer) {
+        if (action == 6) app->screenshot_viewer = false;
+        else if (count && (action == 1 || action == 2))
+            app->detail_selection = (app->detail_selection + (action == 1 ? count-1 : 1)) % count;
         return;
     }
     if (action == 6) { game_back(app); return; }
@@ -126,10 +141,46 @@ static void handle_game_details_input(WolodriveApp *app, const SDL_Event *ev) {
     else if (action == 2 && app->detail_selection + 1 < count) app->detail_selection++;
     else if (action == 5) game_activate_entry(app, entries, count);
 }
+static void render_screenshot_image(WolodriveApp *app, const char *uri, SDL_Rect box, bool selected) {
+    int width = 0, height = 0;
+    bool failed = false;
+    SDL_Texture *texture = artwork_get_media(app,uri,selected ? 110 : 80,&width,&height,&failed);
+    fill_rect(app->renderer,box.x,box.y,box.w,box.h,8,8,10,255);
+    if (texture && width > 0 && height > 0) {
+        SDL_Rect destination = artwork_fit(width,height,box,false);
+        SDL_RenderCopy(app->renderer,texture,NULL,&destination);
+    } else draw_text(app->renderer,app->font_small,TR(app,failed ? TXT_SCREEN_FAILED : TXT_SCREEN_IMAGE_LOADING),
+                     box.x+16,box.y+box.h/2-20,(SDL_Color){190,190,195,255},box.w-32);
+}
+static void render_screenshot_viewer(WolodriveApp *app, const ScreenshotSet *shots) {
+    SDL_Renderer *r = app->renderer;
+    SDL_Color white = {245,245,245,255};
+    fill_rect(r,0,0,SCREEN_WIDTH,SCREEN_HEIGHT,0,0,0,255);
+    draw_single_line(r,app->font_small,app->detail_item->title,60,24,white,(SDL_Rect){60,20,1700,45});
+    if (shots->count) render_screenshot_image(app,shots->images[app->detail_selection],(SDL_Rect){120,90,1680,850},true);
+    draw_text(r,app->font_row_title,"X",1835,22,white,0);
+    draw_text(r,app->font_row_title,"<",35,490,white,0);
+    draw_text(r,app->font_row_title,">",1835,490,white,0);
+    char label[600];
+    snprintf(label,sizeof(label),"%d / %d",shots->count ? app->detail_selection+1 : 0,shots->count);
+    draw_text(r,app->font_small,label,60,960,white,0);
+    snprintf(label,sizeof(label),TR(app,TXT_SCREEN_SOURCE),shots->source);
+    draw_text(r,app->font_micro,label,300,960,white,1450);
+    draw_text(r,app->font_small,TR(app,TXT_SCREEN_VIEWER_HINT),60,1010,white,1750);
+}
+
 static void render_game_details(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     GameItem *item = app->detail_item;
     SDL_Color white = {245,245,245,255}, muted = {175,175,175,255};
+    ScreenshotSet shots = {0};
+    if (app->detail_tab == GAME_SCREENSHOTS) screenshots_get(app,item,&shots);
+    if (app->screenshot_viewer) {
+        app->detail_selection = shots.count ? SDL_min(app->detail_selection,shots.count-1) : 0;
+        render_screenshot_viewer(app,&shots);
+        return;
+    }
+
     fill_rect(r, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0,0,0,220);
     /* Keep a strip of neighboring covers above the expanded game panel. */
     int count = app->active_row == VIEW_SEARCH ? app->search_count : app->rows[app->active_row].item_count;
@@ -169,17 +220,21 @@ static void render_game_details(WolodriveApp *app) {
         draw_text(r, app->font_small, metadata, 1330, 440, muted, 480);
     } else {
         GameItem *entries[MAX_CATALOG_ITEMS];
-        int total = app->detail_tab == GAME_SCREENSHOTS ? item->screenshot_count : game_entries(app, entries);
+        int total = app->detail_tab == GAME_SCREENSHOTS ? shots.count : game_entries(app, entries);
         app->detail_selection = total ? SDL_min(app->detail_selection, total-1) : 0;
         int start = app->detail_selection / 3 * 3;
-        if (!total) draw_text(r, app->font_body, TR(app, app->detail_tab == GAME_DLC ? TXT_GAME_NO_DLC : TXT_GAME_NO_SCREENSHOTS), CONTENT_X+20, 460, muted, 1350);
+        if (!total) {
+            TextId message = app->detail_tab == GAME_DLC ? TXT_GAME_NO_DLC :
+                shots.state == SHOTS_PENDING ? TXT_SCREEN_LOOKUP : shots.state == SHOTS_FAILED ? TXT_SCREEN_FAILED : TXT_GAME_NO_SCREENSHOTS;
+            draw_text(r,app->font_body,TR(app,message),CONTENT_X+20,460,muted,1350);
+        }
         for (int i = start; i < total && i < start+3; i++) {
             SDL_Rect box = game_entry_target(i);
             fill_rect(r, box.x, box.y, box.w, box.h, 24,24,24,245);
             if (app->detail_tab == GAME_SCREENSHOTS) {
                 snprintf(metadata, sizeof(metadata), TR(app, TXT_GAME_OPEN_SCREENSHOT), i+1);
-                draw_text(r, app->font_row_title, metadata, box.x+18, box.y+50, white, box.w-36);
-                draw_text(r, app->font_micro, item->screenshot_urls[i], box.x+18, box.y+130, muted, box.w-36);
+                render_screenshot_image(app,shots.images[i],(SDL_Rect){box.x+10,box.y+10,box.w-20,240},i == app->detail_selection);
+                draw_text(r, app->font_small, metadata, box.x+18, box.y+270, white, box.w-36);
             } else {
                 GameItem *package = entries[i];
                 render_cover_or_placeholder(app, package, box.x+(box.w-110)/2, box.y, 110, 155, false);
@@ -196,6 +251,11 @@ static void render_game_details(WolodriveApp *app) {
         if (total) {
             snprintf(metadata, sizeof(metadata), "%d / %d", app->detail_selection+1, total);
             draw_text(r, app->font_micro, metadata, CONTENT_X+20, 765, muted, 0);
+        }
+        if (app->detail_tab == GAME_SCREENSHOTS && total) {
+            snprintf(metadata,sizeof(metadata),TR(app,TXT_SCREEN_SOURCE),shots.source);
+            draw_text(r,app->font_micro,metadata,CONTENT_X+160,765,muted,1300);
+            if (shots.page[0]) draw_text(r,app->font_micro,shots.page,CONTENT_X+20,795,muted,1450);
         }
         if (app->detail_tab == GAME_INSTALL) draw_text(r, app->font_micro, TR(app, TXT_ACTION_UNAVAILABLE), CONTENT_X+20, 795, muted, 1490);
     }

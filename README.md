@@ -99,15 +99,49 @@ DLC includes entries with `category: "dlc"` whose `baseTitleId` or `parentTitleI
 matches the game, or whose own title ID matches when no parent ID is supplied.
 Unrelated entries are excluded, and missing relationships show an empty state.
 
-Screenshots accepts up to six unique HTTP(S) links from a catalog's `screenshots`
-or `screenshotUrls` array, as URL strings or objects with a `url` field. Selecting
-a link opens the source image in the desktop system's default browser/viewer.
-These are external links, not an in-app screenshot gallery. PS5 cannot currently
-open them and reports this explicitly. Sources without screenshot metadata show
-an empty state; cover artwork is never presented as gameplay screenshots.
-Details shows the catalog description and package metadata. **Page Up/Down**,
-the mouse wheel or controller Down scrolls text; **I / right stick** toggles the
-original description when online translation is configured.
+The **Screenshots** tab shows up to six in-app image previews. Select one with
+**Enter / Cross** or a click to open a full-screen viewer; **Left/Right / D-pad**,
+mouse wheel, or the on-screen arrows change screenshots. **Escape / Circle** or
+**X** closes the viewer and keeps the panel and selection. Images retain their
+full aspect ratio and are never cropped like the box-cover cards. Loading and
+unavailable images have explicit states in all nine languages.
+
+Catalog `screenshots` / `screenshotUrls` arrays take priority, accepting unique
+HTTP(S) URL strings or objects with a `url` field. When absent, a background worker
+looks for local images, then [LaunchBox](https://gamesdb.launchbox-app.com/), then
+an [official PlayStation game page](https://www.playstation.com/en-us/games/).
+No API keys or accounts are required. LaunchBox discovery requires an exact
+normalised title and console match in its search results (at most two search
+requests, with a keyword fallback), then selects only
+**Screenshot - Gameplay** images. Ambiguous matches, other platforms, covers,
+title screens and logos are rejected. PlayStation discovery tries the game's
+title slug and requires matching `searchtitle` metadata and screenshot-labelled
+media. Explicitly age-gated blocks are skipped. These public HTML adapters depend
+on source coverage and page structure; they do not guarantee screenshots for every
+game. Named editions stay distinct, and DLC is not automatically matched to a base
+game. Source name and matched page URL are shown in the gallery.
+
+Optional `launchboxUrl` and `playstationUrl` catalog fields can identify a known
+source page. A local `assets/screenshots/PPSA12345.sources` file can also contain
+one source page URL per line: a LaunchBox `/games/images/...` URL and/or a
+PlayStation `https://www.playstation.com/en-us/games/.../` URL. Supplied pages still
+must match the game title (and console on LaunchBox). Only these page hosts and
+their image hosts are accepted for provider discovery. Redirects stay within the
+allowed page locations; failed requests and access challenges are not bypassed.
+
+Local screenshots go in `assets/screenshots/PPSA12345/01.jpg` through `06.jpg`;
+PNG and WebP are supported too (extension precedence: JPG, PNG, WebP). These files
+are independent of covers. On PS5 use `/data/homebrew/wolodrive/screenshots` for
+both local screenshots and `.sources` files. Runtime files are ignored by Git.
+
+Discovery runs only when opening the Screenshots tab, with one worker, 32 memory
+entries, a 2 MiB page limit, 5-second connection and 12-second request timeouts,
+and verified HTTPS. LaunchBox page requests are spaced by at least one second;
+PlayStation requests by at least five seconds, including redirects. Successful
+metadata lists persist for seven days; empty/failed lookups are held for 30 minutes.
+Image downloads reuse the existing bounded artwork worker/cache, including retries
+and offline reuse. Remove a `.list` file and restart to force a metadata refresh;
+changing a `.sources` file also changes its cache key. Workers join on shutdown.
 
 Home shows the **128 latest catalog additions**, newest first across the loaded
 sources. It includes explicit `category: "game"` entries with valid UTC `createdAt`
@@ -409,3 +443,18 @@ The vertical-fill adjustment passed the Linux build and full automated suite via
 WSL. A fully visible WSLg window confirmed artwork fills the cases below the
 platform strip, readable text, and Right-key selection/backdrop updates. Native
 Windows/native Linux graphical sessions and PS5 verification remain unavailable.
+
+Screenshot-source validation covers exact platform/title matching, ambiguity,
+image-type and host filtering, entity decoding, explicit age gates, cached success
+and failures, source changes, catalog/local priority, worker shutdown, and viewer
+keyboard/controller/mouse navigation. Live discovery returned six PS5 gameplay
+images for Stray from LaunchBox and six Tales of Arise images from PlayStation.
+Hellblade II currently has no matching PS5 gallery in the tested LaunchBox search;
+a missing or unrecognised official screenshot gallery is shown as an empty state.
+
+The screenshot gallery change passed `make build-linux`, `make test` and
+`git diff --check` through WSL. Its loading and empty states were visible and
+readable in WSLg. Further Computer Use was stopped with the physical Escape key;
+loaded gallery images and full-screen navigation remain visually unverified.
+Native Windows has no configured build target/toolchain, a separate native Linux
+graphical session is unavailable, and `make ps5` is blocked by the missing SDK.

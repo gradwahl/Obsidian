@@ -1,5 +1,8 @@
 /* Exercise private rendering/parser seams without adding a production test API. */
 #include "wolodrive.h"
+#include "screenshots.h"
+static char *no_screenshot_network(void *userdata, const char *url) { (void)userdata; (void)url; return NULL; }
+
 #include "text.h"
 #include <assert.h>
 #include <stdio.h>
@@ -275,8 +278,8 @@ static void test_game_details(WolodriveApp *app) {
     const char *json = "{\"games\":["
         "{\"titleId\":\"PPSA90000\",\"title\":\"Detail Test\",\"category\":\"game\","
         "\"description\":\"<p>Game overview &amp; information.</p>\","
-        "\"screenshots\":[\"https://example.com/one.png\",{\"url\":\"https://example.com/two.png\"},"
-        "\"javascript:bad\",\"https://example.com/one.png\"]},"
+        "\"screenshots\":[\"http://127.0.0.1:9/one.png\",{\"url\":\"http://127.0.0.1:9/two.png\"},"
+        "\"javascript:bad\",\"http://127.0.0.1:9/one.png\"]},"
         "{\"titleId\":\"PPSA90000\",\"title\":\"[exFAT] Detail Test\",\"category\":\"game\"},"
         "{\"titleId\":\"DLC90001\",\"title\":\"Expansion\",\"category\":\"dlc\",\"baseTitleId\":\"PPSA90000\"},"
         "{\"titleId\":\"DLC90002\",\"title\":\"Unrelated expansion\",\"category\":\"dlc\",\"parentTitleId\":\"PPSA99999\"},"
@@ -328,6 +331,25 @@ static void test_game_details(WolodriveApp *app) {
             SDL_FreeSurface(surface);
         }
     }
+    game_select_tab(app,GAME_SCREENSHOTS);
+    event.type = SDL_KEYDOWN; event.key.repeat = 0;
+    event.key.keysym.sym = SDLK_DOWN; ui_handle_input(app,&event);
+    event.key.keysym.sym = SDLK_RETURN; ui_handle_input(app,&event);
+    assert(app->screenshot_viewer && app->detail_open);
+    event.key.keysym.sym = SDLK_RIGHT; ui_handle_input(app,&event);
+    assert(app->detail_selection == 1);
+    ui_render(app);
+    event.key.keysym.sym = SDLK_ESCAPE; ui_handle_input(app,&event);
+    assert(!app->screenshot_viewer && app->detail_open && app->detail_selection == 1);
+    event.type = SDL_CONTROLLERBUTTONDOWN; event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app,&event); assert(app->screenshot_viewer);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B; ui_handle_input(app,&event);
+    assert(!app->screenshot_viewer && app->detail_open);
+    event.type = SDL_MOUSEBUTTONDOWN; event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = game_entry_target(1).x+40; event.button.y = game_entry_target(1).y+40;
+    ui_handle_input(app,&event); assert(app->screenshot_viewer);
+    event.button.x = 1840; event.button.y = 40; ui_handle_input(app,&event);
+    assert(!app->screenshot_viewer && app->detail_open);
     game_select_tab(app, GAME_DLC);
     assert(game_entries(app, entries) == 2);
     event.type = SDL_CONTROLLERBUTTONDOWN;
@@ -514,6 +536,7 @@ static void test_tv_catalog_navigation(void) {
     assert(app->catalog_mutex && app->window);
     assert(ui_create_renderer(app));
     sys_init(app);
+    app->screenshots = screenshots_create(no_screenshot_network,NULL);
     /* General UI checks stay offline; test_artwork exercises the real downloader. */
     for (int i = 0; i < app->catalog_count; i++) app->catalog[i].cover_url[0] = 0;
     for (int i = 0; i < app->catalog_count; i++) {

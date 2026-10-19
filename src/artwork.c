@@ -82,6 +82,13 @@ static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *
     else url = item->boxart_url[0] ? item->boxart_url :
                item->cover_url[0] ? item->cover_url :
                item->icon_url[0] ? item->icon_url : item->landscape_url;
+    if (strncmp(url,"local:",6) == 0) {
+        request->local = true;
+        SDL_strlcpy(request->path,url+6,sizeof(request->path));
+        if (stat(request->path,&st) == 0 && st.st_size > 0)
+            snprintf(request->key,sizeof(request->key),"%s:%lld:%lld",request->path,(long long)st.st_mtime,(long long)st.st_size);
+        return;
+    }
     request->complete_box = !backdrop && item->boxart_url[0];
     request->soft = backdrop && !item->backdrop_url[0] && !item->landscape_url[0];
     SDL_strlcpy(request->url, url, sizeof(request->url));
@@ -343,6 +350,20 @@ SDL_Color artwork_background(WolodriveApp *app, SDL_Texture *texture) {
         if (entry->texture == texture) return entry->color;
     }
     return (SDL_Color){40,40,45,255};
+}
+
+SDL_Texture *artwork_get_media(WolodriveApp *app, const char *uri, int priority, int *width, int *height, bool *failed) {
+    GameItem media = {0};
+    if (strncmp(uri,"https://",8) == 0 || strncmp(uri,"http://",7) == 0)
+        SDL_strlcpy(media.cover_url,uri,sizeof(media.cover_url));
+    else snprintf(media.cover_url,sizeof(media.cover_url),"local:%s",uri);
+    SDL_Texture *texture = artwork_get(app,&media,false,priority,width,height);
+    ArtworkEntry *entry = artwork_request(app,&media,false,priority);
+    *failed = entry == NULL;
+    if (entry && app->artwork) {
+        SDL_LockMutex(app->artwork->mutex); *failed = entry->failed; SDL_UnlockMutex(app->artwork->mutex);
+    }
+    return texture;
 }
 
 bool artwork_complete_box(WolodriveApp *app, SDL_Texture *texture) {

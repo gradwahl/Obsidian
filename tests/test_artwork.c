@@ -42,6 +42,8 @@ int main(void) {
     int w = 0, h = 0;
     SDL_Texture *first = wait_art(app, &item, false, &w, &h);
     assert(first && w == 80 && h == 120);
+    bool media_failed = false;
+    assert(artwork_get_media(app,item.cover_url,100,&w,&h,&media_failed) == first && !media_failed);
     GameItem variant = item;
     SDL_strlcpy(variant.id_code, "PPSA54321", sizeof(variant.id_code));
     assert(artwork_get(app,&variant,false,80,&w,&h) == first);
@@ -63,6 +65,13 @@ int main(void) {
     SDL_FillRect(local,NULL,SDL_MapRGBA(local->format,230,40,80,255));
     assert(IMG_SavePNG(local,"assets/artwork/PPSA12345.card.png") == 0);
     assert(wait_art(app,&item,false,&w,&h) && w == 50 && h == 50);
+    Uint32 media_start = SDL_GetTicks();
+    SDL_Texture *local_media = NULL;
+    while (!local_media && SDL_GetTicks()-media_start < 2000) {
+        local_media = artwork_get_media(app,"assets/artwork/PPSA12345.card.png",100,&w,&h,&media_failed);
+        SDL_Delay(10);
+    }
+    assert(local_media && !media_failed && w == 50 && h == 50);
     assert(remove("assets/artwork/PPSA12345.card.png") == 0);
     assert(IMG_SavePNG(local,"assets/artwork/PPSA12345.box.png") == 0);
     complete = wait_art(app,&item,false,&w,&h);

@@ -3,3 +3,4 @@ __pycache__/
 assets/covers/*.art
 assets/covers/*.tmp
 assets/artwork/
+assets/screenshots/

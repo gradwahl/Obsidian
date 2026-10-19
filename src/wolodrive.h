@@ -92,6 +92,7 @@ typedef struct {
     char parent_title_id[32];
     char screenshot_urls[MAX_GAME_SCREENSHOTS][512];
     int screenshot_count;
+    char launchbox_url[512], playstation_url[512];
     uint64_t catalog_added_at;  /* Validated UTC YYYYMMDDhhmmss, zero means unknown. */
     TextId description_id;      /* TEXT_COUNT means source-provided description. */
     char description[MAX_DESCRIPTION_BYTES]; /* Original plain-text catalog description. */
@@ -158,6 +159,8 @@ typedef struct {
     int settings_column;
     bool language_menu_open;
     int language_menu_index;
+    struct ScreenshotService *screenshots;
+    bool screenshot_viewer;
     struct ArtworkCache *artwork;
     SDL_Thread *catalog_thread;
     TranslationService *translations;
