@@ -170,6 +170,7 @@ typedef struct {
     int description_scroll;
     SDL_Window *window;
     SDL_Renderer *renderer;
+    struct UiTextCache *text_cache;
     TTF_Font *font_logo;
     TTF_Font *font_hero_title;
     TTF_Font *font_row_title;

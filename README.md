@@ -198,6 +198,13 @@ Local replacements and downloaded cache files are ignored by Git. On PS5 the
 cache is `/data/homebrew/wolodrive/covers` and replacements belong under
 `/data/homebrew/wolodrive/artwork`. The worker joins before SDL/image shutdown.
 
+Artwork location lookups, including missing local replacements, are cached in
+128 memory slots. Visible/requested locations are rechecked after one second;
+local file additions, removals and modification-time/size changes can therefore
+take up to one second to appear. Catalog artwork URL changes take effect on the
+next request. This avoids repeating filesystem probes for every card on every
+frame, especially across WSL's Windows-drive filesystem.
+
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
 **Sega**, **Nintendo**, **Atari**, **SNK**, **NEC**, **Bandai**, **Other consoles**, and
@@ -347,6 +354,31 @@ make build-linux
 make test
 make linux
 ```
+
+UI text textures, including wrapped descriptions, use a per-app LRU cache with
+128 slots and a 16 MiB texture budget. Text, font, color and wrapping width form
+the key, so changing the selection or language produces the appropriate text.
+Textures are released before fonts and the renderer during shutdown.
+
+For a repeatable, offline navigation performance check on Linux or WSL, run
+`make benchmark-ui` from the repository. It renders 128 fixture games at
+1280×720 with SDL's software renderer and dummy video driver, reporting stationary
+and moving-selection frame times. On the Windows-mounted repository through WSL,
+the initial cache change reduced navigation from 206.25 ms/frame (4.8 FPS) to
+15.44 ms/frame (64.8 FPS), with stationary frames falling from 184.84 to 10.82 ms.
+These are fixture measurements; real artwork, screen sizes and machines affect
+performance. WSL's software-rendering default and `SDL_RENDER_DRIVER` override
+are unchanged.
+
+The navigation cache change passed `make build-linux`, the full `make test`
+suite and `git diff --check` through WSL. Tests cover text reuse, UTF-8, wrapping,
+font/color/translation changes, eviction and cleanup, plus repeated positive and
+negative artwork lookups, expiry and local override changes. The visible WSLg
+preview displayed loaded covers and readable Home/game-panel text. Controlled
+live navigation checks could not be completed while user input was active.
+Native Windows still has no configured build target/toolchain, a separate native
+Linux graphical session is unavailable, and `make ps5` is blocked by the missing
+payload SDK. These platforms are not verified by the benchmark or WSLg preview.
 
 Tests validate translation completeness and printf placeholders, locale
 precedence, fallback, preference persistence, mouse/keyboard/controller menu

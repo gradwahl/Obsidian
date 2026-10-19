@@ -1011,6 +1011,44 @@ static void test_latest_catalog_games(void) {
     puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection passed.");
 }
 
+static void test_text_cache(void) {
+    assert(TTF_Init() == 0);
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    SDL_Surface *screen = SDL_CreateRGBSurfaceWithFormat(0, 640, 360, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(screen);
+    app->renderer = SDL_CreateSoftwareRenderer(screen);
+    assert(app->renderer && ui_init(app));
+    SDL_Color white = {255,255,255,255};
+    UiTextEntry *entry = cached_text(app, app->font_body, "English 中文 Русский", white, 180);
+    assert(entry);
+    SDL_Surface *reference = TTF_RenderUTF8_Blended_Wrapped(app->font_body, "English 中文 Русский", white, 180);
+    assert(reference && entry->w == reference->w && entry->h == reference->h);
+    SDL_FreeSurface(reference);
+    SDL_Texture *texture = entry->texture;
+    for (int i = 0; i < 100; i++) {
+        assert(cached_text(app, app->font_body, "English 中文 Русский", white, 180)->texture == texture);
+    }
+    assert(cached_text(app, app->font_body, "English 中文 Русский", white, 300)->texture != texture);
+    assert(cached_text(app, app->font_small, "English 中文 Русский", white, 180)->texture != texture);
+    assert(cached_text(app, app->font_body, "English 中文 Русский", (SDL_Color){100,100,100,255}, 180)->texture != texture);
+    assert(cached_text(app, app->font_body, "Changed translation 中文", white, 180)->texture != texture);
+    char changing[128];
+    for (int i = 0; i < UI_TEXT_SLOTS * 3; i++) {
+        snprintf(changing, sizeof(changing), "Changing selection %d 中文 Русский", i);
+        assert(cached_text(app, app->font_hero_title, changing, white, 800));
+        assert(app->text_cache->bytes <= UI_TEXT_BUDGET);
+    }
+    assert(cached_text(app, app->font_body, "English 中文 Русский", white, 180));
+    ui_cleanup(app);
+    assert(!app->text_cache);
+    SDL_DestroyRenderer(app->renderer);
+    SDL_FreeSurface(screen);
+    free(app);
+    TTF_Quit();
+    puts("Text cache: reuse, UTF-8, wrapping, fonts, colors, translation changes, bounded eviction and cleanup passed.");
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
@@ -1019,6 +1057,7 @@ int main(void) {
     test_native_artwork_bounds();
     test_latest_catalog_games();
     test_tv_catalog_navigation();
+    test_text_cache();
     const int sizes[][2] = {{1280, 720}, {1365, 767}, {1920, 1080}, {800, 600}};
     for (int fallback = 0; fallback < 2; fallback++) {
 #if SDL_VERSION_ATLEAST(2, 0, 18)

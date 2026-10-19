@@ -29,6 +29,13 @@ typedef struct {
     bool busy, local, failed, soft, complete_box;
 } ArtworkEntry;
 
+typedef struct {
+    char input[768];
+    ArtworkEntry request;
+    Uint32 checked;
+    Uint64 used;
+} ArtworkLocation;
+
 struct ArtworkCache {
     SDL_mutex *mutex;
     SDL_cond *condition;
@@ -36,6 +43,9 @@ struct ArtworkCache {
     SDL_atomic_t stop;
     ArtworkEntry entries[ART_SLOTS];
     size_t bytes;
+    /* UI thread only: cache positive and negative filesystem probes. */
+    ArtworkLocation locations[128];
+    Uint64 location_clock;
 };
 
 SDL_Rect artwork_fit(int width, int height, SDL_Rect box, bool crop) {
@@ -239,9 +249,6 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
     if (app->catalog_mutex) SDL_LockMutex(app->catalog_mutex);
     snapshot = *item;
     if (app->catalog_mutex) SDL_UnlockMutex(app->catalog_mutex);
-    ArtworkEntry request = {0};
-    artwork_location(&snapshot, backdrop, &request);
-    if (!request.key[0]) return NULL;
     if (!app->artwork) {
         struct ArtworkCache *cache = calloc(1, sizeof(*cache));
         if (!cache) return NULL;
@@ -261,9 +268,33 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
         if (!cache->thread) { artwork_destroy(app); return NULL; }
     }
     struct ArtworkCache *cache = app->artwork;
+    const char *url = backdrop ? (snapshot.backdrop_url[0] ? snapshot.backdrop_url :
+        snapshot.landscape_url[0] ? snapshot.landscape_url : snapshot.cover_url[0] ? snapshot.cover_url : snapshot.icon_url) :
+        (snapshot.boxart_url[0] ? snapshot.boxart_url : snapshot.cover_url[0] ? snapshot.cover_url :
+         snapshot.icon_url[0] ? snapshot.icon_url : snapshot.landscape_url);
+    char input[768];
+    snprintf(input, sizeof(input), "%s:%d:%d:%d:%s", snapshot.id_code, backdrop,
+             !backdrop && snapshot.boxart_url[0] != 0,
+             backdrop && !snapshot.backdrop_url[0] && !snapshot.landscape_url[0], url);
+    Uint32 now = SDL_GetTicks();
+    ArtworkLocation *location = NULL, *oldest_location = &cache->locations[0];
+    for (int i = 0; i < 128; i++) {
+        ArtworkLocation *candidate = &cache->locations[i];
+        if (candidate->used && !strcmp(candidate->input, input)) { location = candidate; break; }
+        if (candidate->used < oldest_location->used) oldest_location = candidate;
+    }
+    if (!location || now - location->checked >= 1000) {
+        if (!location) location = oldest_location;
+        memset(&location->request, 0, sizeof(location->request));
+        artwork_location(&snapshot, backdrop, &location->request);
+        SDL_strlcpy(location->input, input, sizeof(location->input));
+        location->checked = now;
+    }
+    location->used = ++cache->location_clock;
+    ArtworkEntry request = location->request;
+    if (!request.key[0]) return NULL;
     SDL_LockMutex(cache->mutex);
     ArtworkEntry *entry = NULL, *oldest = NULL;
-    Uint32 now = SDL_GetTicks();
     for (int i = 0; i < ART_SLOTS; i++) {
         ArtworkEntry *candidate = &cache->entries[i];
         if (strcmp(candidate->key, request.key) == 0) { entry = candidate; break; }

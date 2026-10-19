@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include "ui_text.h"
 
 static const char *FONT_CANDIDATES_BOLD[] = {
     "assets/font_bold.ttf",
@@ -274,60 +275,45 @@ static void draw_drop_shadow(SDL_Renderer *r, int x, int y, int w, int h,
     }
 }
 
-static int draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text,
+static int draw_text(WolodriveApp *app, TTF_Font *font, const char *text,
                      int x, int y, SDL_Color color, int max_width) {
-    if (!font || !text || text[0] == '\0') return 0;
-
-    SDL_Surface *surf = NULL;
-    if (max_width > 0) {
-        surf = TTF_RenderUTF8_Blended_Wrapped(font, text, color, (Uint32)max_width);
-    } else {
-        surf = TTF_RenderUTF8_Blended(font, text, color);
-    }
-    if (!surf) return 0;
-
-    int drawn_w = surf->w;
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
-    if (tex) {
-        SDL_Rect dst = { x, y, surf->w, surf->h };
-        SDL_RenderCopy(renderer, tex, NULL, &dst);
-        SDL_DestroyTexture(tex);
-    }
-    SDL_FreeSurface(surf);
-    return drawn_w;
+    UiTextEntry *entry = cached_text(app, font, text, color, max_width);
+    if (!entry) return 0;
+    SDL_Rect dst = {x, y, entry->w, entry->h};
+    SDL_RenderCopy(app->renderer, entry->texture, NULL, &dst);
+    return entry->w;
 }
 
-static void draw_single_line(SDL_Renderer *r, TTF_Font *font, const char *text,
+static void draw_single_line(WolodriveApp *app, TTF_Font *font, const char *text,
                              int x, int y, SDL_Color color, SDL_Rect clip) {
+    SDL_Renderer *r = app->renderer;
     SDL_Rect previous;
     bool clipped = SDL_RenderIsClipEnabled(r);
     SDL_RenderGetClipRect(r, &previous);
     SDL_RenderSetClipRect(r, &clip);
-    draw_text(r, font, text, x, y, color, 0);
+    draw_text(app, font, text, x, y, color, 0);
     SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
 }
 
 /* Keep translated navigation and action labels complete within their bounds. */
-static void draw_fitted_text(SDL_Renderer *r, TTF_Font *font, const char *text,
+static void draw_fitted_text(WolodriveApp *app, TTF_Font *font, const char *text,
                              SDL_Rect bounds, SDL_Color color, SDL_Rect clip, bool centered) {
-    SDL_Surface *surface = TTF_RenderUTF8_Blended(font, text, color);
-    if (!surface) return;
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(r, surface);
-    if (texture) {
-        float scale = fminf(1.0f, fminf((float)bounds.w / surface->w,
-                                      (float)bounds.h / surface->h));
-        int w = (int)(surface->w * scale), h = (int)(surface->h * scale);
+    SDL_Renderer *r = app->renderer;
+    UiTextEntry *entry = cached_text(app, font, text, color, 0);
+    if (!entry) return;
+    {
+        float scale = fminf(1.0f, fminf((float)bounds.w / entry->w,
+                                      (float)bounds.h / entry->h));
+        int w = (int)(entry->w * scale), h = (int)(entry->h * scale);
         SDL_Rect destination = {bounds.x + (centered ? (bounds.w - w) / 2 : 0),
                                 bounds.y + (bounds.h - h) / 2, w, h};
         SDL_Rect previous;
         bool clipped = SDL_RenderIsClipEnabled(r);
         SDL_RenderGetClipRect(r, &previous);
         SDL_RenderSetClipRect(r, &clip);
-        SDL_RenderCopy(r, texture, NULL, &destination);
+        SDL_RenderCopy(r, entry->texture, NULL, &destination);
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
-        SDL_DestroyTexture(texture);
     }
-    SDL_FreeSurface(surface);
 }
 
 static int render_box_brand(WolodriveApp *app, const GameItem *item, SDL_Rect box) {
@@ -338,7 +324,7 @@ static int render_box_brand(WolodriveApp *app, const GameItem *item, SDL_Rect bo
     fill_rect(app->renderer, box.x, box.y, box.w, band,
               ps5 ? 245 : 0, ps5 ? 245 : 62, ps5 ? 245 : 155, 255);
     SDL_Rect brand = {box.x+8, box.y, box.w-16, band};
-    draw_fitted_text(app->renderer, app->font_small, ps5 ? "PS5" : "PS4", brand,
+    draw_fitted_text(app, app->font_small, ps5 ? "PS5" : "PS4", brand,
                      ps5 ? (SDL_Color){12,12,16,255} : (SDL_Color){255,255,255,255}, brand, false);
     return band;
 }
@@ -383,10 +369,10 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
 
         SDL_Color watermark_col = { 255, 255, 255, 75 };
         SDL_Color sub_col       = { 220, 220, 225, 160 };
-        draw_text(r, is_hero ? app->font_row_title : app->font_small,
+        draw_text(app, is_hero ? app->font_row_title : app->font_small,
                   "WOLODRIVE", x + 18, y + h / 2 - (is_hero ? 28 : 22), watermark_col, 0);
 
-        draw_text(r, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
+        draw_text(app, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
         if (!is_hero) render_box_brand(app, it, (SDL_Rect){x,y,w,h});
     }
     if (!is_hero) draw_border(r, x, y, w, h, 2, 22, 62, 110, 255);
@@ -450,6 +436,7 @@ bool ui_init(WolodriveApp *app) {
 }
 
 void ui_cleanup(WolodriveApp *app) {
+    text_cache_destroy(app);
     screenshots_destroy(app->screenshots); app->screenshots = NULL;
     artwork_destroy(app);
     for (int i = 0; i < app->library_artwork_count; i++) {
@@ -892,9 +879,9 @@ static void render_hero_banner(WolodriveApp *app) {
     SDL_Color white = {245, 245, 245, 255};
     SDL_Color muted = {185, 185, 185, 255};
     if (!hero) {
-        draw_text(r, app->font_hero_title, view_content_title(app),
+        draw_text(app, app->font_hero_title, view_content_title(app),
                   CONTENT_X, 150, white, 900);
-        draw_text(r, app->font_body, empty_view_message(app), CONTENT_X, 320, muted, 690);
+        draw_text(app, app->font_body, empty_view_message(app), CONTENT_X, 320, muted, 690);
         return;
     }
 
@@ -904,12 +891,12 @@ static void render_hero_banner(WolodriveApp *app) {
     fill_vertical_gradient(r, RAIL_WIDTH, 450, SCREEN_WIDTH - RAIL_WIDTH, 300,
                            0, 0, 0, 0, 0, 0, 0, 255, 32);
 
-    draw_text(r, app->font_logo, "W", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
-    draw_text(r, app->font_micro, "W O L O D R I V E", CONTENT_X + 45, 116, white, 0);
+    draw_text(app, app->font_logo, "W", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
+    draw_text(app, app->font_micro, "W O L O D R I V E", CONTENT_X + 45, 116, white, 0);
     /* Two title lines fit without displacing metadata or description. */
     SDL_Rect title_clip = {CONTENT_X, 142, 940, 136};
     SDL_RenderSetClipRect(r, &title_clip);
-    draw_text(r, app->font_hero_title, hero->title, CONTENT_X, 142, white, title_clip.w);
+    draw_text(app, app->font_hero_title, hero->title, CONTENT_X, 142, white, title_clip.w);
     SDL_RenderSetClipRect(r, NULL);
     char metadata[256];
     snprintf(metadata, sizeof(metadata), "%s   v%s   %s   %.1f GB",
@@ -920,34 +907,31 @@ static void render_hero_banner(WolodriveApp *app) {
                  hero->id_code, sys_format_short_badge(hero->format), hero->size_gb,
                  (unsigned)(date / 10000), (unsigned)(date / 100 % 100), (unsigned)(date % 100));
     }
-    draw_single_line(r, app->font_small, metadata, CONTENT_X, 276, muted,
+    draw_single_line(app, app->font_small, metadata, CONTENT_X, 276, muted,
                      (SDL_Rect){CONTENT_X, 276, 800, 34});
     char description[MAX_TRANSLATED_DESCRIPTION_BYTES];
     description_text(app, hero, description, sizeof(description));
-    SDL_Surface *description_surface = TTF_RenderUTF8_Blended_Wrapped(app->font_body, description, muted, DESCRIPTION_AREA.w);
-    if (description_surface) {
-        int maximum_scroll = SDL_max(0, description_surface->h - DESCRIPTION_AREA.h);
+    UiTextEntry *entry = cached_text(app, app->font_body, description, muted, DESCRIPTION_AREA.w);
+    if (entry) {
+        int maximum_scroll = SDL_max(0, entry->h - DESCRIPTION_AREA.h);
         app->description_scroll = SDL_min(app->description_scroll, maximum_scroll);
-        SDL_Texture *texture = SDL_CreateTextureFromSurface(r, description_surface);
-        if (texture) {
+        {
             SDL_Rect destination = {DESCRIPTION_AREA.x, DESCRIPTION_AREA.y - app->description_scroll,
-                                    description_surface->w, description_surface->h};
+                                    entry->w, entry->h};
             SDL_RenderSetClipRect(r, &DESCRIPTION_AREA);
-            SDL_RenderCopy(r, texture, NULL, &destination);
+            SDL_RenderCopy(r, entry->texture, NULL, &destination);
             SDL_RenderSetClipRect(r, NULL);
-            SDL_DestroyTexture(texture);
         }
         if (maximum_scroll > 0) {
             fill_rect(r, DESCRIPTION_AREA.x + DESCRIPTION_AREA.w + 4, DESCRIPTION_AREA.y, 3, DESCRIPTION_AREA.h, 65, 65, 75, 255);
             int thumb_y = DESCRIPTION_AREA.y + (DESCRIPTION_AREA.h - 12) * app->description_scroll / maximum_scroll;
             fill_rect(r, DESCRIPTION_AREA.x + DESCRIPTION_AREA.w + 4, thumb_y, 3, 12, 180, 180, 190, 255);
         }
-        SDL_FreeSurface(description_surface);
     }
     if (hero->description_id == TEXT_COUNT) {
         fill_rect(r, DESCRIPTION_BUTTON.x, DESCRIPTION_BUTTON.y, DESCRIPTION_BUTTON.w, DESCRIPTION_BUTTON.h, 35, 35, 43, 255);
         TextId label = app->show_original_description ? TXT_TRANSLATED_DESCRIPTION : TXT_ORIGINAL_DESCRIPTION;
-        draw_single_line(r, app->font_small, TR(app, label), DESCRIPTION_BUTTON.x + 12,
+        draw_single_line(app, app->font_small, TR(app, label), DESCRIPTION_BUTTON.x + 12,
                          DESCRIPTION_BUTTON.y + 10, white, DESCRIPTION_BUTTON);
     }
 
@@ -957,7 +941,7 @@ static void render_carousels(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 245, 255}, muted = {170, 170, 170, 255};
     CarouselRow *row = &app->rows[app->active_row];
-    draw_text(r, app->font_row_title, view_content_title(app), CONTENT_X, 532, white, 0);
+    draw_text(app, app->font_row_title, view_content_title(app), CONTENT_X, 532, white, 0);
     if (!row->item_count) {
         return;
     }
@@ -972,7 +956,7 @@ static void render_carousels(WolodriveApp *app) {
         render_cover_or_placeholder(app, item, card.x, card.y, card.w, CARD_HEIGHT, false);
         SDL_Rect title = {card.x, card.y + CARD_HEIGHT, card.w, CARD_TITLE};
         fill_rect(r, title.x, title.y, title.w, title.h, 18,18,22,255);
-        draw_single_line(r, app->font_micro, item->title, title.x + 6, title.y + 2, white,
+        draw_single_line(app, app->font_micro, item->title, title.x + 6, title.y + 2, white,
                          (SDL_Rect){SDL_max(title.x+6,clip.x),title.y,SDL_max(0,SDL_min(title.x+title.w-6,SCREEN_WIDTH)-SDL_max(title.x+6,clip.x)),title.h});
         int footer_y = card.y + CARD_HEIGHT + CARD_TITLE;
         fill_rect(r, card.x, footer_y, card.w, CARD_FOOTER,
@@ -982,7 +966,7 @@ static void render_carousels(WolodriveApp *app) {
         else snprintf(status, sizeof(status), "%s  /  %.1f GB", sys_format_short_badge(item->format), item->size_gb);
         SDL_Rect footer_clip = {SDL_max(card.x + 8, clip.x), footer_y, 0, CARD_FOOTER};
         footer_clip.w = SDL_max(0, SDL_min(card.x + card.w - 8, SCREEN_WIDTH) - footer_clip.x);
-        draw_fitted_text(r, app->font_small, status,
+        draw_fitted_text(app, app->font_small, status,
                          (SDL_Rect){card.x + 12, footer_y, card.w - 24, CARD_FOOTER},
                          selected ? (SDL_Color){0, 0, 0, 255} : muted, footer_clip, true);
         if (item->state == STATE_DOWNLOADING) {
@@ -995,7 +979,7 @@ static void render_carousels(WolodriveApp *app) {
     SDL_RenderSetClipRect(r, NULL);
     char position[40];
     snprintf(position, sizeof(position), "%d / %d", row->selected_col + 1, row->item_count);
-    draw_text(r, app->font_micro, position, CONTENT_X, 956, muted, 0);
+    draw_text(app, app->font_micro, position, CONTENT_X, 956, muted, 0);
 }
 
 /* Geometry icons remain available on PS5 and do not depend on font symbols. */
@@ -1016,7 +1000,7 @@ static void render_sidebar(WolodriveApp *app) {
         }
         SDL_Color color = {c, c, c, 255};
         SDL_Rect label = {84, target.y + 24, RAIL_WIDTH - 100, 42};
-        draw_fitted_text(r, app->font_small, app->rows[row].title, label, color, label, false);
+        draw_fitted_text(app, app->font_small, app->rows[row].title, label, color, label, false);
         if (row == VIEW_SEARCH) {
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             for (int angle = 0; angle < 360; angle++) {
@@ -1103,7 +1087,7 @@ static void render_language_control(WolodriveApp *app) {
     SDL_RenderDrawLine(r, cx - 13, cy - 8, cx + 13, cy - 8);
     SDL_RenderDrawLine(r, cx - 13, cy + 8, cx + 13, cy + 8);
     SDL_Rect label = {84, LANGUAGE_BUTTON.y + 24, RAIL_WIDTH - 128, 42};
-    draw_fitted_text(r, app->font_small,
+    draw_fitted_text(app, app->font_small,
                      i18n_language_name((Language)SDL_AtomicGet(&app->language)),
                      label, (SDL_Color){c, c, c, 255}, label, false);
     int arrow_x = RAIL_WIDTH - 30;
@@ -1115,16 +1099,14 @@ static void render_language_control(WolodriveApp *app) {
 }
 
 static void render_top_bar(WolodriveApp *app) {
-    SDL_Renderer *r = app->renderer;
-
     SDL_Color red = {229, 9, 20, 255};
     SDL_Color muted = {155, 155, 155, 255};
-    draw_text(r, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
+    draw_text(app, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
     if (app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS) {
-        draw_text(r, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
-        draw_single_line(r, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
+        draw_text(app, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
+        draw_single_line(app, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
                          (SDL_Rect){CONTENT_X + 378, 984, 260, 30});
-        draw_single_line(r, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 658, 984, muted,
+        draw_single_line(app, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 658, 984, muted,
                          (SDL_Rect){CONTENT_X + 658, 984, 600, 30});
     }
 
@@ -1149,7 +1131,7 @@ static void render_top_bar(WolodriveApp *app) {
     }
     SDL_UnlockMutex(app->catalog_mutex);
 
-    draw_single_line(r, app->font_micro, sync_info, CONTENT_X, 1032, muted,
+    draw_single_line(app, app->font_micro, sync_info, CONTENT_X, 1032, muted,
                      (SDL_Rect){CONTENT_X, 1032, 880, 32});
     render_language_control(app);
 
@@ -1162,7 +1144,7 @@ static void render_top_bar(WolodriveApp *app) {
              app->stats.cpu_temp_c,
              app->stats.gpu_temp_c);
 
-    draw_single_line(r, app->font_micro, telemetry, 1200, 1032, muted,
+    draw_single_line(app, app->font_micro, telemetry, 1200, 1032, muted,
                      (SDL_Rect){1200, 1032, 670, 32});
 }
 
@@ -1182,7 +1164,7 @@ static void render_language_menu(WolodriveApp *app) {
             draw_border(r, LANGUAGE_MENU.x + 4, y, LANGUAGE_MENU.w - 8, 44, 1, 229, 9, 20, 255);
         }
         if (selected) fill_rect(r, LANGUAGE_MENU.x + 14, y + 16, 10, 10, 229, 9, 20, 255);
-        draw_text(r, app->font_body, i18n_language_name(LANGUAGE_ORDER[i]),
+        draw_text(app, app->font_body, i18n_language_name(LANGUAGE_ORDER[i]),
                   LANGUAGE_MENU.x + 38, y + 10, selected ? white : muted, 0);
     }
 }
@@ -1201,7 +1183,7 @@ static void render_toast_notification(WolodriveApp *app) {
     fill_rect(r, box_x, box_y, box_w, box_h, 20, 20, 26, 245);
     fill_rect(r, box_x, box_y, 6, box_h, COLOR_ACCENT_R, COLOR_ACCENT_G, COLOR_ACCENT_B, 255);
     draw_border(r, box_x, box_y, box_w, box_h, 1, 255, 255, 255, 60);
-    draw_text(r, app->font_small, app->toast_message, box_x + 22, box_y + 18, white, box_w - 36);
+    draw_text(app, app->font_small, app->toast_message, box_x + 22, box_y + 18, white, box_w - 36);
 }
 
 static int library_console_game_count(WolodriveApp *app, const LibraryConsole *console) {
@@ -1223,14 +1205,14 @@ static void render_library_breadcrumb(WolodriveApp *app) {
     if (app->library_depth == LIBRARY_COMPANIES) return;
     fill_rect(r, LIBRARY_BACK_BUTTON.x, LIBRARY_BACK_BUTTON.y,
               LIBRARY_BACK_BUTTON.w, LIBRARY_BACK_BUTTON.h, 28, 28, 28, 255);
-    draw_fitted_text(r, app->font_small, TR(app, TXT_LIBRARY_BACK),
+    draw_fitted_text(app, app->font_small, TR(app, TXT_LIBRARY_BACK),
                      (SDL_Rect){CONTENT_X + 18, 28, 144, 42}, muted, LIBRARY_BACK_BUTTON, false);
     char path[200];
     const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
     snprintf(path, sizeof(path), "%s / %s%s%s", library_section_title(app), company->name,
              app->library_depth == LIBRARY_GAMES ? " / " : "",
              app->library_depth == LIBRARY_GAMES ? console->name : "");
-    draw_single_line(r, app->font_small, path, CONTENT_X + 204, 36, muted,
+    draw_single_line(app, app->font_small, path, CONTENT_X + 204, 36, muted,
                      (SDL_Rect){CONTENT_X + 204, 24, 1150, 50});
 }
 
@@ -1334,9 +1316,9 @@ static void render_library_grid(WolodriveApp *app) {
     int selected = companies ? app->library_company_selection : app->library_console_selection;
     int count = companies ? library_company_count() : company->console_count;
     int first = selected / LIBRARY_PAGE_SIZE * LIBRARY_PAGE_SIZE;
-    draw_text(r, app->font_hero_title, companies ? library_section_title(app) : company->name,
+    draw_text(app, app->font_hero_title, companies ? library_section_title(app) : company->name,
               CONTENT_X, 100, white, 1300);
-    draw_text(r, app->font_small, TR(app, companies ? TXT_CHOOSE_COMPANY : TXT_CHOOSE_CONSOLE),
+    draw_text(app, app->font_small, TR(app, companies ? TXT_CHOOSE_COMPANY : TXT_CHOOSE_CONSOLE),
               CONTENT_X, 178, muted, 1200);
     for (int i = first; i < count && i < first + LIBRARY_PAGE_SIZE; i++) {
         SDL_Rect tile = library_tile_target(i);
@@ -1349,14 +1331,14 @@ static void render_library_grid(WolodriveApp *app) {
         const char *artwork = companies ? brand->artwork_path :
             (console->artwork_path ? console->artwork_path : console->logo_path);
         if (!render_library_artwork(app, artwork, image)) {
-            draw_fitted_text(r, app->font_row_title, companies ? brand->name : console->name,
+            draw_fitted_text(app, app->font_row_title, companies ? brand->name : console->name,
                              image, white, image, true);
         }
         if (!companies) {
             SDL_Rect logo = {tile.x + 36, tile.y + 220, tile.w - 72, 36};
             if (console->artwork_path) render_library_artwork(app, console->logo_path, logo);
             SDL_Rect title = {tile.x + 16, tile.y + 264, tile.w - 32, 24};
-            draw_fitted_text(r, app->font_micro, console->name, title, white, title, true);
+            draw_fitted_text(app, app->font_micro, console->name, title, white, title, true);
         }
         char subtitle[100];
         TextId count_label = companies ? TXT_CONSOLE_COUNT :
@@ -1364,14 +1346,14 @@ static void render_library_grid(WolodriveApp *app) {
         snprintf(subtitle, sizeof(subtitle), TR(app, count_label), companies ? brand->console_count :
                  (app->active_row == VIEW_EMULATORS ? app->rows[VIEW_EMULATORS].item_count : library_console_game_count(app, console)));
         SDL_Rect footer = {tile.x + 24, tile.y + (companies ? 256 : 292), tile.w - 48, companies ? 32 : 20};
-        draw_fitted_text(r, companies ? app->font_small : app->font_micro,
+        draw_fitted_text(app, companies ? app->font_small : app->font_micro,
                          subtitle, footer, muted, footer, true);
         if (focused) draw_border(r, tile.x, tile.y, tile.w, tile.h, 3, 245, 245, 245, 255);
     }
     char position[50];
     snprintf(position, sizeof(position), "%d / %d", selected + 1, count);
-    draw_text(r, app->font_micro, position, CONTENT_X, 910, muted, 0);
-    draw_text(r, app->font_micro, TR(app, app->sidebar_focus ?
+    draw_text(app, app->font_micro, position, CONTENT_X, 910, muted, 0);
+    draw_text(app, app->font_micro, TR(app, app->sidebar_focus ?
               TXT_LIBRARY_ENTER_HINT : TXT_LIBRARY_NAV_HINT), CONTENT_X, 944, muted, 1200);
     render_library_breadcrumb(app);
 }

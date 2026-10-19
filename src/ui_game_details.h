@@ -149,24 +149,24 @@ static void render_screenshot_image(WolodriveApp *app, const char *uri, SDL_Rect
     if (texture && width > 0 && height > 0) {
         SDL_Rect destination = artwork_fit(width,height,box,false);
         SDL_RenderCopy(app->renderer,texture,NULL,&destination);
-    } else draw_text(app->renderer,app->font_small,TR(app,failed ? TXT_SCREEN_FAILED : TXT_SCREEN_IMAGE_LOADING),
+    } else draw_text(app,app->font_small,TR(app,failed ? TXT_SCREEN_FAILED : TXT_SCREEN_IMAGE_LOADING),
                      box.x+16,box.y+box.h/2-20,(SDL_Color){190,190,195,255},box.w-32);
 }
 static void render_screenshot_viewer(WolodriveApp *app, const ScreenshotSet *shots) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245,245,245,255};
     fill_rect(r,0,0,SCREEN_WIDTH,SCREEN_HEIGHT,0,0,0,255);
-    draw_single_line(r,app->font_small,app->detail_item->title,60,24,white,(SDL_Rect){60,20,1700,45});
+    draw_single_line(app,app->font_small,app->detail_item->title,60,24,white,(SDL_Rect){60,20,1700,45});
     if (shots->count) render_screenshot_image(app,shots->images[app->detail_selection],(SDL_Rect){120,90,1680,850},true);
-    draw_text(r,app->font_row_title,"X",1835,22,white,0);
-    draw_text(r,app->font_row_title,"<",35,490,white,0);
-    draw_text(r,app->font_row_title,">",1835,490,white,0);
+    draw_text(app,app->font_row_title,"X",1835,22,white,0);
+    draw_text(app,app->font_row_title,"<",35,490,white,0);
+    draw_text(app,app->font_row_title,">",1835,490,white,0);
     char label[600];
     snprintf(label,sizeof(label),"%d / %d",shots->count ? app->detail_selection+1 : 0,shots->count);
-    draw_text(r,app->font_small,label,60,960,white,0);
+    draw_text(app,app->font_small,label,60,960,white,0);
     snprintf(label,sizeof(label),TR(app,TXT_SCREEN_SOURCE),shots->source);
-    draw_text(r,app->font_micro,label,300,960,white,1450);
-    draw_text(r,app->font_small,TR(app,TXT_SCREEN_VIEWER_HINT),60,1010,white,1750);
+    draw_text(app,app->font_micro,label,300,960,white,1450);
+    draw_text(app,app->font_small,TR(app,TXT_SCREEN_VIEWER_HINT),60,1010,white,1750);
 }
 
 static void render_game_details(WolodriveApp *app) {
@@ -193,31 +193,28 @@ static void render_game_details(WolodriveApp *app) {
     render_cover_or_placeholder(app, item, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, true);
     fill_rect(r, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, 0,0,0,220);
     SDL_Rect title_box = {CONTENT_X+20, 240, 1400, 105};
-    draw_fitted_text(r, app->font_hero_title, item->title, title_box, white, title_box, false);
+    draw_fitted_text(app, app->font_hero_title, item->title, title_box, white, title_box, false);
     char metadata[256];
     snprintf(metadata, sizeof(metadata), "%s   |   %s   |   %s   |   %.1f GB", item->id_code,
              sys_format_short_badge(item->format), item->version, item->size_gb);
-    draw_text(r, app->font_small, metadata, CONTENT_X+20, 365, muted, 1350);
-    draw_text(r, app->font_row_title, "X", GAME_CLOSE.x+15, GAME_CLOSE.y+8, white, 0);
+    draw_text(app, app->font_small, metadata, CONTENT_X+20, 365, muted, 1350);
+    draw_text(app, app->font_row_title, "X", GAME_CLOSE.x+15, GAME_CLOSE.y+8, white, 0);
     if (app->detail_tab == GAME_DETAILS) {
         char description[MAX_TRANSLATED_DESCRIPTION_BYTES];
         description_text(app, item, description, sizeof(description));
-        SDL_Surface *surface = TTF_RenderUTF8_Blended_Wrapped(app->font_body, description, white, 920);
+        UiTextEntry *entry = cached_text(app, app->font_body, description, white, 920);
         SDL_Rect clip = {CONTENT_X+20, 430, 920, 320};
-        if (surface) {
-            app->detail_scroll = SDL_min(app->detail_scroll, SDL_max(0, surface->h - clip.h));
-            SDL_Texture *texture = SDL_CreateTextureFromSurface(r, surface);
-            if (texture) {
-                SDL_Rect dest = {clip.x, clip.y-app->detail_scroll, surface->w, surface->h};
+        if (entry) {
+            app->detail_scroll = SDL_min(app->detail_scroll, SDL_max(0, entry->h - clip.h));
+            {
+                SDL_Rect dest = {clip.x, clip.y-app->detail_scroll, entry->w, entry->h};
                 SDL_RenderSetClipRect(r, &clip);
-                SDL_RenderCopy(r, texture, NULL, &dest);
+                SDL_RenderCopy(r, entry->texture, NULL, &dest);
                 SDL_RenderSetClipRect(r, NULL);
-                SDL_DestroyTexture(texture);
             }
-            SDL_FreeSurface(surface);
         }
         snprintf(metadata, sizeof(metadata), "%s\n%s\n%s\n%s", item->source_name, item->id_code, item->version, sys_format_short_badge(item->format));
-        draw_text(r, app->font_small, metadata, 1330, 440, muted, 480);
+        draw_text(app, app->font_small, metadata, 1330, 440, muted, 480);
     } else {
         GameItem *entries[MAX_CATALOG_ITEMS];
         int total = app->detail_tab == GAME_SCREENSHOTS ? shots.count : game_entries(app, entries);
@@ -226,7 +223,7 @@ static void render_game_details(WolodriveApp *app) {
         if (!total) {
             TextId message = app->detail_tab == GAME_DLC ? TXT_GAME_NO_DLC :
                 shots.state == SHOTS_PENDING ? TXT_SCREEN_LOOKUP : shots.state == SHOTS_FAILED ? TXT_SCREEN_FAILED : TXT_GAME_NO_SCREENSHOTS;
-            draw_text(r,app->font_body,TR(app,message),CONTENT_X+20,460,muted,1350);
+            draw_text(app,app->font_body,TR(app,message),CONTENT_X+20,460,muted,1350);
         }
         for (int i = start; i < total && i < start+3; i++) {
             SDL_Rect box = game_entry_target(i);
@@ -234,38 +231,38 @@ static void render_game_details(WolodriveApp *app) {
             if (app->detail_tab == GAME_SCREENSHOTS) {
                 snprintf(metadata, sizeof(metadata), TR(app, TXT_GAME_OPEN_SCREENSHOT), i+1);
                 render_screenshot_image(app,shots.images[i],(SDL_Rect){box.x+10,box.y+10,box.w-20,240},i == app->detail_selection);
-                draw_text(r, app->font_small, metadata, box.x+18, box.y+270, white, box.w-36);
+                draw_text(app, app->font_small, metadata, box.x+18, box.y+270, white, box.w-36);
             } else {
                 GameItem *package = entries[i];
                 render_cover_or_placeholder(app, package, box.x+(box.w-110)/2, box.y, 110, 155, false);
                 snprintf(metadata, sizeof(metadata), "%s  |  %s  |  %s", package->id_code,
                          sys_format_short_badge(package->format), package->version);
                 SDL_Rect label = {box.x+14, box.y+165, box.w-28, 48};
-                draw_fitted_text(r, app->font_small, app->detail_tab == GAME_DLC ? package->title : package->source_name, label, white, label, false);
-                draw_text(r, app->font_micro, metadata, box.x+14, box.y+220, muted, box.w-28);
-                draw_text(r, app->font_small, app->detail_tab == GAME_DLC ? TR(app, TXT_GAME_DETAILS) : action_label(app, package), box.x+14, box.y+285, white, box.w-28);
+                draw_fitted_text(app, app->font_small, app->detail_tab == GAME_DLC ? package->title : package->source_name, label, white, label, false);
+                draw_text(app, app->font_micro, metadata, box.x+14, box.y+220, muted, box.w-28);
+                draw_text(app, app->font_small, app->detail_tab == GAME_DLC ? TR(app, TXT_GAME_DETAILS) : action_label(app, package), box.x+14, box.y+285, white, box.w-28);
             }
             if (i == app->detail_selection && app->detail_content_focus)
                 draw_border(r, box.x-3, box.y-3, box.w+6, box.h+6, 3,245,245,245,255);
         }
         if (total) {
             snprintf(metadata, sizeof(metadata), "%d / %d", app->detail_selection+1, total);
-            draw_text(r, app->font_micro, metadata, CONTENT_X+20, 765, muted, 0);
+            draw_text(app, app->font_micro, metadata, CONTENT_X+20, 765, muted, 0);
         }
         if (app->detail_tab == GAME_SCREENSHOTS && total) {
             snprintf(metadata,sizeof(metadata),TR(app,TXT_SCREEN_SOURCE),shots.source);
-            draw_text(r,app->font_micro,metadata,CONTENT_X+160,765,muted,1300);
-            if (shots.page[0]) draw_text(r,app->font_micro,shots.page,CONTENT_X+20,795,muted,1450);
+            draw_text(app,app->font_micro,metadata,CONTENT_X+160,765,muted,1300);
+            if (shots.page[0]) draw_text(app,app->font_micro,shots.page,CONTENT_X+20,795,muted,1450);
         }
-        if (app->detail_tab == GAME_INSTALL) draw_text(r, app->font_micro, TR(app, TXT_ACTION_UNAVAILABLE), CONTENT_X+20, 795, muted, 1490);
+        if (app->detail_tab == GAME_INSTALL) draw_text(app, app->font_micro, TR(app, TXT_ACTION_UNAVAILABLE), CONTENT_X+20, 795, muted, 1490);
     }
     for (int tab = 0; tab < GAME_TAB_COUNT; tab++) {
         SDL_Rect box = game_tab_target(tab);
-        draw_fitted_text(r, app->font_small, TR(app, GAME_TABS[tab]), box, tab == app->detail_tab ? white : muted, box, true);
+        draw_fitted_text(app, app->font_small, TR(app, GAME_TABS[tab]), box, tab == app->detail_tab ? white : muted, box, true);
         if (tab == app->detail_tab) {
             fill_rect(r, box.x+20, box.y+box.h-5, box.w-40, 5,229,9,20,255);
             if (!app->detail_content_focus) draw_border(r, box.x, box.y, box.w, box.h, 1,140,140,140,255);
         }
     }
-    draw_text(r, app->font_micro, TR(app, TXT_GAME_PANEL_HINT), CONTENT_X+20, 955, white, 1470);
+    draw_text(app, app->font_micro, TR(app, TXT_GAME_PANEL_HINT), CONTENT_X+20, 955, white, 1470);
 }

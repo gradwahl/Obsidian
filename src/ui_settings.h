@@ -125,16 +125,16 @@ static void settings_draw_checkbox(WolodriveApp *app, SDL_Rect box, const char *
         SDL_RenderDrawLine(r, x+13, y+24, x+26, y+7);
     } else if (mixed) fill_rect(r, x+7, y+14, 18, 4,245,245,245,255);
     SDL_Rect area = {box.x+65, box.y+10, box.w-85, 42};
-    draw_fitted_text(r, app->font_small, label, area, white, area, false);
+    draw_fitted_text(app, app->font_small, label, area, white, area, false);
     if (focus) draw_border(r, box.x, box.y, box.w, box.h, 3,245,245,245,255);
 }
 static void render_settings(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245,245,245,255}, muted = {170,170,170,255};
-    draw_text(r, app->font_hero_title, TR(app, TXT_NAV_SETTINGS), CONTENT_X+30, 75, white, 0);
-    draw_text(r, app->font_body, TR(app, TXT_SETTINGS_HELP), CONTENT_X+30, 175, muted, 1450);
-    draw_text(r, app->font_row_title, TR(app, TXT_SETTINGS_SOURCE), CONTENT_X+30, 230, white, 0);
-    draw_text(r, app->font_row_title, TR(app, TXT_SETTINGS_FORMAT), CONTENT_X+890, 230, white, 0);
+    draw_text(app, app->font_hero_title, TR(app, TXT_NAV_SETTINGS), CONTENT_X+30, 75, white, 0);
+    draw_text(app, app->font_body, TR(app, TXT_SETTINGS_HELP), CONTENT_X+30, 175, muted, 1450);
+    draw_text(app, app->font_row_title, TR(app, TXT_SETTINGS_SOURCE), CONTENT_X+30, 230, white, 0);
+    draw_text(app, app->font_row_title, TR(app, TXT_SETTINGS_FORMAT), CONTENT_X+890, 230, white, 0);
     const char *names[MAX_CATALOG_ITEMS*2];
     SDL_LockMutex(app->catalog_mutex);
     int count = settings_sources(app, names);
@@ -155,11 +155,11 @@ static void render_settings(WolodriveApp *app) {
     }
     SDL_Rect reset = settings_target(1,4);
     fill_rect(r, reset.x, reset.y, reset.w, reset.h, 35,35,35,255);
-    draw_fitted_text(r, app->font_small, TR(app, TXT_SETTINGS_RESET), reset, white, reset, true);
+    draw_fitted_text(app, app->font_small, TR(app, TXT_SETTINGS_RESET), reset, white, reset, true);
     if (!app->sidebar_focus && app->settings_column && app->settings_selection == 4) draw_border(r,reset.x,reset.y,reset.w,reset.h,3,245,245,245,255);
     if (count > SETTINGS_SOURCE_PAGE) {
         char page[64]; snprintf(page,sizeof(page),"%d / %d", start/SETTINGS_SOURCE_PAGE+1, (count+SETTINGS_SOURCE_PAGE-1)/SETTINGS_SOURCE_PAGE);
-        draw_text(r, app->font_micro, page, CONTENT_X+30, 860, muted, 0);
+        draw_text(app, app->font_micro, page, CONTENT_X+30, 860, muted, 0);
     }
-    draw_text(r, app->font_small, TR(app, TXT_SETTINGS_HINT), CONTENT_X+30, 930, muted, 1450);
+    draw_text(app, app->font_small, TR(app, TXT_SETTINGS_HINT), CONTENT_X+30, 930, muted, 1450);
 }

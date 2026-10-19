@@ -1,5 +1,13 @@
 /* Exercise worker/cache lifecycle with a local HTTP fixture, never a public CDN. */
+#include <sys/stat.h>
+static unsigned filesystem_probes;
+static int counted_stat(const char *path, struct stat *info) {
+    filesystem_probes++;
+    return stat(path, info);
+}
+#define stat(path, info) counted_stat(path, info)
 #include "../src/artwork.c"
+#undef stat
 #include <assert.h>
 #include <unistd.h>
 
@@ -12,6 +20,10 @@ static SDL_Texture *wait_art(WolodriveApp *app, GameItem *item, bool backdrop, i
         SDL_Delay(10);
     } while (SDL_GetTicks()-start < 4000);
     return NULL;
+}
+
+static void expire_locations(WolodriveApp *app) {
+    for (int i = 0; i < 128; i++) app->artwork->locations[i].checked -= 1000;
 }
 
 int main(void) {
@@ -42,6 +54,18 @@ int main(void) {
     int w = 0, h = 0;
     SDL_Texture *first = wait_art(app, &item, false, &w, &h);
     assert(first && w == 80 && h == 120);
+    unsigned before = filesystem_probes;
+    for (int i = 0; i < 100; i++) artwork_prefetch(app, &item, 10);
+    assert(filesystem_probes == before);
+    GameItem missing = {0};
+    SDL_strlcpy(missing.id_code, "NO_ARTWORK", sizeof(missing.id_code));
+    artwork_prefetch(app, &missing, 10);
+    before = filesystem_probes;
+    for (int i = 0; i < 100; i++) artwork_prefetch(app, &missing, 10);
+    assert(filesystem_probes == before); /* Cache absent artwork too. */
+    expire_locations(app);
+    artwork_prefetch(app, &missing, 10);
+    assert(filesystem_probes > before);
     bool media_failed = false;
     assert(artwork_get_media(app,item.cover_url,100,&w,&h,&media_failed) == first && !media_failed);
     GameItem variant = item;
@@ -64,6 +88,7 @@ int main(void) {
     SDL_Surface *local = SDL_CreateRGBSurfaceWithFormat(0,50,50,32,SDL_PIXELFORMAT_RGBA32);
     SDL_FillRect(local,NULL,SDL_MapRGBA(local->format,230,40,80,255));
     assert(IMG_SavePNG(local,"assets/artwork/PPSA12345.card.png") == 0);
+    expire_locations(app);
     assert(wait_art(app,&item,false,&w,&h) && w == 50 && h == 50);
     Uint32 media_start = SDL_GetTicks();
     SDL_Texture *local_media = NULL;
@@ -74,9 +99,11 @@ int main(void) {
     assert(local_media && !media_failed && w == 50 && h == 50);
     assert(remove("assets/artwork/PPSA12345.card.png") == 0);
     assert(IMG_SavePNG(local,"assets/artwork/PPSA12345.box.png") == 0);
+    expire_locations(app);
     complete = wait_art(app,&item,false,&w,&h);
     assert(complete && artwork_complete_box(app,complete));
     assert(remove("assets/artwork/PPSA12345.box.png") == 0);
+    expire_locations(app);
     assert(artwork_get(app,&item,false,80,&w,&h) == changed);
     SDL_strlcpy(item.id_code,"../escape",sizeof(item.id_code));
     artwork_location(&item,false,&location); assert(!location.local);

@@ -201,10 +201,10 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
 static void render_search(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245,245,245,255}, muted = {170,170,170,255};
-    draw_text(r, app->font_row_title, TR(app, TXT_NAV_SEARCH), CONTENT_X, 70, white, 0);
+    draw_text(app, app->font_row_title, TR(app, TXT_NAV_SEARCH), CONTENT_X, 70, white, 0);
     SDL_Rect query = {CONTENT_X, 130, 1540, 52};
     fill_rect(r, query.x, query.y, query.w, query.h, 24,24,24,255);
-    draw_single_line(r, app->font_body, app->search_query[0] ? app->search_query : TR(app, TXT_SEARCH_PROMPT),
+    draw_single_line(app, app->font_body, app->search_query[0] ? app->search_query : TR(app, TXT_SEARCH_PROMPT),
                      query.x + 12, query.y + 8, white, query);
     for (int k = 0; k < SEARCH_KEYS; k++) {
         SDL_Rect box = search_key_target(k);
@@ -213,27 +213,27 @@ static void render_search(WolodriveApp *app) {
         char letter[] = {k < 36 ? SEARCH_LETTERS[k] : ' ', '\0'};
         const char *label = k == 36 ? TR(app, TXT_SEARCH_SPACE) : k == 37 ? TR(app, TXT_SEARCH_DELETE) : letter;
         SDL_Color color = focus ? (SDL_Color){10,10,10,255} : white;
-        draw_fitted_text(r, app->font_body, label, box, color, box, true);
+        draw_fitted_text(app, app->font_body, label, box, color, box, true);
     }
     char count[80];
     snprintf(count, sizeof(count), TR(app, TXT_SEARCH_COUNT), app->search_count);
-    draw_text(r, app->font_small, count, CONTENT_X, 740, muted, 0);
-    draw_text(r, app->font_micro, TR(app, TXT_SEARCH_HINT), CONTENT_X, 800, muted, 455);
+    draw_text(app, app->font_small, count, CONTENT_X, 740, muted, 0);
+    draw_text(app, app->font_micro, TR(app, TXT_SEARCH_HINT), CONTENT_X, 800, muted, 455);
     int start = app->search_selected / SEARCH_PAGE * SEARCH_PAGE;
     for (int i = start; i < app->search_count && i < start + SEARCH_PAGE; i++) {
         SDL_Rect box = search_result_target(i);
         GameItem *item = app->search_results[i];
         render_cover_or_placeholder(app, item, box.x + (box.w-132)/2, box.y, 132, 184, false);
         SDL_Rect label = {box.x, box.y + 188, box.w, 30};
-        draw_single_line(r, app->font_micro, item->title, label.x, label.y, white, label);
+        draw_single_line(app, app->font_micro, item->title, label.x, label.y, white, label);
         if (!app->sidebar_focus && app->search_results_focus && i == app->search_selected)
             draw_border(r, box.x - 3, box.y - 3, box.w + 6, box.h + 6, 3,245,245,245,255);
     }
-    if (!app->search_count) draw_text(r, app->font_body,
+    if (!app->search_count) draw_text(app, app->font_body,
         TR(app, settings_filters_active(app) ? TXT_SETTINGS_NO_MATCHES : TXT_SEARCH_EMPTY),
         820, 230, muted, 950);
     if (app->search_count) {
         snprintf(count, sizeof(count), "%d / %d", app->search_selected + 1, app->search_count);
-        draw_text(r, app->font_micro, count, 820, 950, muted, 0);
+        draw_text(app, app->font_micro, count, 820, 950, muted, 0);
     }
 }

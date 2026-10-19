@@ -7,7 +7,7 @@ PS5_PORT        ?= 9021
 PS5_FTP_PORT    ?= 1337
 PS5_PAYLOAD_SDK ?= /opt/ps5-payload-sdk
 
-.PHONY: all linux preview build-linux test ps5 deploy deploy-ftp clean
+.PHONY: all linux preview build-linux test benchmark-ui ps5 deploy deploy-ftp clean
 
 all: build-linux
 
@@ -25,6 +25,14 @@ build-linux:
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` \
 	    -lm -lpthread
 	@echo "[WOLODRIVE] Zbudowano natywną binarkę Linux: build/wolodrive"
+
+benchmark-ui:
+	@mkdir -p build
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+	    tests/benchmark_ui.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    -o build/benchmark_ui \
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	SDL_VIDEODRIVER=dummy ./build/benchmark_ui
 
 test:
 	@mkdir -p build
