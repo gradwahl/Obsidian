@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import struct
 import threading
+import time
 
 
 def bitmap(width, height):
@@ -20,7 +21,9 @@ def artwork_server():
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             requests.append(self.path)
-            if self.path == '/retry' and requests.count('/retry') == 1:
+            if self.path == '/stall':
+                time.sleep(2)
+            if self.path == '/bad-until-import' or (self.path == '/retry' and requests.count('/retry') == 1):
                 body = b'not an image' * 100
             else:
                 dimensions = (80, 120) if self.path == '/good' else (160, 90)

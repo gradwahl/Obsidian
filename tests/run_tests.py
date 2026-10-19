@@ -72,6 +72,8 @@ with tempfile.TemporaryDirectory(prefix="wolodrive-artwork-") as artwork_dir:
         assert requests.count("/good") == 1, requests
         assert requests.count("/changed") == 1, requests
         assert requests.count("/retry") == 2, requests
+        assert requests.count("/bad-until-import") == 1, requests
+        assert "/cached-during-stall" not in requests, requests
 
 with tempfile.TemporaryDirectory(prefix="wolodrive-screenshots-") as screenshot_dir:
     subprocess.run([str(Path("build/test_screenshots").resolve())],

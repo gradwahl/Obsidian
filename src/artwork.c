@@ -25,8 +25,8 @@ typedef struct {
     SDL_Surface *surface;
     SDL_Color color;
     int width, height, priority;
-    Uint32 used, retry, priority_tick;
-    bool busy, local, failed, soft, complete_box;
+    Uint32 used, retry, priority_tick, disk_checked;
+    bool busy, local, failed, soft, complete_box, disk_tried, needs_download;
 } ArtworkEntry;
 
 typedef struct {
@@ -40,6 +40,7 @@ struct ArtworkCache {
     SDL_mutex *mutex;
     SDL_cond *condition;
     SDL_Thread *thread;
+    SDL_Thread *download_thread;
     SDL_atomic_t stop;
     ArtworkEntry entries[ART_SLOTS];
     size_t bytes;
@@ -184,30 +185,37 @@ static SDL_Surface *artwork_resize(SDL_Surface *source, bool soft) {
     return small;
 }
 
-static int artwork_worker(void *userdata) {
-    struct ArtworkCache *cache = userdata;
+static int artwork_run_worker(struct ArtworkCache *cache, bool downloading) {
     SDL_LockMutex(cache->mutex);
     while (!SDL_AtomicGet(&cache->stop)) {
         ArtworkEntry *next = NULL;
         Uint32 now = SDL_GetTicks();
-        int pending = 0;
+        int pending = 0, busy = 0;
         for (int i = 0; i < ART_SLOTS; i++) {
             ArtworkEntry *entry = &cache->entries[i];
             if (entry->surface && now-entry->used > 2000) {
                 SDL_FreeSurface(entry->surface); entry->surface = NULL;
             }
             if (entry->surface) pending++;
+            if (entry->busy) busy++;
         }
         /* Bound decoded surfaces waiting for the UI to upload them as well. */
         for (int i = 0; i < ART_SLOTS; i++) {
             ArtworkEntry *entry = &cache->entries[i];
-            if (!entry->key[0] || entry->texture || entry->surface || entry->busy ||
-                (entry->failed && (Sint32)(now-entry->retry) < 0) || now-entry->used > 2000) continue;
+            if (!entry->key[0] || entry->texture || entry->surface || entry->busy || now-entry->used > 2000) continue;
+            if (downloading) {
+                if (!entry->needs_download || (entry->failed && (Sint32)(now-entry->retry) < 0)) continue;
+            } else {
+                /* Recheck disk while a failed/missing download waits for retry:
+                   a bulk import must become usable without waiting 30 seconds. */
+                if (entry->disk_tried && now-entry->disk_checked < 1000) continue;
+                if (entry->failed && !entry->needs_download && (Sint32)(now-entry->retry) < 0) continue;
+            }
             if (!next || entry->priority > next->priority ||
                 (entry->priority == next->priority && entry->used > next->used)) next = entry;
         }
         if (!next) { SDL_CondWaitTimeout(cache->condition, cache->mutex, 100); continue; }
-        if (pending >= 3) {
+        if (pending + busy >= 3) {
             ArtworkEntry *lowest = NULL;
             for (int i = 0; i < ART_SLOTS; i++) {
                 ArtworkEntry *entry = &cache->entries[i];
@@ -219,19 +227,37 @@ static int artwork_worker(void *userdata) {
             }
             SDL_FreeSurface(lowest->surface); lowest->surface = NULL;
             lowest->failed = true; lowest->retry = now + 2000;
+            lowest->needs_download = false;
+            lowest->disk_tried = false;
         }
         next->busy = true;
         ArtworkEntry request = *next;
         SDL_UnlockMutex(cache->mutex);
-        SDL_Surface *surface = artwork_resize(artwork_load(cache, &request), request.soft);
+        SDL_Surface *surface = artwork_resize(downloading ? artwork_load(cache, &request) : IMG_Load(request.path), request.soft);
         SDL_LockMutex(cache->mutex);
         next->surface = surface;
         next->busy = false;
-        next->failed = !surface;
-        next->retry = SDL_GetTicks() + 30000;
+        if (!downloading) {
+            next->disk_tried = true;
+            next->disk_checked = SDL_GetTicks();
+        }
+        next->needs_download = !surface && !request.local;
+        if (surface || downloading || request.local) {
+            next->failed = !surface;
+            next->retry = SDL_GetTicks() + (downloading ? 30000 : 1000);
+        }
+        SDL_CondBroadcast(cache->condition);
     }
     SDL_UnlockMutex(cache->mutex);
     return 0;
+}
+
+static int artwork_worker(void *userdata) {
+    return artwork_run_worker(userdata, false);
+}
+
+static int artwork_download_worker(void *userdata) {
+    return artwork_run_worker(userdata, true);
 }
 
 static void artwork_release(struct ArtworkCache *cache, ArtworkEntry *entry) {
@@ -266,6 +292,8 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
         app->artwork = cache;
         cache->thread = SDL_CreateThread(artwork_worker, "artwork", cache);
         if (!cache->thread) { artwork_destroy(app); return NULL; }
+        cache->download_thread = SDL_CreateThread(artwork_download_worker, "artwork-download", cache);
+        if (!cache->download_thread) { artwork_destroy(app); return NULL; }
     }
     struct ArtworkCache *cache = app->artwork;
     const char *url = backdrop ? (snapshot.backdrop_url[0] ? snapshot.backdrop_url :
@@ -310,7 +338,7 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
             entry->priority = priority; entry->priority_tick = now;
         } else entry->priority = SDL_max(entry->priority, priority);
         entry->used = now;
-        SDL_CondSignal(cache->condition);
+        SDL_CondBroadcast(cache->condition);
     }
     SDL_UnlockMutex(cache->mutex);
     return entry;
@@ -413,8 +441,9 @@ void artwork_destroy(WolodriveApp *app) {
     struct ArtworkCache *cache = app->artwork;
     if (!cache) return;
     SDL_AtomicSet(&cache->stop, 1);
-    SDL_CondSignal(cache->condition);
+    SDL_CondBroadcast(cache->condition);
     if (cache->thread) SDL_WaitThread(cache->thread, NULL);
+    if (cache->download_thread) SDL_WaitThread(cache->download_thread, NULL);
     for (int i = 0; i < ART_SLOTS; i++) artwork_release(cache, &cache->entries[i]);
     SDL_DestroyCond(cache->condition); SDL_DestroyMutex(cache->mutex);
     free(cache); app->artwork = NULL;

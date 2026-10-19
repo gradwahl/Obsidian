@@ -212,15 +212,16 @@ This does not add a retail box-art database: sources that only supply square ima
 continue to use those images inside portrait cases, filling the artwork area
 without stretching and cropping the sides where necessary.
 
-Images download and decode in an SDL worker; texture creation stays on the UI
-thread. URL-keyed files in `assets/covers/*.art` share downloads across package
+Cached images decode in a dedicated SDL worker, independent of the single network
+download worker, so a slow/missing remote image cannot hold up other cached covers.
+Texture creation stays on the UI thread. URL-keyed files in `assets/covers/*.art` share downloads across package
 variants and change automatically when the URL changes. Existing title-ID `.cover`
 files are left untouched and are no longer used as downloads, because they cannot
 identify their source URL. Corrupt cached images are downloaded again and validated
 by decoding before replacing the cache file. Failed images retry after 30 seconds
 while requested. HTTPS verification remains enabled. Downloads are limited to
 16 MiB and 12 seconds each. Decoded images fit within 1920×1080, pending decoded
-surfaces are limited to three, and textures use a 48 MiB LRU budget across 64 slots.
+surfaces plus in-flight loads are limited to three, and textures use a 48 MiB LRU budget across 64 slots.
 Disk files persist for offline reuse; they currently have no automatic size limit.
 
 For local replacements, add PNG, JPG or WebP files under `assets/artwork/`:
@@ -236,14 +237,27 @@ and extension order is PNG, JPG, WebP. Adding/removing
 files or changing their modification time/size updates the requested artwork.
 Local replacements and downloaded cache files are ignored by Git. On PS5 the
 cache is `/data/homebrew/wolodrive/covers` and replacements belong under
-`/data/homebrew/wolodrive/artwork`. The worker joins before SDL/image shutdown.
+`/data/homebrew/wolodrive/artwork`. Both artwork workers join before SDL/image shutdown.
 
 Artwork location lookups, including missing local replacements, are cached in
 128 memory slots. Visible/requested locations are rechecked after one second;
 local file additions, removals and modification-time/size changes can therefore
 take up to one second to appear. Catalog artwork URL changes take effect on the
 next request. This avoids repeating filesystem probes for every card on every
-frame, especially across WSL's Windows-drive filesystem.
+frame, especially across WSL's Windows-drive filesystem. Missing/failed images
+also recheck disk once per second while requested, so bulk-downloaded files can
+become usable during the 30-second network retry cooldown.
+
+The independent cached-image loader passed `make build-linux`, the full `make test`
+suite and `git diff --check` through WSL. A local-server regression reproduced the
+old queue blockage, then loaded a cached cover in 6 ms during a two-second network
+stall after the fix. Another test loaded an imported cache file in 1,011 ms during
+network retry cooldown without another HTTP request. The offline software navigation
+benchmark measured 16.97 ms/frame (58.9 FPS) at 1280×720. Native Windows app builds
+and launch, a separate native Linux graphical session and PS5 (SDK unavailable)
+remain unverified; WSL's software renderer default and explicit override are preserved.
+The updated WSLg preview was inspected fully visible, with readable text, loaded
+covers, and live Right-key selection, carousel and background updates.
 
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,

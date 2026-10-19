@@ -143,6 +143,50 @@ int main(void) {
     entry->retry = SDL_GetTicks();
     SDL_UnlockMutex(app->artwork->mutex);
     assert(wait_art(app,&item,false,&w,&h));
+    /* A file imported during network retry cooldown must load from disk. */
+    GameItem imported = {0};
+    snprintf(imported.cover_url, sizeof(imported.cover_url), "%s/bad-until-import", server);
+    ArtworkEntry *waiting = artwork_request(app, &imported, false, 110);
+    bool waiting_failed = false;
+    for (int i = 0; i < 300 && !waiting_failed; i++) {
+        SDL_Delay(5);
+        SDL_LockMutex(app->artwork->mutex); waiting_failed = waiting->failed; SDL_UnlockMutex(app->artwork->mutex);
+    }
+    assert(waiting_failed);
+    ArtworkEntry imported_location = {0};
+    artwork_location(&imported, false, &imported_location);
+    SDL_Surface *import_fixture = SDL_CreateRGBSurfaceWithFormat(0, 39, 53, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(import_fixture && IMG_SavePNG(import_fixture, imported_location.path) == 0);
+    SDL_FreeSurface(import_fixture);
+    Uint32 import_start = SDL_GetTicks();
+    assert(wait_art(app, &imported, false, &w, &h) && w == 39 && h == 53);
+    assert(SDL_GetTicks() - import_start < 1500);
+    printf("Imported cover bypassed network retry cooldown in %u ms.\n", SDL_GetTicks() - import_start);
+    /* A slow network image must not hold cached covers behind it. */
+    GameItem slow = {0}, cached = {0};
+    snprintf(slow.cover_url, sizeof(slow.cover_url), "%s/stall", server);
+    ArtworkEntry *blocked = artwork_request(app, &slow, false, 110);
+    bool busy = false;
+    for (int i = 0; i < 200 && !busy; i++) {
+        SDL_Delay(5);
+        SDL_LockMutex(app->artwork->mutex); busy = blocked->busy && blocked->disk_tried; SDL_UnlockMutex(app->artwork->mutex);
+    }
+    assert(busy);
+    SDL_Delay(50);
+    snprintf(cached.cover_url, sizeof(cached.cover_url), "%s/cached-during-stall", server);
+    ArtworkEntry cached_location = {0};
+    artwork_location(&cached, false, &cached_location);
+    SDL_Surface *fixture = SDL_CreateRGBSurfaceWithFormat(0, 37, 51, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(fixture && IMG_SavePNG(fixture, cached_location.path) == 0);
+    SDL_FreeSurface(fixture);
+    Uint32 cached_start = SDL_GetTicks();
+    SDL_Texture *ready = NULL;
+    do {
+        ready = artwork_get(app, &cached, false, 100, &w, &h);
+        if (!ready) SDL_Delay(5);
+    } while (!ready && SDL_GetTicks() - cached_start < 500);
+    assert(ready && w == 37 && h == 51);
+    printf("Cached cover loaded in %u ms during a 2-second network stall.\n", SDL_GetTicks() - cached_start);
     artwork_destroy(app); assert(!app->artwork);
     SDL_DestroyRenderer(app->renderer); SDL_FreeSurface(screen); free(app);
     curl_global_cleanup(); IMG_Quit(); SDL_Quit();
