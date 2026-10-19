@@ -13,6 +13,9 @@ export function CoverArt({ game, className = '' }: { game: GameItem; className?:
   return <div className={`tv-cover ${className}`} style={{ background:
     `linear-gradient(rgb(${game.cover_r},${game.cover_g},${game.cover_b}), #101014)` }}>
     {platform && !completeBox && <div className={`tv-platform tv-platform-${platform.toLowerCase()}`}>{platform}</div>}
+    {game.rating_score ? (
+      <div className="tv-rating-badge">★ {game.rating_score.toFixed(1)}</div>
+    ) : null}
     <div className="tv-cover-image">
       {!source && <div className="tv-cover-placeholder"><strong>WOLODRIVE</strong><span>{game.title}</span></div>}
       {source && <img src={source} alt={game.title}

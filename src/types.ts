@@ -18,6 +18,8 @@ export type SidebarView =
 export type PackageFormat = 'exfat' | 'ffpkg' | 'pkg';
 export type PackageState = 'available' | 'downloading' | 'installed';
 
+export type HomeCategoryId = 'ps5' | 'ps4' | 'popular' | 'newest' | 'top_rated';
+
 export interface GameItem {
   id_code: string;
   title: string;
@@ -28,6 +30,9 @@ export interface GameItem {
   parent_title_id?: string;
   screenshot_urls: string[];
   catalog_added_at?: number; // timestamp
+  release_date?: string;
+  download_count?: number;
+  rating_score?: number;
   description: string;
   description_id?: string;
   install_path: string;

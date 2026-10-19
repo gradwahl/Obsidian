@@ -58,12 +58,16 @@ static TTF_Font *open_first_available_font(const char **candidates, int ptsize) 
 static const Language LANGUAGE_ORDER[LANG_COUNT] = {
     LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
 };
-enum { RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
-       CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40 };
+enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
+       CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40,
+       HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
 static const SDL_Rect LANGUAGE_BUTTON = {0, 24, RAIL_WIDTH, 90};
 static const SDL_Rect LANGUAGE_MENU = {14, 122, RAIL_WIDTH - 28, LANG_COUNT * 44 + 16};
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
+static const SDL_Rect HERO_PLAY_BUTTON = {CONTENT_X + 344, 478, 206, 42};
+static const SDL_Rect HERO_INFO_BUTTON = {CONTENT_X + 562, 478, 236, 42};
+static const SDL_Rect HOME_SHOW_ALL_BUTTON = {CONTENT_X, 524, 560, 44};
 enum { LIBRARY_COLUMNS = 4, LIBRARY_PAGE_SIZE = 8, LIBRARY_TILE = 320,
        LIBRARY_GAP = 30, LIBRARY_GRID_Y = 220 };
 static const SDL_Rect LIBRARY_BACK_BUTTON = {CONTENT_X, 24, 180, 50};
@@ -91,6 +95,10 @@ static const char *library_section_title(WolodriveApp *app) {
 static void select_sidebar_view(WolodriveApp *app, int view) {
     app->active_row = view;
     app->sidebar_focus = true;
+    if (view == VIEW_HOME) {
+        app->home_cat_index = 0;
+        app->home_grid_expanded = false;
+    }
     if (view == VIEW_SEARCH) SDL_StartTextInput();
     else SDL_StopTextInput();
     if (is_library_view(view)) {
@@ -104,10 +112,36 @@ static SDL_Rect sidebar_target(int row) {
     return (SDL_Rect){0, row == VIEW_SEARCH ? 150 : 240 + position * 90, RAIL_WIDTH, 90};
 }
 
+static CarouselRow *active_home_row(WolodriveApp *app) {
+    if (app->active_row == VIEW_HOME && app->home_cat_index > 0 &&
+        app->home_cat_index < HOME_CAT_COUNT &&
+        app->home_categories[app->home_cat_index].item_count > 0) {
+        return &app->home_categories[app->home_cat_index];
+    }
+    return &app->rows[app->active_row];
+}
+
 static SDL_Rect card_target(WolodriveApp *app, int col) {
+    CarouselRow *row = active_home_row(app);
     return (SDL_Rect){CONTENT_X + col * (CARD_WIDTH + CARD_GAP) -
-                     (int)app->rows[app->active_row].scroll_x,
+                     (int)row->scroll_x,
                      CARDS_Y, CARD_WIDTH, CARD_HEIGHT + CARD_TITLE + CARD_FOOTER};
+}
+
+static SDL_Rect home_row_card_target(WolodriveApp *app, int cat, int col) {
+    CarouselRow *row = &app->home_categories[cat];
+    int row_y = CARDS_Y + cat * HOME_ROW_STRIDE - (int)app->home_vertical_scroll;
+    return (SDL_Rect){CONTENT_X + col * (CARD_WIDTH + CARD_GAP) - (int)row->scroll_x,
+                      row_y, CARD_WIDTH, CARD_HEIGHT + CARD_TITLE + CARD_FOOTER};
+}
+
+static SDL_Rect home_grid_card_target(WolodriveApp *app, int index) {
+    int col = index % HOME_GRID_COLS;
+    int row = index / HOME_GRID_COLS - app->home_grid_scroll_row;
+    int cell_h = CARD_HEIGHT + CARD_TITLE + CARD_FOOTER + 22;
+    return (SDL_Rect){CONTENT_X + col * (CARD_WIDTH + CARD_GAP),
+                      128 + row * cell_h - (int)app->home_vertical_scroll,
+                      CARD_WIDTH, CARD_HEIGHT + CARD_TITLE + CARD_FOOTER};
 }
 
 static bool contains_point(SDL_Rect rect, int x, int y) {
@@ -329,8 +363,21 @@ static int render_box_brand(WolodriveApp *app, const GameItem *item, SDL_Rect bo
     return band;
 }
 
-static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
-                                        int x, int y, int w, int h, bool is_hero) {
+/* Zaokrąglenie rogów pionowego kafelka okładki (proporcje pudełkowe) */
+static void draw_rounded_card_corners(SDL_Renderer *r, int x, int y, int w, int h,
+                                      uint8_t br, uint8_t bg, uint8_t bb) {
+    static const int trim[6] = { 6, 4, 3, 2, 1, 1 };
+    for (int row = 0; row < 6; row++) {
+        int cw = trim[row];
+        fill_rect(r, x, y + row, cw, 1, br, bg, bb, 255);
+        fill_rect(r, x + w - cw, y + row, cw, 1, br, bg, bb, 255);
+        fill_rect(r, x, y + h - 1 - row, cw, 1, br, bg, bb, 255);
+        fill_rect(r, x + w - cw, y + h - 1 - row, cw, 1, br, bg, bb, 255);
+    }
+}
+
+static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
+                                              int x, int y, int w, int h, bool is_hero, Uint8 alpha) {
     SDL_Renderer *r = app->renderer;
     int width = 0, height = 0;
     SDL_Texture *texture = artwork_get(app, it, is_hero, is_hero ? 100 : 80, &width, &height);
@@ -338,8 +385,8 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
     if (texture && width > 0 && height > 0) {
         SDL_Rect box = {x, y, w, h};
         SDL_Color color = artwork_background(app, texture);
-        fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, 255,
-                               color.r/8, color.g/8, color.b/8, 255, 24);
+        fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, alpha,
+                               color.r/8, color.g/8, color.b/8, alpha, 24);
         bool complete_box = !is_hero && artwork_complete_box(app, texture);
         if (!is_hero && !complete_box) {
             int band = render_box_brand(app, it, box);
@@ -353,29 +400,37 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
         SDL_Rect intersection = box;
         if (clipped) SDL_IntersectRect(&box, &previous, &intersection);
         SDL_RenderSetClipRect(r, &intersection);
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureAlphaMod(texture, alpha);
         SDL_RenderCopy(r, texture, NULL, &destination);
-        if (is_hero) fill_rect(r, x, y, w, h, 0, 0, 0, 70);
+        SDL_SetTextureAlphaMod(texture, 255);
+        if (is_hero) fill_rect(r, x, y, w, h, 0, 0, 0, (Uint8)((70 * alpha) / 255));
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
     } else {
         /* Elegancki, stylowy Placeholder z logo WOLODRIVE i gradientem bazowym */
         fill_vertical_gradient(r, x, y, w, h,
-                               it->cover_r, it->cover_g, it->cover_b, 255,
-                               (uint8_t)(it->cover_r / 3), (uint8_t)(it->cover_g / 3), (uint8_t)(it->cover_b / 3), 255,
+                               it->cover_r, it->cover_g, it->cover_b, alpha,
+                               (uint8_t)(it->cover_r / 3), (uint8_t)(it->cover_g / 3), (uint8_t)(it->cover_b / 3), alpha,
                                24);
 
         /* Geometryczny akcent w tle placeholdera */
-        fill_rect(r, x + w - 90, y, 90, h, 255, 255, 255, 12);
-        fill_rect(r, x, y + h / 2 - 1, w, 2, 255, 255, 255, 18);
+        fill_rect(r, x + w - 90, y, 90, h, 255, 255, 255, (Uint8)((12 * alpha) / 255));
+        fill_rect(r, x, y + h / 2 - 1, w, 2, 255, 255, 255, (Uint8)((18 * alpha) / 255));
 
-        SDL_Color watermark_col = { 255, 255, 255, 75 };
-        SDL_Color sub_col       = { 220, 220, 225, 160 };
+        SDL_Color watermark_col = { 255, 255, 255, (Uint8)((75 * alpha) / 255) };
+        SDL_Color sub_col       = { 220, 220, 225, (Uint8)((160 * alpha) / 255) };
         draw_text(app, is_hero ? app->font_row_title : app->font_small,
                   "WOLODRIVE", x + 18, y + h / 2 - (is_hero ? 28 : 22), watermark_col, 0);
 
         draw_text(app, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
         if (!is_hero) render_box_brand(app, it, (SDL_Rect){x,y,w,h});
     }
-    if (!is_hero) draw_border(r, x, y, w, h, 2, 22, 62, 110, 255);
+    if (!is_hero) draw_border(r, x, y, w, h, 2, 22, 62, 110, alpha);
+}
+
+static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
+                                        int x, int y, int w, int h, bool is_hero) {
+    render_cover_or_placeholder_alpha(app, it, x, y, w, h, is_hero, 255);
 }
 
 bool ui_create_renderer(WolodriveApp *app) {
@@ -436,6 +491,13 @@ bool ui_init(WolodriveApp *app) {
     }
 
     app->active_row = 0;
+    app->home_cat_index = 0;
+    app->home_grid_expanded = false;
+    app->home_grid_anim = 0.0f;
+    app->sidebar_width = (float)SIDEBAR_COLLAPSED_W;
+    app->sidebar_dim_alpha = 0.0f;
+    app->hero_crossfade = 1.0f;
+    app->card_focus_scale = 1.0f;
     app->vertical_scroll_y = 0.0f;
     app->target_vertical_scroll_y = 0.0f;
     app->focus_pulse = 0.0f;
@@ -462,6 +524,32 @@ void ui_cleanup(WolodriveApp *app) {
 
 static void search_rebuild_locked(WolodriveApp *app);
 
+static int cmp_popular_desc(const void *a, const void *b) {
+    const GameItem *ga = *(const GameItem *const *)a;
+    const GameItem *gb = *(const GameItem *const *)b;
+    if (gb->download_count != ga->download_count)
+        return (gb->download_count > ga->download_count) - (gb->download_count < ga->download_count);
+    return SDL_strcasecmp(ga->title, gb->title);
+}
+
+static int cmp_newest_desc(const void *a, const void *b) {
+    const GameItem *ga = *(const GameItem *const *)a;
+    const GameItem *gb = *(const GameItem *const *)b;
+    int d = strcmp(gb->release_date, ga->release_date);
+    if (d != 0) return d;
+    if (gb->catalog_added_at != ga->catalog_added_at)
+        return (gb->catalog_added_at > ga->catalog_added_at) - (gb->catalog_added_at < ga->catalog_added_at);
+    return SDL_strcasecmp(ga->title, gb->title);
+}
+
+static int cmp_rating_desc(const void *a, const void *b) {
+    const GameItem *ga = *(const GameItem *const *)a;
+    const GameItem *gb = *(const GameItem *const *)b;
+    if (fabsf(gb->rating_score - ga->rating_score) > 0.001f)
+        return (gb->rating_score > ga->rating_score) ? 1 : -1;
+    return (gb->download_count > ga->download_count) - (gb->download_count < ga->download_count);
+}
+
 void ui_rebuild_carousels(WolodriveApp *app) {
     const char *titles[TOTAL_ROWS] = {
         TR(app, TXT_NAV_HOME),
@@ -473,6 +561,13 @@ void ui_rebuild_carousels(WolodriveApp *app) {
         TR(app, TXT_NAV_SEARCH),
         TR(app, TXT_NAV_SETTINGS)
     };
+    const char *cat_titles[HOME_CAT_COUNT] = {
+        TR(app, TXT_CAT_PS5),
+        TR(app, TXT_CAT_PS4),
+        TR(app, TXT_CAT_POPULAR),
+        TR(app, TXT_CAT_NEWEST),
+        TR(app, TXT_CAT_TOP_RATED)
+    };
 
     SDL_LockMutex(app->catalog_mutex);
 
@@ -483,6 +578,11 @@ void ui_rebuild_carousels(WolodriveApp *app) {
         snprintf(app->rows[r].title, sizeof(app->rows[r].title), "%s", titles[r]);
         app->rows[r].item_count = 0;
     }
+    for (int c = 0; c < HOME_CAT_COUNT; c++) {
+        snprintf(app->home_categories[c].title, sizeof(app->home_categories[c].title), "%s", cat_titles[c]);
+        app->home_categories[c].item_count = 0;
+    }
+
     home->item_count = catalog_latest_games_locked(app, home->items, MAX_ITEMS_PER_ROW);
     home->selected_col = 0;
     if (selected_home) {
@@ -505,11 +605,48 @@ void ui_rebuild_carousels(WolodriveApp *app) {
             app->rows[VIEW_DOWNLOADS].item_count < MAX_ITEMS_PER_ROW) {
             app->rows[VIEW_DOWNLOADS].items[app->rows[VIEW_DOWNLOADS].item_count++] = it;
         }
+
+        if (it->is_game) {
+            bool is_ps4 = (SDL_strncasecmp(it->id_code, "CUSA", 4) == 0 || it->format == FMT_PKG);
+            CarouselRow *plat = &app->home_categories[is_ps4 ? HOME_CAT_PS4 : HOME_CAT_PS5];
+            if (plat->item_count < MAX_ITEMS_PER_ROW) plat->items[plat->item_count++] = it;
+
+            CarouselRow *pop = &app->home_categories[HOME_CAT_POPULAR];
+            if (pop->item_count < MAX_ITEMS_PER_ROW) pop->items[pop->item_count++] = it;
+
+            CarouselRow *newest = &app->home_categories[HOME_CAT_NEWEST];
+            if (newest->item_count < MAX_ITEMS_PER_ROW) newest->items[newest->item_count++] = it;
+
+            CarouselRow *rated = &app->home_categories[HOME_CAT_TOP_RATED];
+            if (rated->item_count < MAX_ITEMS_PER_ROW) rated->items[rated->item_count++] = it;
+        }
+    }
+
+    if (app->home_categories[HOME_CAT_POPULAR].item_count > 1) {
+        qsort(app->home_categories[HOME_CAT_POPULAR].items,
+              (size_t)app->home_categories[HOME_CAT_POPULAR].item_count,
+              sizeof(GameItem *), cmp_popular_desc);
+    }
+    if (app->home_categories[HOME_CAT_NEWEST].item_count > 1) {
+        qsort(app->home_categories[HOME_CAT_NEWEST].items,
+              (size_t)app->home_categories[HOME_CAT_NEWEST].item_count,
+              sizeof(GameItem *), cmp_newest_desc);
+    }
+    if (app->home_categories[HOME_CAT_TOP_RATED].item_count > 1) {
+        qsort(app->home_categories[HOME_CAT_TOP_RATED].items,
+              (size_t)app->home_categories[HOME_CAT_TOP_RATED].item_count,
+              sizeof(GameItem *), cmp_rating_desc);
     }
 
     for (int r = 0; r < TOTAL_ROWS; r++) {
         if (app->rows[r].selected_col >= app->rows[r].item_count) {
             app->rows[r].selected_col = (app->rows[r].item_count > 0) ? app->rows[r].item_count - 1 : 0;
+        }
+    }
+    for (int c = 0; c < HOME_CAT_COUNT; c++) {
+        if (app->home_categories[c].selected_col >= app->home_categories[c].item_count) {
+            app->home_categories[c].selected_col =
+                (app->home_categories[c].item_count > 0) ? app->home_categories[c].item_count - 1 : 0;
         }
     }
 
@@ -523,13 +660,20 @@ static GameItem *get_focused_item(WolodriveApp *app) {
     if (app->active_row == VIEW_SEARCH)
         return app->search_count ? app->search_results[app->search_selected] : NULL;
     if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) return NULL;
-    CarouselRow *row = &app->rows[app->active_row];
+    CarouselRow *row = active_home_row(app);
     if (row->item_count <= 0) return NULL;
-    return row->items[row->selected_col];
+    int col = SDL_max(0, SDL_min(row->selected_col, row->item_count - 1));
+    return row->items[col];
 }
 
 static void track_description_focus(WolodriveApp *app, GameItem *item) {
     if (app->description_item != item) {
+        if (app->hero_current_item && app->hero_current_item != item) {
+            app->hero_prev_item = app->hero_current_item;
+            app->hero_crossfade = 0.0f;
+            app->card_focus_scale = 1.0f;
+        }
+        app->hero_current_item = item;
         app->description_item = item;
         app->show_original_description = false;
         app->description_scroll = 0;
@@ -667,12 +811,55 @@ static const char *action_label(WolodriveApp *app, GameItem *item);
 #include "ui_game_details.h"
 #include "ui_settings.h"
 
+static void sync_home_active_row(WolodriveApp *app) {
+    if (app->home_cat_index < 0) app->home_cat_index = 0;
+    if (app->home_cat_index >= HOME_CAT_COUNT) app->home_cat_index = HOME_CAT_COUNT - 1;
+    CarouselRow *cat = &app->home_categories[app->home_cat_index];
+    CarouselRow *home = &app->rows[VIEW_HOME];
+    home->item_count = cat->item_count;
+    for (int i = 0; i < cat->item_count && i < MAX_CATALOG_ITEMS; i++) {
+        home->items[i] = cat->items[i];
+    }
+    if (cat->selected_col >= cat->item_count) {
+        cat->selected_col = cat->item_count > 0 ? cat->item_count - 1 : 0;
+    }
+    home->selected_col = cat->selected_col;
+    home->scroll_x = cat->scroll_x;
+    home->target_scroll_x = cat->target_scroll_x;
+    home->scroll_velocity = cat->scroll_velocity;
+}
+
+static const char *home_category_title(WolodriveApp *app, int cat) {
+    switch (cat) {
+        case HOME_CAT_PS5:       return TR(app, TXT_CAT_PS5);
+        case HOME_CAT_PS4:       return TR(app, TXT_CAT_PS4);
+        case HOME_CAT_POPULAR:   return TR(app, TXT_CAT_POPULAR);
+        case HOME_CAT_NEWEST:    return TR(app, TXT_CAT_NEWEST);
+        case HOME_CAT_TOP_RATED: return TR(app, TXT_CAT_TOP_RATED);
+        default:                 return TR(app, TXT_LATEST_GAMES);
+    }
+}
+
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
+    if (ev->type == SDL_MOUSEMOTION) {
+        int mx = ev->motion.x;
+        float sb_limit = app->sidebar_width > (float)SIDEBAR_COLLAPSED_W
+                             ? app->sidebar_width
+                             : (float)SIDEBAR_COLLAPSED_W + 24.0f;
+        app->sidebar_hovered = (mx >= 0 && (float)mx <= sb_limit);
+    }
+
     if (handle_language_input(app, ev)) return;
     if (app->detail_open) { handle_game_details_input(app, ev); return; }
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+        int sidebar_hit_w = (app->sidebar_hovered || app->sidebar_focus || app->sidebar_expand > 0.35f)
+                                ? RAIL_WIDTH
+                                : SIDEBAR_COLLAPSED_W;
         for (int r = 0; r < TOTAL_ROWS; r++) {
-            if (contains_point(sidebar_target(r), ev->button.x, ev->button.y)) {
+            SDL_Rect sb = sidebar_target(r);
+            sb.w = sidebar_hit_w;
+            if (contains_point(sb, ev->button.x, ev->button.y)) {
+                app->home_grid_expanded = false;
                 select_sidebar_view(app, r);
                 track_description_focus(app, get_focused_item(app));
                 return;
@@ -711,6 +898,84 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_settings_input(app, ev)) return;
     if (handle_search_input(app, ev)) return;
     if (handle_library_input(app, ev)) return;
+
+    /* Przyciski akcji w sekcji Hero ([Play/Pobierz] oraz [Więcej informacji]) */
+    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT &&
+        app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS &&
+        !app->home_grid_expanded) {
+        GameItem *hero_item = get_focused_item(app);
+        if (hero_item && contains_point(HERO_PLAY_BUTTON, ev->button.x, ev->button.y)) {
+            app->sidebar_focus = false;
+            sys_trigger_action(app, hero_item);
+            return;
+        }
+        if (hero_item && contains_point(HERO_INFO_BUTTON, ev->button.x, ev->button.y)) {
+            app->sidebar_focus = false;
+            ui_open_game(app, hero_item);
+            return;
+        }
+    }
+
+    /* Kliknięcie w tytuł kategorii lub "Pokaż wszystko" oraz kafelki na ekranie Home */
+    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT &&
+        app->active_row == VIEW_HOME) {
+        int mx = ev->button.x, my = ev->button.y;
+        if (app->home_grid_expanded) {
+            SDL_Rect grid_header = {CONTENT_X, TOPBAR_HEIGHT + 8, SCREEN_WIDTH - CONTENT_X - 48, 44};
+            if (contains_point(grid_header, mx, my)) {
+                app->home_grid_expanded = false;
+                return;
+            }
+            CarouselRow *cat_row = &app->home_categories[app->home_cat_index];
+            for (int col = 0; col < cat_row->item_count; col++) {
+                SDL_Rect card = home_grid_card_target(app, col);
+                if (contains_point(card, mx, my)) {
+                    app->sidebar_focus = false;
+                    cat_row->selected_col = col;
+                    app->rows[VIEW_HOME].selected_col = col;
+                    track_description_focus(app, get_focused_item(app));
+                    ui_open_game(app, get_focused_item(app));
+                    return;
+                }
+            }
+            return;
+        }
+
+        for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
+            int row_y = CARDS_Y + cat * HOME_ROW_STRIDE - (int)app->home_vertical_scroll;
+            int header_y = row_y - 44;
+            if (header_y < HERO_HEIGHT - 40 || header_y > SCREEN_HEIGHT) continue;
+            SDL_Rect title_hit = {CONTENT_X, header_y, 560, 38};
+            SDL_Rect show_all_hit = {HOME_SHOW_ALL_BUTTON.x, header_y + 2,
+                                     HOME_SHOW_ALL_BUTTON.w, HOME_SHOW_ALL_BUTTON.h};
+            if (contains_point(title_hit, mx, my) || contains_point(show_all_hit, mx, my)) {
+                app->sidebar_focus = false;
+                app->home_cat_index = cat;
+                sync_home_active_row(app);
+                app->home_grid_expanded = true;
+                track_description_focus(app, get_focused_item(app));
+                return;
+            }
+        }
+
+        for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
+            CarouselRow *cat_row = &app->home_categories[cat];
+            for (int col = 0; col < cat_row->item_count; col++) {
+                SDL_Rect card = home_row_card_target(app, cat, col);
+                if (card.y + card.h < HERO_HEIGHT - 16 || card.y > SCREEN_HEIGHT) continue;
+                if (contains_point(card, mx, my)) {
+                    app->sidebar_focus = false;
+                    app->home_cat_index = cat;
+                    cat_row->selected_col = col;
+                    sync_home_active_row(app);
+                    track_description_focus(app, get_focused_item(app));
+                    ui_open_game(app, get_focused_item(app));
+                    return;
+                }
+            }
+        }
+    }
+
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         CarouselRow *clicked_row = &app->rows[app->active_row];
         if (ev->button.x >= RAIL_WIDTH + 20) {
@@ -741,15 +1006,168 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         }
         return;
     }
+    if (ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_g && !ev->key.repeat &&
+        app->active_row == VIEW_HOME) {
+        app->home_grid_expanded = !app->home_grid_expanded;
+        return;
+    }
+    if (ev->type == SDL_CONTROLLERBUTTONDOWN && ev->cbutton.button == SDL_CONTROLLER_BUTTON_X &&
+        app->active_row == VIEW_HOME) {
+        app->home_grid_expanded = !app->home_grid_expanded;
+        return;
+    }
     if (ev->type == SDL_MOUSEWHEEL && app->description_hovered) {
         int direction = ev->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
         app->description_scroll = SDL_max(0, app->description_scroll - ev->wheel.y * direction * 24);
+        return;
+    }
+    if (ev->type == SDL_MOUSEWHEEL && app->active_row == VIEW_HOME && !app->description_hovered) {
+        int direction = ev->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
+        int dy = ev->wheel.y * direction;
+        if (!app->home_grid_expanded) {
+            if (dy < 0 && app->home_cat_index < HOME_CAT_COUNT - 1) {
+                app->home_cat_index++;
+                sync_home_active_row(app);
+            } else if (dy > 0 && app->home_cat_index > 0) {
+                app->home_cat_index--;
+                sync_home_active_row(app);
+            }
+            track_description_focus(app, get_focused_item(app));
+        }
         return;
     }
     if (ev->type == SDL_KEYDOWN && (ev->key.keysym.sym == SDLK_PAGEUP || ev->key.keysym.sym == SDLK_PAGEDOWN)) {
         app->description_scroll = SDL_max(0, app->description_scroll + (ev->key.keysym.sym == SDLK_PAGEUP ? -48 : 48));
         return;
     }
+
+    if (app->active_row == VIEW_HOME) {
+        CarouselRow *cat_row = &app->home_categories[app->home_cat_index];
+        CarouselRow *home_row = &app->rows[VIEW_HOME];
+        /* Keep cat_row->selected_col synchronized if external code modified home_row->selected_col */
+        if (cat_row->selected_col != home_row->selected_col &&
+            home_row->selected_col >= 0 && home_row->selected_col < cat_row->item_count) {
+            cat_row->selected_col = home_row->selected_col;
+        }
+        if (ev->type == SDL_KEYDOWN) {
+            switch (ev->key.keysym.sym) {
+                case SDLK_LEFT:
+                case SDLK_a:
+                    if (cat_row->selected_col > 0) {
+                        cat_row->selected_col--;
+                        home_row->selected_col = cat_row->selected_col;
+                    } else {
+                        app->sidebar_focus = true;
+                    }
+                    break;
+                case SDLK_RIGHT:
+                case SDLK_d:
+                    if (cat_row->selected_col + 1 < cat_row->item_count) {
+                        cat_row->selected_col++;
+                        home_row->selected_col = cat_row->selected_col;
+                    }
+                    break;
+                case SDLK_UP:
+                case SDLK_w:
+                    if (app->home_grid_expanded) {
+                        if (cat_row->selected_col >= HOME_GRID_COLS) {
+                            cat_row->selected_col -= HOME_GRID_COLS;
+                            home_row->selected_col = cat_row->selected_col;
+                        }
+                    } else if (app->home_cat_index > 0) {
+                        app->home_cat_index--;
+                        sync_home_active_row(app);
+                    }
+                    break;
+                case SDLK_DOWN:
+                case SDLK_s:
+                    if (app->home_grid_expanded) {
+                        if (cat_row->selected_col + HOME_GRID_COLS < cat_row->item_count) {
+                            cat_row->selected_col += HOME_GRID_COLS;
+                            home_row->selected_col = cat_row->selected_col;
+                        }
+                    } else if (app->home_cat_index + 1 < HOME_CAT_COUNT) {
+                        app->home_cat_index++;
+                        sync_home_active_row(app);
+                    }
+                    break;
+                case SDLK_RETURN:
+                case SDLK_SPACE:
+                    ui_open_game(app, get_focused_item(app));
+                    break;
+                case SDLK_BACKSPACE:
+                case SDLK_b:
+                    if (app->home_grid_expanded) app->home_grid_expanded = false;
+                    else sys_cancel_action(app, get_focused_item(app));
+                    break;
+                case SDLK_r:
+                case SDLK_y:
+                case SDLK_F5:
+                    catalog_start_async_sync(app);
+                    break;
+                case SDLK_ESCAPE:
+                    if (app->home_grid_expanded) app->home_grid_expanded = false;
+                    else app->running = false;
+                    break;
+                default:
+                    break;
+            }
+        } else if (ev->type == SDL_CONTROLLERBUTTONDOWN) {
+            switch (ev->cbutton.button) {
+                case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                    if (cat_row->selected_col > 0) {
+                        cat_row->selected_col--;
+                        home_row->selected_col = cat_row->selected_col;
+                    } else {
+                        app->sidebar_focus = true;
+                    }
+                    break;
+                case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                    if (cat_row->selected_col + 1 < cat_row->item_count) {
+                        cat_row->selected_col++;
+                        home_row->selected_col = cat_row->selected_col;
+                    }
+                    break;
+                case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                    if (app->home_grid_expanded) {
+                        if (cat_row->selected_col >= HOME_GRID_COLS) {
+                            cat_row->selected_col -= HOME_GRID_COLS;
+                            home_row->selected_col = cat_row->selected_col;
+                        }
+                    } else if (app->home_cat_index > 0) {
+                        app->home_cat_index--;
+                        sync_home_active_row(app);
+                    }
+                    break;
+                case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                    if (app->home_grid_expanded) {
+                        if (cat_row->selected_col + HOME_GRID_COLS < cat_row->item_count) {
+                            cat_row->selected_col += HOME_GRID_COLS;
+                            home_row->selected_col = cat_row->selected_col;
+                        }
+                    } else if (app->home_cat_index + 1 < HOME_CAT_COUNT) {
+                        app->home_cat_index++;
+                        sync_home_active_row(app);
+                    }
+                    break;
+                case SDL_CONTROLLER_BUTTON_A:
+                    ui_open_game(app, get_focused_item(app));
+                    break;
+                case SDL_CONTROLLER_BUTTON_B:
+                    if (app->home_grid_expanded) app->home_grid_expanded = false;
+                    else sys_cancel_action(app, get_focused_item(app));
+                    break;
+                case SDL_CONTROLLER_BUTTON_Y:
+                    catalog_start_async_sync(app);
+                    break;
+                default:
+                    break;
+            }
+        }
+        track_description_focus(app, get_focused_item(app));
+        return;
+    }
+
     CarouselRow *row = &app->rows[app->active_row];
 
     if (ev->type == SDL_KEYDOWN) {
@@ -814,6 +1232,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 break;
         }
     }
+    track_description_focus(app, get_focused_item(app));
 }
 
 void ui_update_animations(WolodriveApp *app, float dt) {
@@ -822,6 +1241,16 @@ void ui_update_animations(WolodriveApp *app, float dt) {
     }
 
     app->focus_pulse += dt;
+
+    /* Sync home_categories[home_cat_index] with rows[VIEW_HOME] if tests changed rows[VIEW_HOME].selected_col */
+    if (app->active_row == VIEW_HOME) {
+        CarouselRow *cat = &app->home_categories[app->home_cat_index];
+        CarouselRow *home = &app->rows[VIEW_HOME];
+        if (cat->selected_col != home->selected_col &&
+            home->selected_col >= 0 && home->selected_col < cat->item_count) {
+            cat->selected_col = home->selected_col;
+        }
+    }
 
     const float card_stride = CARD_WIDTH + CARD_GAP;
     for (int r = 0; r < TOTAL_ROWS; r++) {
@@ -845,6 +1274,73 @@ void ui_update_animations(WolodriveApp *app, float dt) {
         if (fabsf(row->scroll_x - row->target_scroll_x) < 0.05f && fabsf(row->scroll_velocity) < 0.5f) {
             row->scroll_x = row->target_scroll_x;
             row->scroll_velocity = 0;
+        }
+    }
+
+    for (int c = 0; c < HOME_CAT_COUNT; c++) {
+        CarouselRow *row = &app->home_categories[c];
+        row->target_scroll_x = row->selected_col * card_stride;
+        if (dt <= 0.0f) continue;
+        const float speed = 24.0f;
+        float offset = row->scroll_x - row->target_scroll_x;
+        float motion = (row->scroll_velocity + speed * offset) * dt;
+        float decay = expf(-speed * dt);
+        row->scroll_x = row->target_scroll_x + (offset + motion) * decay;
+        row->scroll_velocity = (row->scroll_velocity - speed * motion) * decay;
+        float maximum = SDL_max(0, row->item_count - 1) * card_stride;
+        if (row->scroll_x < 0 || row->scroll_x > maximum) {
+            row->scroll_x = fmaxf(0, fminf(row->scroll_x, maximum));
+            row->scroll_velocity = 0;
+        }
+        if (fabsf(row->scroll_x - row->target_scroll_x) < 0.05f && fabsf(row->scroll_velocity) < 0.5f) {
+            row->scroll_x = row->target_scroll_x;
+            row->scroll_velocity = 0;
+        }
+    }
+
+    if (dt > 0.0f) {
+        /* Płynne przewijanie w pionie między kategoriami (Wzór Netflix) */
+        float target_v = 0.0f;
+        if (app->active_row == VIEW_HOME) {
+            if (app->home_grid_expanded) {
+                int sel_row = app->home_categories[app->home_cat_index].selected_col / HOME_GRID_COLS;
+                if (sel_row > 1) {
+                    target_v = (float)((sel_row - 1) * (CARD_HEIGHT + 58));
+                }
+            } else {
+                target_v = (float)(app->home_cat_index * HOME_ROW_STRIDE);
+            }
+        }
+        app->home_vertical_scroll += (target_v - app->home_vertical_scroll) * fminf(1.0f, 12.0f * dt);
+        if (fabsf(target_v - app->home_vertical_scroll) < 0.5f) {
+            app->home_vertical_scroll = target_v;
+        }
+
+        /* Animacja rozszerzenia widoku "Pokaż wszystko" (siatka Grid) */
+        float target_grid = app->home_grid_expanded ? 1.0f : 0.0f;
+        app->home_grid_anim += (target_grid - app->home_grid_anim) * fminf(1.0f, 12.0f * dt);
+        if (app->home_grid_anim < 0.001f) app->home_grid_anim = 0.0f;
+        if (app->home_grid_anim > 0.999f) app->home_grid_anim = 1.0f;
+
+        /* Płynne rozsuwanie paska bocznego w prawo po najechaniu / focusie */
+        float target_sb = (app->sidebar_hovered || app->sidebar_focus) ? 1.0f : 0.0f;
+        app->sidebar_expand += (target_sb - app->sidebar_expand) * fminf(1.0f, 14.0f * dt);
+        if (app->sidebar_expand < 0.001f) app->sidebar_expand = 0.0f;
+        if (app->sidebar_expand > 0.999f) app->sidebar_expand = 1.0f;
+        app->sidebar_width = (float)SIDEBAR_COLLAPSED_W +
+                             ((float)(RAIL_WIDTH - SIDEBAR_COLLAPSED_W) * app->sidebar_expand);
+
+        /* Płynne powiększanie wybranego kafelka (scale up) */
+        app->card_focus_scale += (1.06f - app->card_focus_scale) * fminf(1.0f, 14.0f * dt);
+        if (app->card_focus_scale > 1.059f) app->card_focus_scale = 1.06f;
+
+        /* Dynamiczna zmiana tła Hero (cross-fade animation) */
+        if (app->hero_crossfade < 1.0f) {
+            app->hero_crossfade += 5.5f * dt;
+            if (app->hero_crossfade >= 1.0f) {
+                app->hero_crossfade = 1.0f;
+                app->hero_prev_item = NULL;
+            }
         }
     }
 }
@@ -892,7 +1388,7 @@ static const char *empty_view_message(WolodriveApp *app) {
 }
 
 static const char *view_content_title(WolodriveApp *app) {
-    if (app->active_row == VIEW_HOME) return TR(app, TXT_LATEST_GAMES);
+    if (app->active_row == VIEW_HOME) return home_category_title(app, app->home_cat_index);
     if (is_library_view(app->active_row) && app->library_depth == LIBRARY_GAMES) {
         const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
         if (console) return console->name;
@@ -912,10 +1408,22 @@ static void render_hero_banner(WolodriveApp *app) {
         return;
     }
 
-    render_cover_or_placeholder(app, hero, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, true);
+    /* Cross-fade tła (Background Hero) pomiędzy poprzednią a aktualnie wybraną grą */
+    if (app->hero_prev_item && app->hero_prev_item != hero && app->hero_crossfade < 1.0f) {
+        Uint8 prev_alpha = (Uint8)(255.0f * (1.0f - app->hero_crossfade));
+        Uint8 curr_alpha = (Uint8)(255.0f * app->hero_crossfade);
+        render_cover_or_placeholder_alpha(app, app->hero_prev_item,
+                                          RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, true, prev_alpha);
+        render_cover_or_placeholder_alpha(app, hero,
+                                          RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, true, curr_alpha);
+    } else {
+        render_cover_or_placeholder(app, hero, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, true);
+    }
+
+    /* Czarny gradient zanikający w lewo i w dół (vignette / fade to black) */
     fill_rect(r, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, 0, 0, 0, 55);
     shade_hero(r);
-    fill_vertical_gradient(r, RAIL_WIDTH, 450, SCREEN_WIDTH - RAIL_WIDTH, 300,
+    fill_vertical_gradient(r, RAIL_WIDTH, 420, SCREEN_WIDTH - RAIL_WIDTH, 320,
                            0, 0, 0, 0, 0, 0, 0, 255, 32);
 
     draw_text(app, app->font_logo, "W", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
@@ -926,16 +1434,13 @@ static void render_hero_banner(WolodriveApp *app) {
     draw_text(app, app->font_hero_title, hero->title, CONTENT_X, 142, white, title_clip.w);
     SDL_RenderSetClipRect(r, NULL);
     char metadata[256];
-    snprintf(metadata, sizeof(metadata), "%s   v%s   %s   %.1f GB",
-             hero->id_code, hero->version, sys_format_short_badge(hero->format), hero->size_gb);
-    if (app->active_row == VIEW_HOME) {
-        uint64_t date = hero->catalog_added_at / 1000000;
-        snprintf(metadata, sizeof(metadata), "%s   %s   %.1f GB   %04u-%02u-%02u",
-                 hero->id_code, sys_format_short_badge(hero->format), hero->size_gb,
-                 (unsigned)(date / 10000), (unsigned)(date / 100 % 100), (unsigned)(date % 100));
-    }
+    const char *rel = hero->release_date[0] ? hero->release_date : "2024-01-01";
+    snprintf(metadata, sizeof(metadata),
+             "%s   v%s   %s   %.1f GB   ★ %.1f/10   ↓ %u   %s",
+             hero->id_code, hero->version, sys_format_short_badge(hero->format),
+             hero->size_gb, hero->rating_score, hero->download_count, rel);
     draw_single_line(app, app->font_small, metadata, CONTENT_X, 276, muted,
-                     (SDL_Rect){CONTENT_X, 276, 800, 34});
+                     (SDL_Rect){CONTENT_X, 276, 860, 34});
     char description[MAX_TRANSLATED_DESCRIPTION_BYTES];
     description_text(app, hero, description, sizeof(description));
     UiTextEntry *entry = cached_text(app, app->font_body, description, muted, DESCRIPTION_AREA.w);
@@ -955,53 +1460,197 @@ static void render_hero_banner(WolodriveApp *app) {
             fill_rect(r, DESCRIPTION_AREA.x + DESCRIPTION_AREA.w + 4, thumb_y, 3, 12, 180, 180, 190, 255);
         }
     }
+
+    /* Nowoczesne przyciski akcji w stylu Netflix Smart TV: [Play/Pobierz] oraz [Więcej informacji] */
+    fill_rect(r, HERO_PLAY_BUTTON.x, HERO_PLAY_BUTTON.y, HERO_PLAY_BUTTON.w, HERO_PLAY_BUTTON.h,
+              229, 9, 20, 255);
+    draw_border(r, HERO_PLAY_BUTTON.x, HERO_PLAY_BUTTON.y, HERO_PLAY_BUTTON.w, HERO_PLAY_BUTTON.h,
+                2, 255, 255, 255, 220);
+    char play_label[128];
+    snprintf(play_label, sizeof(play_label), "▶  %s", action_label(app, hero));
+    draw_fitted_text(app, app->font_small, play_label,
+                     (SDL_Rect){HERO_PLAY_BUTTON.x + 14, HERO_PLAY_BUTTON.y + 8,
+                                HERO_PLAY_BUTTON.w - 28, HERO_PLAY_BUTTON.h - 16},
+                     white, HERO_PLAY_BUTTON, true);
+
+    fill_rect(r, HERO_INFO_BUTTON.x, HERO_INFO_BUTTON.y, HERO_INFO_BUTTON.w, HERO_INFO_BUTTON.h,
+              42, 42, 52, 235);
+    draw_border(r, HERO_INFO_BUTTON.x, HERO_INFO_BUTTON.y, HERO_INFO_BUTTON.w, HERO_INFO_BUTTON.h,
+                1, 165, 165, 178, 200);
+    char info_label[128];
+    snprintf(info_label, sizeof(info_label), "ℹ  %s", TR(app, TXT_MORE_INFO));
+    draw_fitted_text(app, app->font_small, info_label,
+                     (SDL_Rect){HERO_INFO_BUTTON.x + 14, HERO_INFO_BUTTON.y + 8,
+                                HERO_INFO_BUTTON.w - 28, HERO_INFO_BUTTON.h - 16},
+                     white, HERO_INFO_BUTTON, true);
+
     if (hero->description_id == TEXT_COUNT) {
         fill_rect(r, DESCRIPTION_BUTTON.x, DESCRIPTION_BUTTON.y, DESCRIPTION_BUTTON.w, DESCRIPTION_BUTTON.h, 35, 35, 43, 255);
         TextId label = app->show_original_description ? TXT_TRANSLATED_DESCRIPTION : TXT_ORIGINAL_DESCRIPTION;
         draw_single_line(app, app->font_small, TR(app, label), DESCRIPTION_BUTTON.x + 12,
                          DESCRIPTION_BUTTON.y + 10, white, DESCRIPTION_BUTTON);
     }
+}
 
+static void render_single_card(WolodriveApp *app, GameItem *item, SDL_Rect base_card,
+                               bool selected, SDL_Rect clip) {
+    SDL_Renderer *r = app->renderer;
+    SDL_Color white = {245, 245, 245, 255}, muted = {170, 170, 170, 255};
+    SDL_Rect card = base_card;
+    if (selected && !app->sidebar_focus) {
+        float scale = app->card_focus_scale > 1.0f ? app->card_focus_scale : 1.05f;
+        int new_w = (int)lroundf((float)base_card.w * scale);
+        int new_h = (int)lroundf((float)CARD_HEIGHT * scale);
+        card.x = base_card.x - (new_w - base_card.w) / 2;
+        card.y = base_card.y - (new_h - CARD_HEIGHT) / 2;
+        card.w = new_w;
+        card.h = new_h;
+    } else {
+        card.h = CARD_HEIGHT;
+    }
+
+    render_cover_or_placeholder(app, item, card.x, card.y, card.w, card.h, false);
+    draw_rounded_card_corners(r, card.x, card.y, card.w, card.h, 0, 0, 0);
+
+    /* Plakietka oceny (IMDb/Metacritic rating) w prawym górnym rogu okładki */
+    char rating_badge[24];
+    snprintf(rating_badge, sizeof(rating_badge), "★ %.1f", item->rating_score);
+    SDL_Rect badge_rect = {card.x + card.w - 68, card.y + 8, 60, 24};
+    fill_rect(r, badge_rect.x, badge_rect.y, badge_rect.w, badge_rect.h, 14, 14, 18, 220);
+    draw_fitted_text(app, app->font_micro, rating_badge, badge_rect,
+                     (SDL_Color){255, 205, 45, 255}, badge_rect, true);
+
+    SDL_Rect title = {card.x, card.y + card.h, card.w, CARD_TITLE};
+    fill_rect(r, title.x, title.y, title.w, title.h, 18, 18, 22, 255);
+    draw_single_line(app, app->font_micro, item->title, title.x + 6, title.y + 2, white,
+                     (SDL_Rect){SDL_max(title.x + 6, clip.x), title.y,
+                                SDL_max(0, SDL_min(title.x + title.w - 6, SCREEN_WIDTH) -
+                                           SDL_max(title.x + 6, clip.x)),
+                                title.h});
+    int footer_y = card.y + card.h + CARD_TITLE;
+    fill_rect(r, card.x, footer_y, card.w, CARD_FOOTER,
+              selected ? 240 : 0, selected ? 240 : 0, selected ? 240 : 0, 255);
+    char status[256];
+    if (selected) snprintf(status, sizeof(status), "[X] %s", TR(app, TXT_GAME_DETAILS));
+    else snprintf(status, sizeof(status), "%s  /  %.1f GB", sys_format_short_badge(item->format), item->size_gb);
+    SDL_Rect footer_clip = {SDL_max(card.x + 8, clip.x), footer_y, 0, CARD_FOOTER};
+    footer_clip.w = SDL_max(0, SDL_min(card.x + card.w - 8, SCREEN_WIDTH) - footer_clip.x);
+    draw_fitted_text(app, app->font_small, status,
+                     (SDL_Rect){card.x + 12, footer_y, card.w - 24, CARD_FOOTER},
+                     selected ? (SDL_Color){0, 0, 0, 255} : muted, footer_clip, true);
+    if (item->state == STATE_DOWNLOADING) {
+        int progress = (int)(card.w * fminf(100.0f, fmaxf(0.0f, item->progress)) / 100.0f);
+        fill_rect(r, card.x, footer_y - 4, progress, 4, 229, 9, 20, 255);
+    }
+    if (selected && !app->sidebar_focus) {
+        draw_border(r, card.x - 4, card.y - 4, card.w + 8, card.h + CARD_TITLE + CARD_FOOTER + 8,
+                    4, 240, 240, 240, 255);
+    }
 }
 
 static void render_carousels(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 245, 255}, muted = {170, 170, 170, 255};
+
+    /* Wzór Netflix na ekranie głównym: 5 poziomych kategorii przewijanych w pionie
+       oraz mechanika "Pokaż wszystko" (rozszerzenie kategorii na pełnoekranową siatkę Grid) */
+    if (app->active_row == VIEW_HOME) {
+        CarouselRow *active_cat = &app->home_categories[app->home_cat_index];
+        if (app->home_grid_expanded) {
+            fill_rect(r, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, SCREEN_HEIGHT, 10, 10, 14, 248);
+            draw_text(app, app->font_row_title, home_category_title(app, app->home_cat_index),
+                      CONTENT_X, TOPBAR_HEIGHT + 12, white, 900);
+            SDL_Rect back_btn = {HOME_SHOW_ALL_BUTTON.x - 40, TOPBAR_HEIGHT + 12, 260, 36};
+            fill_rect(r, back_btn.x, back_btn.y, back_btn.w, back_btn.h, 36, 36, 46, 255);
+            draw_border(r, back_btn.x, back_btn.y, back_btn.w, back_btn.h, 1, 229, 9, 20, 255);
+            draw_fitted_text(app, app->font_small, TR(app, TXT_SHOW_LESS),
+                             (SDL_Rect){back_btn.x + 12, back_btn.y + 6, back_btn.w - 24, back_btn.h - 12},
+                             white, back_btn, true);
+
+            SDL_Rect grid_clip = {RAIL_WIDTH + 12, TOPBAR_HEIGHT + 58,
+                                  SCREEN_WIDTH - RAIL_WIDTH - 24, SCREEN_HEIGHT - TOPBAR_HEIGHT - 120};
+            SDL_RenderSetClipRect(r, &grid_clip);
+            for (int i = 0; i < active_cat->item_count; i++) {
+                SDL_Rect card = home_grid_card_target(app, i);
+                if (card.y + card.h + CARD_TITLE + CARD_FOOTER < grid_clip.y ||
+                    card.y > grid_clip.y + grid_clip.h) continue;
+                render_single_card(app, active_cat->items[i], card,
+                                   i == active_cat->selected_col, grid_clip);
+            }
+            SDL_RenderSetClipRect(r, NULL);
+            if (active_cat->item_count > 0) {
+                char position[40];
+                snprintf(position, sizeof(position), "%d / %d",
+                         active_cat->selected_col + 1, active_cat->item_count);
+                draw_text(app, app->font_micro, position, CONTENT_X, 956, muted, 0);
+            }
+            return;
+        }
+
+        SDL_Rect home_clip = {RAIL_WIDTH + 12, CARDS_Y - 56,
+                              SCREEN_WIDTH - RAIL_WIDTH - 12, SCREEN_HEIGHT - (CARDS_Y - 56) - 62};
+        SDL_RenderSetClipRect(r, &home_clip);
+        for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
+            CarouselRow *cat_row = &app->home_categories[cat];
+            int row_y = CARDS_Y + cat * HOME_ROW_STRIDE - (int)app->home_vertical_scroll;
+            int header_y = row_y - 44;
+            if (row_y + CARD_HEIGHT + CARD_TITLE + CARD_FOOTER < home_clip.y ||
+                header_y > home_clip.y + home_clip.h) {
+                continue;
+            }
+            bool is_active_cat = (cat == app->home_cat_index);
+            draw_text(app, app->font_row_title, home_category_title(app, cat),
+                      CONTENT_X, header_y, is_active_cat ? white : muted, 0);
+
+            /* Przycisk "Pokaż wszystko" przy nagłówku kategorii */
+            SDL_Rect show_all = {HOME_SHOW_ALL_BUTTON.x, header_y + 2,
+                                 HOME_SHOW_ALL_BUTTON.w, HOME_SHOW_ALL_BUTTON.h};
+            fill_rect(r, show_all.x, show_all.y, show_all.w, show_all.h,
+                      is_active_cat ? 34 : 22, is_active_cat ? 34 : 22, is_active_cat ? 44 : 28, 235);
+            draw_border(r, show_all.x, show_all.y, show_all.w, show_all.h,
+                        1, is_active_cat ? 229 : 85, is_active_cat ? 9 : 85, is_active_cat ? 20 : 95, 220);
+            char show_all_label[96];
+            snprintf(show_all_label, sizeof(show_all_label), "%s ›", TR(app, TXT_SHOW_ALL));
+            draw_fitted_text(app, app->font_micro, show_all_label,
+                             (SDL_Rect){show_all.x + 10, show_all.y + 4, show_all.w - 20, show_all.h - 8},
+                             is_active_cat ? white : muted, show_all, true);
+
+            if (!cat_row->item_count) continue;
+            SDL_Rect row_clip = {RAIL_WIDTH + 20, SDL_max(home_clip.y, row_y - 14),
+                                 SCREEN_WIDTH - RAIL_WIDTH - 20, CARD_HEIGHT + CARD_TITLE + CARD_FOOTER + 28};
+            SDL_RenderSetClipRect(r, &row_clip);
+            for (int col = 0; col < cat_row->item_count; col++) {
+                SDL_Rect card = home_row_card_target(app, cat, col);
+                if (card.x + card.w < row_clip.x || card.x >= SCREEN_WIDTH) continue;
+                bool selected = is_active_cat && (col == cat_row->selected_col);
+                render_single_card(app, cat_row->items[col], card, selected, row_clip);
+            }
+            SDL_RenderSetClipRect(r, &home_clip);
+        }
+        SDL_RenderSetClipRect(r, NULL);
+        if (active_cat->item_count > 0) {
+            char position[64];
+            snprintf(position, sizeof(position), "%d / %d",
+                     active_cat->selected_col + 1, active_cat->item_count);
+            draw_text(app, app->font_micro, position, CONTENT_X, 956, muted, 0);
+        }
+        return;
+    }
+
     CarouselRow *row = &app->rows[app->active_row];
     draw_text(app, app->font_row_title, view_content_title(app), CONTENT_X, 532, white, 0);
     if (!row->item_count) {
         return;
     }
-    SDL_Rect clip = {RAIL_WIDTH + 20, CARDS_Y - 5, SCREEN_WIDTH - RAIL_WIDTH - 20,
-                     CARD_HEIGHT + CARD_TITLE + CARD_FOOTER + 10};
+    SDL_Rect clip = {RAIL_WIDTH + 20, CARDS_Y - 14, SCREEN_WIDTH - RAIL_WIDTH - 20,
+                     CARD_HEIGHT + CARD_TITLE + CARD_FOOTER + 28};
     SDL_RenderSetClipRect(r, &clip);
     for (int col = 0; col < row->item_count; col++) {
         SDL_Rect card = card_target(app, col);
         if (card.x + card.w < clip.x || card.x >= SCREEN_WIDTH) continue;
         GameItem *item = row->items[col];
         bool selected = col == row->selected_col;
-        render_cover_or_placeholder(app, item, card.x, card.y, card.w, CARD_HEIGHT, false);
-        SDL_Rect title = {card.x, card.y + CARD_HEIGHT, card.w, CARD_TITLE};
-        fill_rect(r, title.x, title.y, title.w, title.h, 18,18,22,255);
-        draw_single_line(app, app->font_micro, item->title, title.x + 6, title.y + 2, white,
-                         (SDL_Rect){SDL_max(title.x+6,clip.x),title.y,SDL_max(0,SDL_min(title.x+title.w-6,SCREEN_WIDTH)-SDL_max(title.x+6,clip.x)),title.h});
-        int footer_y = card.y + CARD_HEIGHT + CARD_TITLE;
-        fill_rect(r, card.x, footer_y, card.w, CARD_FOOTER,
-                  selected ? 240 : 0, selected ? 240 : 0, selected ? 240 : 0, 255);
-        char status[256];
-        if (selected) snprintf(status, sizeof(status), "[X] %s", TR(app, TXT_GAME_DETAILS));
-        else snprintf(status, sizeof(status), "%s  /  %.1f GB", sys_format_short_badge(item->format), item->size_gb);
-        SDL_Rect footer_clip = {SDL_max(card.x + 8, clip.x), footer_y, 0, CARD_FOOTER};
-        footer_clip.w = SDL_max(0, SDL_min(card.x + card.w - 8, SCREEN_WIDTH) - footer_clip.x);
-        draw_fitted_text(app, app->font_small, status,
-                         (SDL_Rect){card.x + 12, footer_y, card.w - 24, CARD_FOOTER},
-                         selected ? (SDL_Color){0, 0, 0, 255} : muted, footer_clip, true);
-        if (item->state == STATE_DOWNLOADING) {
-            int progress = (int)(card.w * fminf(100.0f, fmaxf(0.0f, item->progress)) / 100.0f);
-            fill_rect(r, card.x, footer_y - 4, progress, 4, 229, 9, 20, 255);
-        }
-        if (selected && !app->sidebar_focus) draw_border(r, card.x - 4, card.y - 4, card.w + 8, card.h + 8,
-                                  4, 240, 240, 240, 255);
+        render_single_card(app, item, card, selected, clip);
     }
     SDL_RenderSetClipRect(r, NULL);
     char position[40];
@@ -1009,25 +1658,42 @@ static void render_carousels(WolodriveApp *app) {
     draw_text(app, app->font_micro, position, CONTENT_X, 956, muted, 0);
 }
 
-/* Geometry icons remain available on PS5 and do not depend on font symbols. */
+/* Geometry icons remain available on PS5 and do not depend on font symbols.
+   Pasek boczny: domyślnie zwinięty (wyświetla minimalistyczne ikony), a po najechaniu / focusie
+   płynnie rozsuwa się w prawo, odsłaniając pełne nazwy zakładek i lekko przyciemniając resztę UI. */
 static void render_sidebar(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
-    fill_rect(r, 0, 0, RAIL_WIDTH, SCREEN_HEIGHT, 12, 12, 12, 255);
-    fill_rect(r, RAIL_WIDTH - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
+    int sb_w = (int)lroundf(app->sidebar_width);
+    if (sb_w < SIDEBAR_COLLAPSED_W) sb_w = SIDEBAR_COLLAPSED_W;
+    if (sb_w > RAIL_WIDTH) sb_w = RAIL_WIDTH;
+
+    /* Lekkie przyciemnienie reszty interfejsu, gdy pasek boczny jest rozwinięty */
+    if (app->sidebar_expand > 0.02f) {
+        Uint8 dim_alpha = (Uint8)(115.0f * app->sidebar_expand);
+        fill_rect(r, sb_w, 0, SCREEN_WIDTH - sb_w, SCREEN_HEIGHT, 0, 0, 0, dim_alpha);
+    }
+
+    fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 12, 12, 12, 250);
+    fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
     for (int row = 0; row < TOTAL_ROWS; row++) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
         Uint8 c = selected ? 245 : 160;
-        int x = 32, y = target.y + 28;
+        int x = 30, y = target.y + 28;
         if (selected) {
-            fill_rect(r, 0, target.y, RAIL_WIDTH - 1, target.h, 25, 25, 25, 255);
+            fill_rect(r, 0, target.y, sb_w - 1, target.h, 25, 25, 25, 255);
             fill_rect(r, 0, target.y, 4, target.h, 229, 9, 20, 255);
             if (app->sidebar_focus)
-                draw_border(r, 5, target.y + 2, RAIL_WIDTH - 9, target.h - 4, 2, 245, 245, 245, 255);
+                draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 245, 245, 245, 255);
         }
-        SDL_Color color = {c, c, c, 255};
-        SDL_Rect label = {84, target.y + 24, RAIL_WIDTH - 100, 42};
-        draw_fitted_text(app, app->font_small, app->rows[row].title, label, color, label, false);
+        if (sb_w > SIDEBAR_COLLAPSED_W + 28) {
+            Uint8 text_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
+            SDL_Color color = {c, c, c, text_alpha};
+            SDL_Rect label = {84, target.y + 24, sb_w - 96, 42};
+            if (label.w > 24) {
+                draw_fitted_text(app, app->font_small, app->rows[row].title, label, color, label, false);
+            }
+        }
         if (row == VIEW_SEARCH) {
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             for (int angle = 0; angle < 360; angle++) {
@@ -1092,14 +1758,16 @@ static void render_sidebar(WolodriveApp *app) {
 
 static void render_language_control(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
+    int sb_w = (int)lroundf(app->sidebar_width);
+    if (sb_w < SIDEBAR_COLLAPSED_W) sb_w = SIDEBAR_COLLAPSED_W;
     Uint8 c = app->language_menu_open ? 245 : 160;
     if (app->language_menu_open) {
-        fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, LANGUAGE_BUTTON.w - 1,
+        fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, sb_w - 1,
                   LANGUAGE_BUTTON.h, 25, 25, 25, 255);
         fill_rect(r, 0, LANGUAGE_BUTTON.y, 4, LANGUAGE_BUTTON.h, 229, 9, 20, 255);
     }
     /* Outline globe matches the sidebar icons without relying on a font glyph. */
-    int cx = 48, cy = LANGUAGE_BUTTON.y + 44;
+    int cx = 46, cy = LANGUAGE_BUTTON.y + 44;
     SDL_SetRenderDrawColor(r, c, c, c, 255);
     for (int ring = 0; ring < 2; ring++) {
         SDL_Point points[33];
@@ -1113,16 +1781,20 @@ static void render_language_control(WolodriveApp *app) {
     SDL_RenderDrawLine(r, cx - 16, cy, cx + 16, cy);
     SDL_RenderDrawLine(r, cx - 13, cy - 8, cx + 13, cy - 8);
     SDL_RenderDrawLine(r, cx - 13, cy + 8, cx + 13, cy + 8);
-    SDL_Rect label = {84, LANGUAGE_BUTTON.y + 24, RAIL_WIDTH - 128, 42};
-    draw_fitted_text(app, app->font_small,
-                     i18n_language_name((Language)SDL_AtomicGet(&app->language)),
-                     label, (SDL_Color){c, c, c, 255}, label, false);
-    int arrow_x = RAIL_WIDTH - 30;
-    int arrow_y = cy + (app->language_menu_open ? 4 : -4);
-    int tip_y = cy + (app->language_menu_open ? -4 : 4);
-    SDL_SetRenderDrawColor(r, c, c, c, 255);
-    SDL_RenderDrawLine(r, arrow_x - 5, arrow_y, arrow_x, tip_y);
-    SDL_RenderDrawLine(r, arrow_x, tip_y, arrow_x + 5, arrow_y);
+    if (sb_w > SIDEBAR_COLLAPSED_W + 28) {
+        SDL_Rect label = {84, LANGUAGE_BUTTON.y + 24, sb_w - 128, 42};
+        if (label.w > 24) {
+            draw_fitted_text(app, app->font_small,
+                             i18n_language_name((Language)SDL_AtomicGet(&app->language)),
+                             label, (SDL_Color){c, c, c, 255}, label, false);
+        }
+        int arrow_x = sb_w - 30;
+        int arrow_y = cy + (app->language_menu_open ? 4 : -4);
+        int tip_y = cy + (app->language_menu_open ? -4 : 4);
+        SDL_SetRenderDrawColor(r, c, c, c, 255);
+        SDL_RenderDrawLine(r, arrow_x - 5, arrow_y, arrow_x, tip_y);
+        SDL_RenderDrawLine(r, arrow_x, tip_y, arrow_x + 5, arrow_y);
+    }
 }
 
 static void render_top_bar(WolodriveApp *app) {

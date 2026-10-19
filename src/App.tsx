@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SidebarView, LanguageCode, GameItem, CatalogFilters, SystemStats } from './types';
 import { Sidebar } from './components/Sidebar';
-import { HomeView } from './components/HomeView';
+import { HomeView, HomeCategoryRow } from './components/HomeView';
 import { NativeViewport } from './components/NativeViewport';
 import { GameDetailModal } from './components/GameDetailModal';
 import { SearchGrid } from './components/SearchGrid';
@@ -9,7 +9,7 @@ import { LibraryBrowser } from './components/LibraryBrowser';
 import { SettingsView } from './components/SettingsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
-import { INITIAL_CATALOG, getLatestGames, getDistinctSources, matchesFilters } from './catalog';
+import { INITIAL_CATALOG, getLatestGames, getHomeCategoryGames, getDistinctSources, matchesFilters } from './catalog';
 import { t } from './translations';
 
 export function App() {
@@ -59,7 +59,8 @@ export function App() {
     } catch {}
   };
 
-  // 5. Selected game for Home carousel
+  // 5. Selected category & game for Home carousel
+  const [activeHomeCategory, setActiveHomeCategory] = useState(0);
   const [selectedHomeCol, setSelectedHomeCol] = useState(0);
   const [selectedDownloadCol, setSelectedDownloadCol] = useState(0);
 
@@ -128,14 +129,24 @@ export function App() {
 
   // Computed data
   const availableSources = useMemo(() => getDistinctSources(catalog), [catalog]);
-  const homeGames = useMemo(
-    () => getLatestGames(catalog, filters, 128),
+  const homeCategories = useMemo<HomeCategoryRow[]>(
+    () => [
+      { id: 'ps5', titleKey: 'TXT_CAT_PS5', games: getHomeCategoryGames(catalog, filters, 'ps5', 128) },
+      { id: 'ps4', titleKey: 'TXT_CAT_PS4', games: getHomeCategoryGames(catalog, filters, 'ps4', 128) },
+      { id: 'popular', titleKey: 'TXT_CAT_POPULAR', games: getHomeCategoryGames(catalog, filters, 'popular', 128) },
+      { id: 'newest', titleKey: 'TXT_CAT_NEWEST', games: getHomeCategoryGames(catalog, filters, 'newest', 128) },
+      { id: 'top_rated', titleKey: 'TXT_CAT_TOP_RATED', games: getHomeCategoryGames(catalog, filters, 'top_rated', 128) }
+    ],
     [catalog, filters]
+  );
+  const homeGames = useMemo(
+    () => homeCategories[activeHomeCategory]?.games || getLatestGames(catalog, filters, 128),
+    [homeCategories, activeHomeCategory, catalog, filters]
   );
   const activeHeroGame = homeGames[selectedHomeCol] || homeGames[0] || null;
   useEffect(() => {
-    setSelectedHomeCol(value => Math.max(0, Math.min(value, homeGames.length - 1)));
-  }, [homeGames.length]);
+    setSelectedHomeCol((value) => Math.max(0, Math.min(value, homeGames.length - 1)));
+  }, [homeGames.length, activeHomeCategory]);
 
   // Downloads view items
   const downloadItems = useMemo(
@@ -239,7 +250,7 @@ export function App() {
       if (target.closest('button') && !target.closest('.tv-carousel,.tv-navigation')) return;
       if ((currentView === 'home' || isSidebarFocused) && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(e.key)) e.preventDefault();
 
-      // Arrow keys navigation for Home carousel
+      // Arrow keys navigation for Home carousel (Horizontal within category, Vertical across categories)
       if (currentView === 'home' && !detailGame && !isSidebarFocused) {
         if (e.key === 'ArrowRight' || e.key === 'd') {
           setSelectedHomeCol((c) => Math.min(homeGames.length - 1, c + 1));
@@ -249,6 +260,10 @@ export function App() {
           } else {
             setSelectedHomeCol((c) => Math.max(0, c - 1));
           }
+        } else if (e.key === 'ArrowDown' || e.key === 's') {
+          setActiveHomeCategory((cat) => Math.min(homeCategories.length - 1, cat + 1));
+        } else if (e.key === 'ArrowUp' || e.key === 'w') {
+          setActiveHomeCategory((cat) => Math.max(0, cat - 1));
         } else if (e.key === 'Enter' || e.key === ' ') {
           if (activeHeroGame) setDetailGame(activeHeroGame);
         }
@@ -284,6 +299,7 @@ export function App() {
     detailParentGame,
     isSidebarFocused,
     homeGames,
+    homeCategories.length,
     selectedHomeCol,
     activeHeroGame
   ]);
@@ -333,6 +349,20 @@ export function App() {
             lastButtonPress = now;
             handleSyncPegasus();
           }
+          // D-Pad Up
+          else if (gp.buttons[12]?.pressed) {
+            lastButtonPress = now;
+            if (currentView === 'home' && !detailGame && !isSidebarFocused) {
+              setActiveHomeCategory((cat) => Math.max(0, cat - 1));
+            }
+          }
+          // D-Pad Down
+          else if (gp.buttons[13]?.pressed) {
+            lastButtonPress = now;
+            if (currentView === 'home' && !detailGame && !isSidebarFocused) {
+              setActiveHomeCategory((cat) => Math.min(homeCategories.length - 1, cat + 1));
+            }
+          }
           // D-Pad Left
           else if (gp.buttons[14]?.pressed) {
             lastButtonPress = now;
@@ -362,6 +392,7 @@ export function App() {
     detailParentGame,
     selectedHomeCol,
     homeGames,
+    homeCategories.length,
     activeHeroGame,
     isSidebarFocused,
     language
@@ -391,11 +422,32 @@ export function App() {
         {/* Center / Right Content Area */}
         <main className="tv-main">
           {/* The same logical stage and carousel geometry as the native reference. */}
-          {currentView === 'home' && <HomeView games={homeGames} language={language}
-            selected={selectedHomeCol} sidebarFocused={isSidebarFocused}
-            onSelect={(index) => { setSelectedHomeCol(index); setIsSidebarFocused(false); }}
-            onOpen={(game) => { setDetailGame(game); setDetailParentGame(null); }}
-            onRefresh={handleSyncPegasus} syncInProgress={syncInProgress} />}
+          {currentView === 'home' && (
+            <HomeView
+              games={homeGames}
+              categories={homeCategories}
+              activeCategoryIndex={activeHomeCategory}
+              onSelectCategory={(catIdx) => {
+                setActiveHomeCategory(catIdx);
+                setSelectedHomeCol(0);
+                setIsSidebarFocused(false);
+              }}
+              language={language}
+              selected={selectedHomeCol}
+              sidebarFocused={isSidebarFocused}
+              onSelect={(index) => {
+                setSelectedHomeCol(index);
+                setIsSidebarFocused(false);
+              }}
+              onOpen={(game) => {
+                setDetailGame(game);
+                setDetailParentGame(null);
+              }}
+              onPlay={(game) => handleTriggerAction(game)}
+              onRefresh={handleSyncPegasus}
+              syncInProgress={syncInProgress}
+            />
+          )}
 
           {/* VIEW: GAMES / ROMS */}
           {currentView === 'games' && (
@@ -435,6 +487,7 @@ export function App() {
               showDate={false} selected={currentView === 'downloads' ? selectedDownloadCol : 0}
               sidebarFocused={isSidebarFocused} onSelect={setSelectedDownloadCol}
               onOpen={(game) => { setDetailGame(game); setDetailParentGame(null); }}
+              onPlay={(game) => handleTriggerAction(game)}
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress} />}
 
           {/* VIEW: SEARCH */}

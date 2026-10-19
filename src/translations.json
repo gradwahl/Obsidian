@@ -1131,5 +1131,104 @@
     "it": "Nessun gioco corrisponde. Modifica o reimposta i filtri nelle Impostazioni.",
     "zh": "没有符合筛选条件的游戏。请在设置中更改或重置筛选。",
     "ru": "Нет подходящих игр. Измените или сбросьте фильтры в настройках."
+  },
+  "TXT_CAT_PS5": {
+    "en": "PS5 Games",
+    "pl": "Gry PS5",
+    "es": "Juegos PS5",
+    "fr": "Jeux PS5",
+    "nl": "PS5-games",
+    "de": "PS5-Spiele",
+    "it": "Giochi PS5",
+    "zh": "PS5 游戏",
+    "ru": "Игры PS5"
+  },
+  "TXT_CAT_PS4": {
+    "en": "PS4 Games",
+    "pl": "Gry PS4",
+    "es": "Juegos PS4",
+    "fr": "Jeux PS4",
+    "nl": "PS4-games",
+    "de": "PS4-Spiele",
+    "it": "Giochi PS4",
+    "zh": "PS4 游戏",
+    "ru": "Игры PS4"
+  },
+  "TXT_CAT_POPULAR": {
+    "en": "Most Popular",
+    "pl": "Najpopularniejsze",
+    "es": "Más populares",
+    "fr": "Les plus populaires",
+    "nl": "Meest populair",
+    "de": "Beliebteste",
+    "it": "Più popolari",
+    "zh": "最受欢迎",
+    "ru": "Самые популярные"
+  },
+  "TXT_CAT_NEWEST": {
+    "en": "Newest Releases",
+    "pl": "Najnowsze",
+    "es": "Más recientes",
+    "fr": "Nouveautés",
+    "nl": "Nieuwste",
+    "de": "Neueste",
+    "it": "Più recenti",
+    "zh": "最新发布",
+    "ru": "Новейшие"
+  },
+  "TXT_CAT_TOP_RATED": {
+    "en": "Top Rated",
+    "pl": "Najlepiej oceniane",
+    "es": "Mejor valorados",
+    "fr": "Les mieux notés",
+    "nl": "Best beoordeeld",
+    "de": "Am besten bewertet",
+    "it": "Più votati",
+    "zh": "最高评分",
+    "ru": "Лучшие по рейтингу"
+  },
+  "TXT_SHOW_ALL": {
+    "en": "Show all",
+    "pl": "Pokaż wszystko",
+    "es": "Mostrar todo",
+    "fr": "Tout afficher",
+    "nl": "Alles tonen",
+    "de": "Alle anzeigen",
+    "it": "Mostra tutto",
+    "zh": "显示全部",
+    "ru": "Показать все"
+  },
+  "TXT_SHOW_LESS": {
+    "en": "Back to rows [G]",
+    "pl": "Wróć do rzędów [G]",
+    "es": "Volver a filas [G]",
+    "fr": "Retour aux rangées [G]",
+    "nl": "Terug naar rijen [G]",
+    "de": "Zurück zu Reihen [G]",
+    "it": "Torna alle righe [G]",
+    "zh": "返回列表 [G]",
+    "ru": "Назад к рядам [G]"
+  },
+  "TXT_MORE_INFO": {
+    "en": "More info",
+    "pl": "Więcej informacji",
+    "es": "Más información",
+    "fr": "Plus d'infos",
+    "nl": "Meer info",
+    "de": "Weitere Infos",
+    "it": "Altre info",
+    "zh": "更多信息",
+    "ru": "Подробнее"
+  },
+  "TXT_DOWNLOADS_COUNT": {
+    "en": "%u downloads",
+    "pl": "%u pobrań",
+    "es": "%u descargas",
+    "fr": "%u téléchargements",
+    "nl": "%u downloads",
+    "de": "%u Downloads",
+    "it": "%u download",
+    "zh": "%u 次下载",
+    "ru": "%u загрузок"
   }
 }

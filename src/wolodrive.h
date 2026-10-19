@@ -29,7 +29,7 @@
 
 #define SCREEN_WIDTH            1920
 #define SCREEN_HEIGHT           1080
-#define HERO_HEIGHT             486   /* Górne 45% ekranu (1080p) */
+#define HERO_HEIGHT             552   /* Ponad 50% wysokości ekranu (1080p) */
 #define TOPBAR_HEIGHT           72
 
 /* Paleta kolorów Premium Netflix / PS5 OS */
@@ -67,6 +67,16 @@ typedef enum {
     VIEW_COUNT
 } SidebarView;
 #define TOTAL_ROWS              VIEW_COUNT
+
+typedef enum {
+    HOME_CAT_PS5 = 0,
+    HOME_CAT_PS4 = 1,
+    HOME_CAT_POPULAR = 2,
+    HOME_CAT_NEWEST = 3,
+    HOME_CAT_TOP_RATED = 4,
+    HOME_CAT_COUNT = 5
+} HomeCategory;
+
 #define MAX_DESCRIPTION_BYTES   4096
 #define MAX_GAME_SCREENSHOTS    6
 
@@ -94,6 +104,9 @@ typedef struct {
     int screenshot_count;
     char launchbox_url[512], playstation_url[512];
     uint64_t catalog_added_at;  /* Validated UTC YYYYMMDDhhmmss, zero means unknown. */
+    char release_date[24];      /* Data premiery YYYY-MM-DD (sortowanie "Najnowsze") */
+    int download_count;         /* Ilość pobrań (sortowanie "Najpopularniejsze") */
+    float rating_score;         /* Ocena IMDb/Metacritic/IGDB 0.0f - 10.0f ("Najlepiej oceniane") */
     TextId description_id;      /* TEXT_COUNT means source-provided description. */
     char description[MAX_DESCRIPTION_BYTES]; /* Original plain-text catalog description. */
     char install_path[256];     /* Docelowa ścieżka na PS5 */
@@ -190,12 +203,27 @@ typedef struct {
     char sync_title[128];
 
     CarouselRow rows[TOTAL_ROWS];
+    CarouselRow home_categories[HOME_CAT_COUNT];
+    int home_cat_index;
+    int last_synced_home_col;
+    bool home_grid_expanded;
+    float home_grid_anim;
+    int home_grid_scroll_row;
+    float home_vertical_scroll;
     int active_row;
     LibraryDepth library_depth;
     int library_company_selection;
     int library_company;
     int library_console_selection;
     bool sidebar_focus;
+    bool sidebar_hovered;
+    float sidebar_expand;
+    float sidebar_width;
+    float sidebar_dim_alpha;
+    GameItem *hero_current_item;
+    GameItem *hero_prev_item;
+    float hero_crossfade;
+    float card_focus_scale;
     char search_query[128];
     GameItem *search_results[MAX_CATALOG_ITEMS];
     int search_count, search_selected, search_key;
@@ -235,6 +263,7 @@ const char *sys_format_short_badge(PackageFormat fmt);
 /* Warstwa katalogu Pegasus-DL i cache'u okładek (src/catalog_pegasus.c) */
 void catalog_start_async_sync(WolodriveApp *app);
 void catalog_stop_sync(WolodriveApp *app);
+void catalog_fetch_ratings_curl(WolodriveApp *app);
 /* Caller holds catalog_mutex; returns newest dated games up to capacity. */
 int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacity);
 
