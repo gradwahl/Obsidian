@@ -345,6 +345,61 @@ static void test_tv_catalog_navigation(void) {
     event.button.y = LIBRARY_BACK_BUTTON.y + 20;
     ui_handle_input(app, &event);
     assert(app->library_depth == LIBRARY_CONSOLES && app->library_console_selection == 12);
+    /* Emulators uses the same groups, pages and tiles, without exposing games. */
+    select_sidebar_view(app, VIEW_EMULATORS);
+    assert(app->library_depth == LIBRARY_COMPANIES && app->library_sidebar_focus);
+    assert(strcmp(library_section_title(app), TR(app, TXT_NAV_EMULATORS)) == 0);
+    ui_render(app);
+    for (int c = 0; c < library_company_count(); c++) {
+        app->library_company_selection = c;
+        SDL_Rect tile = library_tile_target(c);
+        event.button.x = tile.x + 40;
+        event.button.y = tile.y + 40;
+        ui_handle_input(app, &event);
+        assert(app->library_depth == LIBRARY_CONSOLES && app->library_company == c);
+        ui_render(app);
+        for (int i = 0; i < library_company_at(c)->console_count; i++) {
+            app->library_console_selection = i;
+            tile = library_tile_target(i);
+            event.button.x = tile.x + 40;
+            event.button.y = tile.y + 40;
+            ui_handle_input(app, &event);
+            assert(app->library_depth == LIBRARY_GAMES);
+            assert(app->active_row == VIEW_EMULATORS && !get_focused_item(app));
+            assert(!app->rows[VIEW_EMULATORS].item_count);
+            assert(strcmp(view_content_title(app), library_console_at(c, i)->name) == 0);
+            assert(strcmp(empty_view_message(app), TR(app, TXT_EMULATOR_NOT_CONNECTED)) == 0);
+            if (i == 0) ui_render(app);
+            event.button.x = LIBRARY_BACK_BUTTON.x + 20;
+            event.button.y = LIBRARY_BACK_BUTTON.y + 20;
+            ui_handle_input(app, &event);
+            assert(app->library_depth == LIBRARY_CONSOLES && app->library_console_selection == i);
+        }
+        ui_handle_input(app, &event); /* Back to the group page. */
+        assert(app->library_depth == LIBRARY_COMPANIES);
+    }
+    /* Keyboard/controller paging also works in Emulators. */
+    app->library_company_selection = 4;
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->library_company_selection == 8);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_CONSOLES && app->library_company == 8);
+    SDL_zero(event);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_COMPANIES);
+    ui_handle_input(app, &event);
+    assert(app->library_sidebar_focus);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_COMPANIES);
+    assert(strcmp(library_section_title(app), TR(app, TXT_NAV_GAMES)) == 0);
+    puts("Emulators browses all 58 systems with shared cards, paging, back navigation and isolated empty sources.");
     /* Every tile has a decodable local asset; renderer-owned textures are reused. */
     for (int c = 0; c < library_company_count(); c++) {
         const LibraryCompany *brand = library_company_at(c);

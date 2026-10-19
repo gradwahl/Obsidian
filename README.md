@@ -66,6 +66,12 @@ This list organizes the browser; it does not install emulators or assert that
 emulation is configured. The current game catalog maps PS4/PS5 title IDs only;
 other systems show an empty catalog until a corresponding source is connected.
 
+**Emulators** uses the same company → system layout, all ten groups and 58 systems,
+artwork, charcoal cards, selection border, paging and input controls. Headings and
+breadcrumbs identify the Emulators section, and system cards show emulator counts.
+No emulator source is currently connected: opening a system shows that explicitly,
+without listing game packages or offering a simulated emulator download.
+
 For PS5 deployment, copy `assets/library/` to
 `/data/homebrew/wolodrive/assets/library/` alongside the payload. Desktop builds
 look in the working directory and relative to the executable (including the
