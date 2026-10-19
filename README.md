@@ -32,8 +32,10 @@ information are shown along the bottom. Language controls are at the top left.
 Carousel motion accelerates and slows smoothly, preserving velocity across repeated
 Left/Right input and reversals. Its timing is independent of frame rate, with
 high-resolution elapsed time and bounds that keep cards inside the catalog.
-Renderers without active VSync target a paced 60 FPS rather than free-running;
-VSync renderers retain their presentation timing. Missed frames do not trigger
+The app requests VSync on the final renderer, including software rendering when
+supported, and keeps a 60 FPS ceiling on all renderers. VSync synchronizes presentation
+to the display; the frame cap also applies on displays above 60 Hz. Unsupported
+backends use timed 60 FPS pacing. Missed frames do not trigger
 catch-up bursts. Actual frame rates still depend on window size and rendering cost.
 The WSL software-rendering default and renderer override remain unchanged.
 
@@ -452,6 +454,18 @@ performance. WSL's software-rendering default and `SDL_RENDER_DRIVER` override
 are unchanged.
 This benchmark measures uncapped render cost; it does not run the main loop's
 60 FPS pacing.
+
+Startup prints `VSync: enabled; frame limit: 60 FPS` when the renderer reports
+VSync enabled, or `VSync: unavailable (using frame pacing)` when unsupported.
+SDL 2.0.18 and newer explicitly enable VSync after renderer creation; older SDL
+builds retain the creation-time VSync request and the timed 60 FPS cap. WSL still
+defaults to software rendering and honors the explicit renderer override.
+The VSync follow-up passed the Linux build and full suite through WSL, including
+supported/unsupported backend tests. The WSLg preview's software backend reported
+VSync enabled at startup. This is backend/startup evidence, not a visual check of
+presentation or tearing. Native Windows app, native Linux graphics, and PS5 remain
+unverified because of the existing toolchain/session/SDK gaps; Computer Use and
+UI automation were not used.
 
 The smooth-scrolling change passed `make build-linux`, the full `make test` suite,
 `make benchmark-ui` and `git diff --check` through WSL. Motion tests cover initial

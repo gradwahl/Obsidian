@@ -13,6 +13,14 @@ static char *no_screenshot_network(void *userdata, const char *url) { (void)user
 
 #if SDL_VERSION_ATLEAST(2, 0, 18)
 static bool force_texture_fallback;
+static int vsync_mode, vsync_requests;
+static int vsync_or_unavailable(SDL_Renderer *renderer, int interval) {
+    assert(interval == 1);
+    vsync_requests++;
+    if (vsync_mode == 1) return 0;
+    if (vsync_mode == -1) return SDL_SetError("Test backend does not support VSync");
+    return SDL_RenderSetVSync(renderer, interval);
+}
 static int geometry_or_fallback(SDL_Renderer *renderer, SDL_Texture *texture,
                                 const SDL_Vertex *vertices, int vertex_count,
                                 const int *indices, int index_count) {
@@ -20,9 +28,11 @@ static int geometry_or_fallback(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderGeometry(renderer, texture, vertices, vertex_count, indices, index_count);
 }
 #define SDL_RenderGeometry geometry_or_fallback
+#define SDL_RenderSetVSync vsync_or_unavailable
 #endif
 #include "../src/ui_netflix.c"
 #undef SDL_RenderGeometry
+#undef SDL_RenderSetVSync
 #include "../src/catalog_pegasus.c"
 
 static void test_description_text(void) {
@@ -1012,6 +1022,33 @@ static void test_latest_catalog_games(void) {
     puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection passed.");
 }
 
+static void test_vsync_request(void) {
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->window = SDL_CreateWindow("VSync regression", 0, 0, 640, 360, SDL_WINDOW_HIDDEN);
+    assert(app->window);
+    setenv("WSL_DISTRO_NAME", "wolodrive-vsync-test", 1);
+    SDL_ResetHint(SDL_HINT_RENDER_DRIVER);
+    for (int supported = 0; supported < 2; supported++) {
+        vsync_mode = supported ? 1 : -1;
+        int before = vsync_requests;
+        assert(ui_create_renderer(app));
+        assert(vsync_requests == before+1);
+        assert(app->vsync_enabled == (supported != 0));
+        SDL_RendererInfo info;
+        assert(SDL_GetRendererInfo(app->renderer, &info) == 0 && !strcmp(info.name, "software"));
+        SDL_DestroyRenderer(app->renderer);
+        app->renderer = NULL;
+    }
+    vsync_mode = 0;
+    unsetenv("WSL_DISTRO_NAME");
+    SDL_DestroyWindow(app->window);
+    free(app);
+    puts("VSync requested on the WSL/software renderer; supported and unsupported backends preserve the 60 FPS cap path.");
+#endif
+}
+
 static void test_scroll_motion(void) {
     WolodriveApp *app = calloc(1, sizeof(*app));
     assert(app);
@@ -1120,6 +1157,7 @@ int main(void) {
     test_native_artwork_bounds();
     test_latest_catalog_games();
     test_tv_catalog_navigation();
+    test_vsync_request();
     test_scroll_motion();
     test_frame_pacing();
     test_text_cache();

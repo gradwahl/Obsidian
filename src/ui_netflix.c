@@ -402,10 +402,19 @@ bool ui_create_renderer(WolodriveApp *app) {
         return false;
     }
     SDL_RendererInfo info;
+    app->vsync_enabled = false;
     if (SDL_GetRendererInfo(app->renderer, &info) == 0) {
+        app->vsync_enabled = (info.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
         printf("[WOLODRIVE DISPLAY] Video: %s; renderer: %s\n",
                SDL_GetCurrentVideoDriver(), info.name);
     }
+    /* Also request VSync on the final renderer, including the WSL/software
+       path. Unsupported backends retain the independent 60 FPS frame cap. */
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    if (SDL_RenderSetVSync(app->renderer, 1) == 0) app->vsync_enabled = true;
+#endif
+    printf("[WOLODRIVE DISPLAY] VSync: %s; frame limit: 60 FPS\n",
+           app->vsync_enabled ? "enabled" : "unavailable (using frame pacing)");
     return true;
 }
 

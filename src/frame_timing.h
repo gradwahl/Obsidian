@@ -3,7 +3,7 @@
 
 #include <SDL2/SDL.h>
 
-/* Software renderers have no VSync wait. Keep an absolute 60 Hz cadence;
+/* Keep a 60 Hz ceiling even with VSync on a higher-refresh display;
    after an overrun, resume from completion instead of producing catch-up bursts. */
 static inline Uint64 frame_next_deadline(Uint64 previous, Uint64 finished, Uint64 frequency) {
     Uint64 deadline = previous + frequency / 60;

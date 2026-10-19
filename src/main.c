@@ -84,9 +84,6 @@ int main(int argc, char *argv[]) {
     Uint64 frequency = SDL_GetPerformanceFrequency();
     Uint64 last_frame = SDL_GetPerformanceCounter();
     Uint64 frame_deadline = last_frame;
-    SDL_RendererInfo renderer_info;
-    bool vsync = SDL_GetRendererInfo(app->renderer, &renderer_info) == 0 &&
-                 (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
     app->last_stats_update = SDL_GetTicks();
 
     while (app->running) {
@@ -115,7 +112,7 @@ int main(int argc, char *argv[]) {
 
         ui_update_animations(app, dt);
         ui_render(app);
-        if (!vsync && app->running) {
+        if (app->running) {
             frame_deadline = frame_next_deadline(frame_deadline, SDL_GetPerformanceCounter(), frequency);
             frame_wait_until(frame_deadline, frequency);
         }
