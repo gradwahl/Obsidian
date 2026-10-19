@@ -1661,6 +1661,23 @@ static void render_carousels(WolodriveApp *app) {
 /* Geometry icons remain available on PS5 and do not depend on font symbols.
    Pasek boczny: domyślnie zwinięty (wyświetla minimalistyczne ikony), a po najechaniu / focusie
    płynnie rozsuwa się w prawo, odsłaniając pełne nazwy zakładek i lekko przyciemniając resztę UI. */
+static const char *sidebar_item_title(WolodriveApp *app, int row) {
+    if (row >= 0 && row < TOTAL_ROWS && app->rows[row].title[0] != '\0') {
+        return app->rows[row].title;
+    }
+    switch (row) {
+        case VIEW_HOME:      return TR(app, TXT_NAV_HOME);
+        case VIEW_GAMES:     return TR(app, TXT_NAV_GAMES);
+        case VIEW_EMULATORS: return TR(app, TXT_NAV_EMULATORS);
+        case VIEW_FILES:     return TR(app, TXT_NAV_FILES);
+        case VIEW_PAYLOADS:  return TR(app, TXT_NAV_PAYLOADS);
+        case VIEW_DOWNLOADS: return TR(app, TXT_NAV_DOWNLOADS);
+        case VIEW_SEARCH:    return TR(app, TXT_NAV_SEARCH);
+        case VIEW_SETTINGS:  return TR(app, TXT_NAV_SETTINGS);
+        default:             return "";
+    }
+}
+
 static void render_sidebar(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     int sb_w = (int)lroundf(app->sidebar_width);
@@ -1686,14 +1703,37 @@ static void render_sidebar(WolodriveApp *app) {
             if (app->sidebar_focus)
                 draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 245, 245, 245, 255);
         }
-        if (sb_w > SIDEBAR_COLLAPSED_W + 28) {
+
+        /* Renderowanie etykiety tekstowej obok ikony */
+        if (sb_w > SIDEBAR_COLLAPSED_W + 10 && app->sidebar_expand > 0.05f) {
             Uint8 text_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
-            SDL_Color color = {c, c, c, text_alpha};
-            SDL_Rect label = {84, target.y + 24, sb_w - 96, 42};
-            if (label.w > 24) {
-                draw_fitted_text(app, app->font_small, app->rows[row].title, label, color, label, false);
+            const char *label_text = sidebar_item_title(app, row);
+            if (label_text && label_text[0] != '\0') {
+                SDL_Color text_color = {c, c, c, 255};
+                UiTextEntry *entry = cached_text(app, app->font_small, label_text, text_color, 0);
+                if (entry && entry->texture) {
+                    int text_x = 84;
+                    int text_y = target.y + (target.h - entry->h) / 2;
+                    int max_text_w = sb_w - text_x - 10;
+                    if (max_text_w > 4) {
+                        SDL_Rect text_clip = {text_x, target.y, max_text_w, target.h};
+                        SDL_Rect dst = {text_x, text_y, entry->w, entry->h};
+                        SDL_Rect previous;
+                        bool clipped = SDL_RenderIsClipEnabled(r);
+                        SDL_RenderGetClipRect(r, &previous);
+                        SDL_RenderSetClipRect(r, &text_clip);
+
+                        SDL_SetTextureBlendMode(entry->texture, SDL_BLENDMODE_BLEND);
+                        SDL_SetTextureAlphaMod(entry->texture, text_alpha);
+                        SDL_RenderCopy(r, entry->texture, NULL, &dst);
+                        SDL_SetTextureAlphaMod(entry->texture, 255);
+
+                        SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
+                    }
+                }
             }
         }
+
         if (row == VIEW_SEARCH) {
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             for (int angle = 0; angle < 360; angle++) {
