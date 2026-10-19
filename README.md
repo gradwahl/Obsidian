@@ -19,12 +19,26 @@ python -m unittest discover -s tests -p test_import_sources.py
 ```
 
 The importer fetches a bounded index per site (up to 400 entries per source);
-it is not a full-site crawler or a live search backend. Certain dynamically
-rendered sites or user archives may have no public machine-readable listings:
-those sources remain registered in Settings, but show zero titles until a
-compatible public listing becomes available. A failed refresh retains the last
-bounded snapshot and marks it stale instead of silently clearing entries.
-Review the per-source `status` and `note` fields to see those conditions.
+it is not a full-site crawler or a live search backend. The four previously
+empty sites now use specialized public metadata adapters:
+
+- **Axekin** reads the paginated `/games` Inertia page-data attribute. Its
+  publicly displayed titles, console associations and cover URLs are imported,
+  never the `downloadLinks` field embedded alongside them.
+- **RomHeaven** reads `/data/switch.csv`, the same public metadata feed its
+  Switch page reads. Individual title pages use the site's filename-derived
+  slugs; file-host payload URLs are excluded.
+- **Retro Game Champion** reads the server-rendered console-gallery labels at
+  `/games`. These are explicitly named **system collections**, not purported
+  individual game dumps. Its first rendered gallery batch may omit more systems.
+- **Archive.org / maelly_pooh** resolves the public uploader identifier from
+  metadata of one known item, then queries that uploader's indexed items.
+  The public uploader email is never written to the configuration or snapshot.
+
+A failed refresh retains the last bounded snapshot and marks it stale instead
+of silently clearing entries; inaccessible or unsupported indexes may remain
+empty. Review each source's `status` and `note` fields. Importing metadata does
+not validate that a package is available, safe or legally redistributable.
 
 The **React preview** bundles the snapshot at build time. Rebuild with
 `npm run build:static` after importing to update its offline catalog. Entries

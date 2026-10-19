@@ -72,7 +72,7 @@
     "name": "Archive.org / maelly_pooh",
     "url": "https://archive.org/details/@maelly_pooh",
     "adapter": "archive",
-    "query": "uploader:maelly_pooh"
+    "seed_identifier": "ps4-fpkg-collection-english-c"
   },
   {
     "id": "pkgps4",
@@ -85,7 +85,8 @@
     "id": "axekin",
     "name": "Axekin",
     "url": "https://www.axekin.com/",
-    "adapter": "html"
+    "adapter": "axekin",
+    "index_url": "https://www.axekin.com/games"
   },
   {
     "id": "vimm",
@@ -97,9 +98,10 @@
     "id": "romheaven",
     "name": "RomHeaven",
     "url": "https://romheaven.com/",
-    "adapter": "html",
+    "adapter": "romheaven",
     "platform": "nintendo-switch",
-    "index_url": "https://romheaven.com/switch"
+    "index_url": "https://romheaven.com/switch",
+    "feed_url": "https://romheaven.com/data/switch.csv"
   },
   {
     "id": "ziperto",
@@ -123,7 +125,8 @@
     "id": "retrogamechampion",
     "name": "Retro Game Champion",
     "url": "https://www.retrogamechampion.com/",
-    "adapter": "html"
+    "adapter": "retro-collections",
+    "index_url": "https://www.retrogamechampion.com/games"
   },
   {
     "id": "romshq",

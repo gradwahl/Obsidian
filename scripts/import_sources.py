@@ -199,6 +199,136 @@ def website(source, limit):
     return rows[:limit], True  # Website index only; not a claim to have crawled all posts.
 
 
+class InertiaPage(HTMLParser):
+    """Read Inertia's server-rendered game metadata; do not follow package links."""
+    def __init__(self):
+        super().__init__()
+        self.page = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "div" and attrs.get("id") == "app" and attrs.get("data-page"):
+            self.page = json.loads(attrs["data-page"])
+
+
+def file_size_bytes(text):
+    match = re.fullmatch(r"\s*([\d.]+)\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)\s*", str(text or ""), re.I)
+    if not match:
+        return 0
+    value, unit = match.groups()
+    base = 1024 if "i" in unit.lower() else 1000
+    exponent = {"B": 0, "KB": 1, "MB": 2, "GB": 3, "TB": 4}[unit.replace("i", "").upper()]
+    try:
+        return max(0, int(float(value) * base ** exponent))
+    except (ValueError, OverflowError):
+        return 0
+
+
+def axekin(source, limit):
+    # Axekin serves a paginated Inertia payload in an HTML attribute (25 games/page).
+    rows = []
+    seen = set()
+    total = None
+    for page in range(1, (limit + 24) // 25 + 1):
+        index = source.get("index_url", source["url"])
+        endpoint = index + ("&" if "?" in index else "?") + urllib.parse.urlencode({"page": page})
+        parser = InertiaPage()
+        parser.feed(fetch(endpoint))
+        if not parser.page or parser.page.get("component") != "games/index":
+            raise ValueError("Axekin Inertia game index not found")
+        listing = parser.page.get("props", {}).get("games", {})
+        games = listing.get("data", [])
+        if not isinstance(games, list):
+            raise ValueError("Axekin game data is not a list")
+        total = listing.get("meta", {}).get("total", total)
+        for game in games:
+            title = game.get("title", "")
+            slug = game.get("slug", "")
+            if not title or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug):
+                continue
+            page_url = urllib.parse.urljoin(source["url"], "/games/" + slug)
+            platforms = game.get("platforms") or []
+            if not isinstance(platforms, list):
+                platforms = []
+            system = next((platform(p.get("name", "")) for p in platforms
+                           if isinstance(p, dict) and platform(p.get("name", ""))), "")
+            if page_url in seen:
+                continue
+            seen.add(page_url)
+            cover = game.get("coverImage") or ""
+            if cover and not str(cover).startswith(("https://", "http://")):
+                cover = urllib.parse.urljoin(source["url"], str(cover))
+            rows.append(record(source, title, page_url, system=system, cover=cover,
+                               description=game.get("description") or "",
+                               size=file_size_bytes(game.get("fileSize"))))
+            if len(rows) >= limit:
+                break
+        if len(rows) >= limit or not games:
+            break
+    return rows, bool(total is None or total > len(rows))
+
+
+def romheaven(source, limit):
+    # Use the same public title CSV the website's Svelte application reads.
+    endpoint = source["feed_url"]
+    if urllib.parse.urlsplit(endpoint).netloc != urllib.parse.urlsplit(source["url"]).netloc:
+        raise ValueError("RomHeaven feed must be on its own host")
+    reader = csv.DictReader(io.StringIO(fetch(endpoint)))
+    if not reader.fieldnames or not {"filename", "display_name"}.issubset(reader.fieldnames):
+        raise ValueError("RomHeaven switch CSV has changed format")
+    rows = []
+    more = False
+    for game in reader:
+        filename = (game.get("filename") or "").strip()
+        title = (game.get("display_name") or filename).strip()
+        if not filename or not title:
+            continue
+        if len(rows) >= limit:
+            more = True
+            break
+        slug = re.sub(r"[^a-z0-9]+", "_", filename.lower()).strip("_")
+        page = urllib.parse.urljoin(source["url"], "/switch/" + slug) if slug else source["index_url"]
+        cover = game.get("iconUrl") or ""
+        try:
+            size = max(0, int(game.get("compressed_size") or 0))
+        except ValueError:
+            size = 0
+        rows.append(record(source, title, page, system="nintendo-switch", cover=cover,
+                           description=game.get("description") or "", size=size))
+    return rows, more
+
+
+class RetroCollectionLinks(HTMLParser):
+    """Wix gallery uses labelled divs, not anchors, for console collection cards."""
+    def __init__(self):
+        super().__init__()
+        self.names = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if (tag == "div" and attrs.get("data-hook") == "item-action" and
+                attrs.get("role") == "link" and attrs.get("aria-label")):
+            self.names.append(clean(attrs["aria-label"]))
+
+
+def retro_collections(source, limit):
+    # These are SYSTEM-LEVEL collections; there is no verified per-game listing.
+    parser = RetroCollectionLinks()
+    parser.feed(fetch(source.get("index_url", source["url"])))
+    rows, seen = [], set()
+    for label in parser.names:
+        if label in seen or len(label) < 3 or len(rows) >= limit:
+            continue
+        seen.add(label)
+        name = re.sub(r"\s+(?:game console|handheld|arcade board)\s*$", "", label, flags=re.I)
+        rows.append(record(
+            source, name + " Collection", source.get("index_url", source["url"]),
+            system=platform(name), description="Curated console-level collection listing; "
+            "individual games have not been indexed from this source."
+        ))
+    return rows, True
+
+
 class VaultLinks(HTMLParser):
     """Extract public game detail links from Vimm's Lair vault indexes."""
     def __init__(self):
@@ -270,7 +400,19 @@ def gfs(source, limit):
 
 
 def archive(source, limit):
-    params = {"q": source["query"], "output": "json", "rows": 50,
+    uploader = ""
+    if source.get("seed_identifier"):
+        seed = source["seed_identifier"]
+        if not re.fullmatch(r"[a-zA-Z0-9_-]+", seed):
+            raise ValueError("Invalid Archive.org seed identifier")
+        metadata = json.loads(fetch("https://archive.org/metadata/" + seed))
+        uploader = str(metadata.get("metadata", {}).get("uploader", "")).strip().lower()
+        if not re.fullmatch(r"[a-z0-9._%+-]+@[a-z0-9.-]+", uploader):
+            raise ValueError("Archive.org seed has no public uploader identifier")
+    # The profile @handle is not the uploader index key. Look up the public
+    # identifier from one known item, without persisting an email in config.
+    query = 'uploader:"' + uploader + '"' if uploader else source["query"]
+    params = {"q": query, "output": "json", "rows": 50,
               "fl[]": ["identifier", "title", "subject", "mediatype"]}
     endpoint = "https://archive.org/advancedsearch.php?" + urllib.parse.urlencode(params, doseq=True)
     document = json.loads(fetch(endpoint))["response"]
@@ -279,6 +421,8 @@ def archive(source, limit):
         identity = item["identifier"]; title = str(item.get("title", identity))
         system = platform(title + " " + str(item.get("subject", "")))
         metadata = json.loads(fetch("https://archive.org/metadata/" + urllib.parse.quote(identity, safe="")))
+        if uploader and str(metadata.get("metadata", {}).get("uploader", "")).strip().lower() != uploader:
+            continue
         for file in metadata.get("files", []):
             name = file.get("name", "")
             if not re.search(r"\.(?:zip|7z|rar|iso|chd|cso|pbp|pkg|nes|sfc|n64|gba)$", name, re.I):
@@ -297,7 +441,9 @@ def import_source(source, limit, previous=None):
     output = {"id": source["id"], "name": source["name"], "website": source["url"],
               "checkedAt": datetime.now(timezone.utc).isoformat(), "entryLimit": limit}
     try:
-        adapters = {"tsv": tsv, "html": website, "gfs": gfs, "archive": archive, "vimm": vimm}
+        adapters = {"tsv": tsv, "html": website, "gfs": gfs, "archive": archive,
+                    "vimm": vimm, "axekin": axekin, "romheaven": romheaven,
+                    "retro-collections": retro_collections}
         rows, truncated = adapters[source["adapter"]](source, limit)
         unique = {(row["id"], row["title"], row["platform"], row["version"]): row for row in rows}
         output.update(packages=list(unique.values()), status="partial" if rows and truncated else "ready" if rows else "empty",
