@@ -132,7 +132,8 @@ def libretro_index(platform, offline=False, cache=CACHE):
     return {"strict": strict, "relaxed": relaxed, "count": len(parser.files)}
 
 
-def match_records(records, indexes):
+def match_records(records, indexes, igdb_matches=None):
+    igdb_matches = igdb_matches or {}
     existing = defaultdict(set)
     for name, game in records:
         url = game.get("boxArtUrl") or game.get("coverUrl")
@@ -171,6 +172,14 @@ def match_records(records, indexes):
                         status, via, confidence = "matched", "libretro-unique", 85
                     elif len(loose) > 1:
                         status = "review"
+        if status == "missing":
+            igdb = igdb_matches.get(key[0] + "|" + key[1])
+            if (isinstance(igdb, dict) and igdb.get("provider") == "igdb-exact-platform-title"
+                    and igdb.get("confidence", 0) >= 95 and
+                    safe_url(igdb.get("url")) and
+                    urlsplit(igdb["url"]).hostname == "images.igdb.com"):
+                url = igdb["url"]
+                status, via, confidence = "matched", "igdb-exact-platform-title", 95
         totals[status] += 1
         by_source[name][status] += 1
         by_platform[game["platform"]][status] += 1
@@ -281,7 +290,14 @@ def main(argv=None):
         print("Artwork refresh incomplete; preserving previous manifest: " +
               json.dumps({k: failures[k] for k in sorted(unexpected)}), file=sys.stderr)
         return 1
-    matches, report = match_records(records, indexes)
+    igdb_file = ROOT / "assets/artwork/igdb-covers.json"
+    igdb = {}
+    if igdb_file.is_file():
+        exported = json.loads(igdb_file.read_text(encoding="utf-8"))
+        if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
+            raise ValueError("IGDB artwork export has an unexpected schema")
+        igdb = exported["matches"]
+    matches, report = match_records(records, indexes, igdb)
     path, native = write_outputs(matches, report)
     print(f"Results: {report['status']}; providers: {report['providers']}", flush=True)
     print(f"Manifest: {path}; native TSV: {native}", flush=True)

@@ -37,10 +37,55 @@ python scripts/enrich_artwork.py --offline --download 10
 
 This uses the existing URL-keyed image cache at `assets/covers/`. Keep
 downloaded cover bytes out of Git; the manifests consist only of source
-IDs, image URLs and confidence. Missing modern-console art can later use an
-opt-in SteamGridDB/ScreenScraper provider with its own credentials, quotas,
-matching review and licensing rules; there is no configured key in this
-implementation.
+IDs, image URLs and confidence. An optional **IGDB** importer can match modern games by exact cleaned
+title **and verified console**. It runs locally with a Twitch client ID and
+secret read from temporary process environment variables. No access token or
+secret is saved or embedded in the web preview. It uses the IGDB API for
+non-commercial projects under the provider's terms. Image URLs are saved, but
+no image bytes are distributed.
+
+**Security:** If a Twitch Client Secret was pasted into a chat, regenerate
+it in the Twitch Developer Console before proceeding. Never add the new
+secret to Git, a tracked configuration, a screenshot, or a command-line
+argument.
+
+From Windows PowerShell (in the Wolodrive repository):
+
+```powershell
+$env:IGDB_CLIENT_ID = Read-Host 'Twitch Client ID'
+$private = Read-Host 'New Twitch Client Secret' -AsSecureString
+$env:IGDB_CLIENT_SECRET = [System.Net.NetworkCredential]::new('', $private).Password
+python scripts/igdb_artwork.py --dry-run
+python scripts/igdb_artwork.py --max-queries 100
+python scripts/enrich_artwork.py --offline
+npm run build:static
+Remove-Item Env:IGDB_CLIENT_SECRET
+Remove-Item Env:IGDB_CLIENT_ID
+```
+
+From a Linux/WSL Bash terminal:
+
+```bash
+read -rp 'Twitch Client ID: ' IGDB_CLIENT_ID
+read -rsp 'New Twitch Client Secret: ' IGDB_CLIENT_SECRET; echo
+export IGDB_CLIENT_ID IGDB_CLIENT_SECRET
+python3 scripts/igdb_artwork.py --max-queries 100
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+unset IGDB_CLIENT_SECRET IGDB_CLIENT_ID
+```
+
+The script enforces a maximum of roughly **3 queries per second**, below
+IGDB's 4-request-per-second limit, with retry/backoff. It searches missing
+titles only, deduplicates by console/title and resumes via ignored local
+cache `.cache/wolodrive-artwork/igdb-results.json`. The output
+`assets/artwork/igdb-covers.json` contains approved cover image links, not
+credentials. Repeat `--max-queries 500` batches or use
+`--platforms nintendo-switch,sony-ps4,sony-ps5` to prioritise consoles.
+Rerun `enrich_artwork.py --offline` after each batch; that merges IGDB into
+the existing React and native manifests. Review uncertain titles rather
+than automatically attaching unrelated artwork. The live API connection is
+not verified until you configure fresh local credentials.
 
 The native Linux/Windows/PS5 catalogue reads
 `assets/artwork/cover-matches.tsv` alongside the snapshots. On PS5 copy it

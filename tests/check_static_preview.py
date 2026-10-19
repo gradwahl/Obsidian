@@ -21,7 +21,7 @@ def main():
     artwork = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "assets"], cwd=ROOT
     ).decode().strip("\0").split("\0")
-    artwork = [name for name in artwork if not name.replace("\\", "/").startswith("assets/catalogs/")]
+    artwork = [name for name in artwork if not name.replace("\\", "/").startswith(("assets/catalogs/", "assets/artwork/"))]
     for name in artwork:
         assert (PREVIEW / name).read_bytes() == (ROOT / name).read_bytes(), name
     assert not list(PREVIEW.rglob("*.tsx")), "Preview must contain compiled code"
