@@ -26,7 +26,7 @@ typedef struct {
     SDL_Color color;
     int width, height, priority;
     Uint32 used, retry, priority_tick;
-    bool busy, local, failed, soft;
+    bool busy, local, failed, soft, complete_box;
 } ArtworkEntry;
 
 struct ArtworkCache {
@@ -53,7 +53,7 @@ static Uint64 artwork_hash(const char *url) {
 }
 
 static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *request) {
-    const char *role = backdrop ? "backdrop" : "card";
+    const char *role = backdrop ? "backdrop" : "box";
     /* Only safe title IDs can select local overrides. */
     bool safe = item->id_code[0] != 0;
     for (const char *p = item->id_code; *p; p++)
@@ -61,26 +61,34 @@ static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *
               (*p >= '0' && *p <= '9') || *p == '-' || *p == '_')) safe = false;
     const char *extensions[] = {"png", "jpg", "webp"};
     struct stat st;
-    if (safe) for (int fallback = 0; fallback < 2; fallback++) {
+    if (safe) for (int fallback = 0; fallback < (backdrop ? 2 : 3); fallback++) {
         for (int i = 0; i < 3; i++) {
             if (!fallback) snprintf(request->path, sizeof(request->path), "%s/%s.%s.%s", ART_OVERRIDES, item->id_code, role, extensions[i]);
+            else if (!backdrop && fallback == 1) snprintf(request->path, sizeof(request->path), "%s/%s.card.%s", ART_OVERRIDES, item->id_code, extensions[i]);
             else snprintf(request->path, sizeof(request->path), "%s/%s.%s", ART_OVERRIDES, item->id_code, extensions[i]);
             if (stat(request->path, &st) == 0 && st.st_size > 0) {
                 request->local = true;
+                request->complete_box = !backdrop && fallback == 0;
                 snprintf(request->key, sizeof(request->key), "%s:%lld:%lld", request->path, (long long)st.st_mtime, (long long)st.st_size);
+                if (request->complete_box) SDL_strlcat(request->key, ":box", sizeof(request->key));
                 return;
             }
         }
     }
-    const char *url = backdrop && item->backdrop_url[0] ? item->backdrop_url :
-                      item->landscape_url[0] ? item->landscape_url :
-                      !backdrop && item->icon_url[0] ? item->icon_url :
-                      item->cover_url[0] ? item->cover_url : item->icon_url;
+    const char *url;
+    if (backdrop) url = item->backdrop_url[0] ? item->backdrop_url :
+                        item->landscape_url[0] ? item->landscape_url :
+                        item->cover_url[0] ? item->cover_url : item->icon_url;
+    else url = item->boxart_url[0] ? item->boxart_url :
+               item->cover_url[0] ? item->cover_url :
+               item->icon_url[0] ? item->icon_url : item->landscape_url;
+    request->complete_box = !backdrop && item->boxart_url[0];
     request->soft = backdrop && !item->backdrop_url[0] && !item->landscape_url[0];
     SDL_strlcpy(request->url, url, sizeof(request->url));
     if (!url[0]) { request->key[0] = 0; return; }
     SDL_strlcpy(request->key, url, sizeof(request->key));
     if (request->soft) SDL_strlcat(request->key, ":soft", sizeof(request->key));
+    if (request->complete_box) SDL_strlcat(request->key, ":box", sizeof(request->key));
     snprintf(request->path, sizeof(request->path), "%s/%016llx.art", COVERS_CACHE_DIR, (unsigned long long)artwork_hash(url));
 }
 
@@ -285,9 +293,10 @@ SDL_Texture *artwork_get(WolodriveApp *app, const GameItem *item, bool backdrop,
         if (app->catalog_mutex) SDL_UnlockMutex(app->catalog_mutex);
         fallback.id_code[0] = 0;
         if (!local) {
-            fallback.backdrop_url[0] = fallback.landscape_url[0] = 0;
-            if (!fallback.cover_url[0]) SDL_strlcpy(fallback.cover_url, fallback.icon_url, sizeof(fallback.cover_url));
-            fallback.icon_url[0] = 0;
+            if (backdrop) fallback.backdrop_url[0] = fallback.landscape_url[0] = 0;
+            else if (fallback.boxart_url[0]) fallback.boxart_url[0] = 0;
+            else if (fallback.cover_url[0]) fallback.cover_url[0] = 0;
+            else fallback.icon_url[0] = 0;
         }
         entry = artwork_request(app, &fallback, backdrop, priority);
         if (!entry) return NULL;
@@ -334,6 +343,14 @@ SDL_Color artwork_background(WolodriveApp *app, SDL_Texture *texture) {
         if (entry->texture == texture) return entry->color;
     }
     return (SDL_Color){40,40,45,255};
+}
+
+bool artwork_complete_box(WolodriveApp *app, SDL_Texture *texture) {
+    if (app->artwork) for (int i = 0; i < ART_SLOTS; i++) {
+        ArtworkEntry *entry = &app->artwork->entries[i];
+        if (entry->texture == texture) return entry->complete_box;
+    }
+    return false;
 }
 
 void artwork_prefetch(WolodriveApp *app, const GameItem *item, int priority) {

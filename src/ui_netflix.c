@@ -56,8 +56,8 @@ static TTF_Font *open_first_available_font(const char **candidates, int ptsize) 
 static const Language LANGUAGE_ORDER[LANG_COUNT] = {
     LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
 };
-enum { RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 600,
-       CARD_WIDTH = 350, CARD_HEIGHT = 198, CARD_GAP = 12, CARD_FOOTER = 44 };
+enum { RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
+       CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40 };
 static const SDL_Rect LANGUAGE_BUTTON = {0, 24, RAIL_WIDTH, 90};
 static const SDL_Rect LANGUAGE_MENU = {14, 122, RAIL_WIDTH - 28, LANG_COUNT * 44 + 16};
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
@@ -105,7 +105,7 @@ static SDL_Rect sidebar_target(int row) {
 static SDL_Rect card_target(WolodriveApp *app, int col) {
     return (SDL_Rect){CONTENT_X + col * (CARD_WIDTH + CARD_GAP) -
                      (int)app->rows[app->active_row].scroll_x,
-                     CARDS_Y, CARD_WIDTH, CARD_HEIGHT + CARD_FOOTER};
+                     CARDS_Y, CARD_WIDTH, CARD_HEIGHT + CARD_TITLE + CARD_FOOTER};
 }
 
 static bool contains_point(SDL_Rect rect, int x, int y) {
@@ -329,6 +329,19 @@ static void draw_fitted_text(SDL_Renderer *r, TTF_Font *font, const char *text,
     SDL_FreeSurface(surface);
 }
 
+static int render_box_brand(WolodriveApp *app, const GameItem *item, SDL_Rect box) {
+    bool ps5 = SDL_strncasecmp(item->id_code, "PPSA", 4) == 0;
+    bool ps4 = SDL_strncasecmp(item->id_code, "CUSA", 4) == 0;
+    if (!ps5 && !ps4) return 0;
+    int band = SDL_max(18, SDL_min(32, box.h/9));
+    fill_rect(app->renderer, box.x, box.y, box.w, band,
+              ps5 ? 245 : 0, ps5 ? 245 : 62, ps5 ? 245 : 155, 255);
+    SDL_Rect brand = {box.x+8, box.y, box.w-16, band};
+    draw_fitted_text(app->renderer, app->font_small, ps5 ? "PS5" : "PS4", brand,
+                     ps5 ? (SDL_Color){12,12,16,255} : (SDL_Color){255,255,255,255}, brand, false);
+    return band;
+}
+
 static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
                                         int x, int y, int w, int h, bool is_hero) {
     SDL_Renderer *r = app->renderer;
@@ -340,7 +353,12 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
         SDL_Color color = artwork_background(app, texture);
         fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, 255,
                                color.r/8, color.g/8, color.b/8, 255, 24);
-        bool crop = is_hero || (double)width / height >= 1.5;
+        bool complete_box = !is_hero && artwork_complete_box(app, texture);
+        if (!is_hero && !complete_box) {
+            int band = render_box_brand(app, it, box);
+            box.y += band; box.h -= band;
+        }
+        bool crop = is_hero;
         SDL_Rect destination = artwork_fit(width, height, box, crop);
         SDL_Rect previous;
         bool clipped = SDL_RenderIsClipEnabled(r);
@@ -368,7 +386,9 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
                   "WOLODRIVE", x + 18, y + h / 2 - (is_hero ? 28 : 22), watermark_col, 0);
 
         draw_text(r, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
+        if (!is_hero) render_box_brand(app, it, (SDL_Rect){x,y,w,h});
     }
+    if (!is_hero) draw_border(r, x, y, w, h, 2, 22, 62, 110, 255);
 }
 
 bool ui_create_renderer(WolodriveApp *app) {
@@ -935,12 +955,12 @@ static void render_carousels(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 245, 255}, muted = {170, 170, 170, 255};
     CarouselRow *row = &app->rows[app->active_row];
-    draw_text(r, app->font_row_title, view_content_title(app), CONTENT_X, 552, white, 0);
+    draw_text(r, app->font_row_title, view_content_title(app), CONTENT_X, 532, white, 0);
     if (!row->item_count) {
         return;
     }
     SDL_Rect clip = {RAIL_WIDTH + 20, CARDS_Y - 5, SCREEN_WIDTH - RAIL_WIDTH - 20,
-                     CARD_HEIGHT + CARD_FOOTER + 10};
+                     CARD_HEIGHT + CARD_TITLE + CARD_FOOTER + 10};
     SDL_RenderSetClipRect(r, &clip);
     for (int col = 0; col < row->item_count; col++) {
         SDL_Rect card = card_target(app, col);
@@ -948,16 +968,11 @@ static void render_carousels(WolodriveApp *app) {
         GameItem *item = row->items[col];
         bool selected = col == row->selected_col;
         render_cover_or_placeholder(app, item, card.x, card.y, card.w, CARD_HEIGHT, false);
-        fill_vertical_gradient(r, card.x, card.y + CARD_HEIGHT - 70, card.w, 70,
-                               0, 0, 0, 0, 0, 0, 0, 220, 16);
-        draw_single_line(r, app->font_small, item->title, card.x + 12,
-                         card.y + CARD_HEIGHT - 36, white,
-                         (SDL_Rect){SDL_max(card.x + 12, clip.x), card.y + CARD_HEIGHT - 36,
-                                    SDL_min(card.x + card.w - 12, SCREEN_WIDTH) - SDL_max(card.x + 12, clip.x), 32});
-        /* draw_single_line restores the carousel clip. */
-        draw_text(r, app->font_small, "W", card.x + 10, card.y + 8,
-                  (SDL_Color){229, 9, 20, 255}, 0);
-        int footer_y = card.y + CARD_HEIGHT;
+        SDL_Rect title = {card.x, card.y + CARD_HEIGHT, card.w, CARD_TITLE};
+        fill_rect(r, title.x, title.y, title.w, title.h, 18,18,22,255);
+        draw_single_line(r, app->font_micro, item->title, title.x + 6, title.y + 2, white,
+                         (SDL_Rect){SDL_max(title.x+6,clip.x),title.y,SDL_max(0,SDL_min(title.x+title.w-6,SCREEN_WIDTH)-SDL_max(title.x+6,clip.x)),title.h});
+        int footer_y = card.y + CARD_HEIGHT + CARD_TITLE;
         fill_rect(r, card.x, footer_y, card.w, CARD_FOOTER,
                   selected ? 240 : 0, selected ? 240 : 0, selected ? 240 : 0, 255);
         char status[256];
@@ -978,7 +993,7 @@ static void render_carousels(WolodriveApp *app) {
     SDL_RenderSetClipRect(r, NULL);
     char position[40];
     snprintf(position, sizeof(position), "%d / %d", row->selected_col + 1, row->item_count);
-    draw_text(r, app->font_micro, position, CONTENT_X, 864, muted, 0);
+    draw_text(r, app->font_micro, position, CONTENT_X, 956, muted, 0);
 }
 
 /* Geometry icons remain available on PS5 and do not depend on font symbols. */

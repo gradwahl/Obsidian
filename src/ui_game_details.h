@@ -136,8 +136,8 @@ static void render_game_details(WolodriveApp *app) {
     int selected = app->active_row == VIEW_SEARCH ? app->search_selected : app->rows[app->active_row].selected_col;
     for (int i = 0; i < 4 && selected + i < count; i++) {
         GameItem *neighbor = app->active_row == VIEW_SEARCH ? app->search_results[selected+i] : app->rows[app->active_row].items[selected+i];
-        render_cover_or_placeholder(app, neighbor, CONTENT_X + i*390, 20, 370, 165, false);
-        if (!i) draw_border(r, CONTENT_X-3, 17, 376, 171, 3,245,245,245,255);
+        render_cover_or_placeholder(app, neighbor, CONTENT_X + i*390 + 126, 20, 118, 165, false);
+        if (!i) draw_border(r, CONTENT_X+123, 17, 124, 171, 3,245,245,245,255);
     }
     render_cover_or_placeholder(app, item, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, true);
     fill_rect(r, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, 0,0,0,220);
@@ -182,7 +182,7 @@ static void render_game_details(WolodriveApp *app) {
                 draw_text(r, app->font_micro, item->screenshot_urls[i], box.x+18, box.y+130, muted, box.w-36);
             } else {
                 GameItem *package = entries[i];
-                render_cover_or_placeholder(app, package, box.x, box.y, box.w, 155, false);
+                render_cover_or_placeholder(app, package, box.x+(box.w-110)/2, box.y, 110, 155, false);
                 snprintf(metadata, sizeof(metadata), "%s  |  %s  |  %s", package->id_code,
                          sys_format_short_badge(package->format), package->version);
                 SDL_Rect label = {box.x+14, box.y+165, box.w-28, 48};

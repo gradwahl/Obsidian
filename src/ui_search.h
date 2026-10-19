@@ -223,7 +223,7 @@ static void render_search(WolodriveApp *app) {
     for (int i = start; i < app->search_count && i < start + SEARCH_PAGE; i++) {
         SDL_Rect box = search_result_target(i);
         GameItem *item = app->search_results[i];
-        render_cover_or_placeholder(app, item, box.x, box.y, box.w, 186, false);
+        render_cover_or_placeholder(app, item, box.x + (box.w-132)/2, box.y, 132, 184, false);
         SDL_Rect label = {box.x, box.y + 188, box.w, 30};
         draw_single_line(r, app->font_micro, item->title, label.x, label.y, white, label);
         if (!app->sidebar_focus && app->search_results_focus && i == app->search_selected)

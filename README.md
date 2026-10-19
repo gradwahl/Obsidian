@@ -6,10 +6,11 @@ SDL2 homebrew catalog interface for Linux and PS5.
 
 The interface follows the supplied Netflix TV reference: a dark left navigation
 rail, selected-game artwork across the background, a readable title and description,
-and horizontal rows of landscape covers. The selected cover has a white border
+and horizontal rows of portrait box-cover cards. The selected cover has a white border
 and action footer. WoloDrive uses its own branding and the catalog's game artwork;
-square icons and portrait covers are shown in full on cards against a matching
-gradient. Wide card artwork fills the card. Backgrounds prefer separate widescreen
+portrait covers and square fallback icons are shown in full on cards against a
+matching gradient. PS5 cards have a white platform header and PS4 cards a blue one;
+complete box-cover images keep their original branding. Titles sit below the art. Backgrounds prefer separate widescreen
 artwork, with a softened, darkened cover fallback when none is supplied.
 
 Use **Left/Right** or the controller **D-pad** to select a game. Press **Left**
@@ -124,13 +125,17 @@ game panels use the same cache, including games beyond the former prefetch limit
 
 ## Game artwork
 
-Catalog entries retain `posterUrl` / `coverUrl` / `cover` / `image` as cover
+Catalog entries accept `boxArtUrl`, `boxartUrl` or `boxCoverUrl` for a complete
+portrait front cover including its platform branding. They retain
+`posterUrl` / `coverUrl` / `cover` / `image` as cover
 fallbacks and `iconUrl` / `icon` as square icons. Optional `landscapeUrl`, `cardUrl`
 or `bannerUrl` supplies card artwork; `backdropUrl`, `backgroundUrl` or `heroUrl`
 supplies a separate backdrop. Screenshots are never substituted for these fields.
-Cards prefer landscape artwork, then icons, then covers; backgrounds prefer their
+Cards prefer complete box art, then covers, icons and finally landscape artwork; backgrounds prefer their
 own artwork, then landscape art, then a softened cover/icon. Failed preferred
-artwork falls back to the cover/icon while retrying in the background.
+artwork falls back to the next available artwork while retrying in the background.
+This does not add a retail box-art database: sources that only supply square images
+continue to use those images inside portrait cases without stretching or cropping.
 
 Images download and decode in an SDL worker; texture creation stays on the UI
 thread. URL-keyed files in `assets/covers/*.art` share downloads across package
@@ -145,12 +150,14 @@ Disk files persist for offline reuse; they currently have no automatic size limi
 
 For local replacements, add PNG, JPG or WebP files under `assets/artwork/`:
 
-- `PPSA12345.card.png` replaces the card image.
+- `PPSA12345.box.png` supplies a complete front cover including its platform header.
+- `PPSA12345.card.png` replaces the card image inside the generated platform header.
 - `PPSA12345.backdrop.jpg` replaces the backdrop.
 - `PPSA12345.png` is a shared fallback for both roles.
 
 Use the exact catalog title ID, including case on Linux. Role-specific files take
-precedence over shared files; extension order is PNG, JPG, WebP. Adding/removing
+precedence over shared files; `.box` takes precedence over `.card` for cards,
+and extension order is PNG, JPG, WebP. Adding/removing
 files or changing their modification time/size updates the requested artwork.
 Local replacements and downloaded cache files are ignored by Git. On PS5 the
 cache is `/data/homebrew/wolodrive/covers` and replacements belong under
@@ -387,3 +394,12 @@ Linux graphical session remain unverified in this environment.
 Visible WSLg covers, softened backgrounds and readable text were inspected during
 this change. Final live navigation checks were stopped with the physical Escape
 key; no further Computer Use actions were taken, so they remain incomplete.
+
+Portrait-case validation uses the same artwork HTTP fixtures to check box-art
+priority over covers/icons, complete-cover branding and local `.box` overrides,
+plus the existing navigation and rendering regressions. Native Windows/native
+Linux graphical checks and PS5 build verification retain the limitations above.
+The portrait-case follow-up passed the Linux build and full automated suite through
+WSL. The visible WSLg case cards, titles and selection/backdrop update after a
+Right key were inspected. The preview window was partly off-screen, so full-window
+layout and native Windows/native Linux graphics remain unverified.

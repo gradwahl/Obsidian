@@ -59,11 +59,12 @@ static void test_artwork_metadata(void) {
     assert(app);
     app->catalog_mutex = SDL_CreateMutex();
     const char *json = "{\"games\":[{\"titleId\":\"PPSA12345\",\"title\":\"Art test\","
-        "\"posterUrl\":\"https://example.test/poster\",\"iconUrl\":\"https://example.test/icon\","
+        "\"boxArtUrl\":\"https://example.test/box\",\"posterUrl\":\"https://example.test/poster\",\"iconUrl\":\"https://example.test/icon\","
         "\"landscapeUrl\":\"https://example.test/card\",\"backdropUrl\":\"https://example.test/hero\","
         "\"screenshots\":[{\"url\":\"https://example.test/shot\",\"backdropUrl\":\"wrong\"}]}]}";
     assert(parse_catalog_json(app,json,"Art",NULL,NULL,0) == 1);
     GameItem *item = &app->catalog[0];
+    assert(strcmp(item->boxart_url,"https://example.test/box") == 0);
     assert(strcmp(item->cover_url,"https://example.test/poster") == 0);
     assert(strcmp(item->icon_url,"https://example.test/icon") == 0);
     assert(strcmp(item->landscape_url,"https://example.test/card") == 0);
@@ -71,7 +72,7 @@ static void test_artwork_metadata(void) {
     json = "{\"games\":[{\"titleId\":\"PPSA12345\",\"title\":\"Art test\","
         "\"cardUrl\":\"https://example.test/new-card\",\"backgroundUrl\":\"https://example.test/new-hero\"}]}";
     assert(parse_catalog_json(app,json,"Art",NULL,NULL,0) == 1 && app->catalog_count == 1);
-    assert(!item->cover_url[0] && !item->icon_url[0]);
+    assert(!item->boxart_url[0] && !item->cover_url[0] && !item->icon_url[0]);
     assert(strcmp(item->landscape_url,"https://example.test/new-card") == 0);
     assert(strcmp(item->backdrop_url,"https://example.test/new-hero") == 0);
     SDL_DestroyMutex(app->catalog_mutex); free(app);

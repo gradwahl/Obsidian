@@ -24,7 +24,9 @@ def artwork_server():
                 body = b'not an image' * 100
             else:
                 dimensions = (80, 120) if self.path == '/good' else (160, 90)
-                if self.path == '/hero' or self.path.startswith('/large'):
+                if self.path == '/boxart':
+                    dimensions = (200, 280)
+                if self.path == '/hero'  or self.path.startswith('/large'):
                     dimensions = (2560, 1440)
                 body = bitmap(*dimensions)
             self.send_response(200)

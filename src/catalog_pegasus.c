@@ -356,6 +356,11 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
         json_extract_string(object_start, object_end, "parentTitleId", parent, sizeof(parent)))
         SDL_strlcpy(target->parent_title_id, parent, sizeof(target->parent_title_id));
     json_extract_screenshots(object_start, object_end, target);
+    const char *boxart = json_object_value(object_start, object_end, "boxArtUrl");
+    if (!boxart) boxart = json_object_value(object_start, object_end, "boxartUrl");
+    if (!boxart) boxart = json_object_value(object_start, object_end, "boxCoverUrl");
+    target->boxart_url[0] = 0;
+    if (boxart && *boxart == '"') text_decode_json_string(boxart+1, object_end, target->boxart_url, sizeof(target->boxart_url));
     const char *icon = json_object_value(object_start, object_end, "iconUrl");
     if (!icon) icon = json_object_value(object_start, object_end, "icon");
     target->icon_url[0] = 0;
