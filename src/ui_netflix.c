@@ -57,6 +57,8 @@ static const Language LANGUAGE_ORDER[LANG_COUNT] = {
 };
 static const SDL_Rect LANGUAGE_BUTTON = {1510, 14, 360, 44};
 static const SDL_Rect LANGUAGE_MENU = {1510, 66, 360, LANG_COUNT * 44 + 16};
+static const SDL_Rect DESCRIPTION_AREA = {80, 254, 930, 54};
+static const SDL_Rect DESCRIPTION_BUTTON = {1040, 254, 240, 36};
 
 static bool contains_point(SDL_Rect rect, int x, int y) {
     SDL_Point point = {x, y};
@@ -66,6 +68,7 @@ static bool contains_point(SDL_Rect rect, int x, int y) {
 static void toggle_language_menu(WolodriveApp *app) {
     app->language_menu_open = !app->language_menu_open;
     if (app->language_menu_open) {
+        app->description_hovered = false;
         for (int i = 0; i < LANG_COUNT; i++) {
             if ((int)LANGUAGE_ORDER[i] == SDL_AtomicGet(&app->language)) {
                 app->language_menu_index = i;
@@ -498,8 +501,66 @@ static GameItem *get_focused_item(WolodriveApp *app) {
     return row->items[row->selected_col];
 }
 
+static void track_description_focus(WolodriveApp *app, GameItem *item) {
+    if (app->description_item != item) {
+        app->description_item = item;
+        app->show_original_description = false;
+        app->description_scroll = 0;
+    }
+}
+
+static void description_text(WolodriveApp *app, GameItem *item, char *out, size_t capacity) {
+    track_description_focus(app, item);
+    /* Copy catalog text before handing it to the separate translation worker. */
+    char original[MAX_DESCRIPTION_BYTES];
+    SDL_LockMutex(app->catalog_mutex);
+    TextId id = item->description_id;
+    SDL_strlcpy(original, item->description, sizeof(original));
+    SDL_UnlockMutex(app->catalog_mutex);
+    if (id == TXT_DESCRIPTION_FALLBACK) {
+        snprintf(out, capacity, TR(app, TXT_DESCRIPTION_FALLBACK), item->source_name, item->version);
+    } else if (id != TEXT_COUNT) {
+        SDL_strlcpy(out, TR(app, id), capacity);
+    } else if (app->show_original_description ||
+               (!app->translations && SDL_AtomicGet(&app->language) == LANG_EN)) {
+        SDL_strlcpy(out, original, capacity);
+    } else {
+        TranslationStatus status = translation_get(app->translations, original,
+            (Language)SDL_AtomicGet(&app->language), out, capacity);
+        if (status != TRANSLATION_READY) {
+            TextId message = status == TRANSLATION_UNCONFIGURED ? TXT_TRANSLATION_UNCONFIGURED :
+                             status == TRANSLATION_FAILED ? TXT_TRANSLATION_FAILED : TXT_TRANSLATING;
+            SDL_strlcpy(out, TR(app, message), capacity);
+        }
+    }
+}
+
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_language_input(app, ev)) return;
+    GameItem *focused = get_focused_item(app);
+    track_description_focus(app, focused);
+    if (ev->type == SDL_MOUSEMOTION) {
+        app->description_hovered = contains_point(DESCRIPTION_AREA, ev->motion.x, ev->motion.y);
+    }
+    if ((ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_i && !ev->key.repeat) ||
+        (ev->type == SDL_CONTROLLERBUTTONDOWN && ev->cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSTICK) ||
+        (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT &&
+         contains_point(DESCRIPTION_BUTTON, ev->button.x, ev->button.y))) {
+        if (focused && focused->description_id == TEXT_COUNT) {
+            app->show_original_description = !app->show_original_description;
+            app->description_scroll = 0;
+        }
+        return;
+    }
+    if (ev->type == SDL_MOUSEWHEEL && app->description_hovered) {
+        int direction = ev->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
+        app->description_scroll = SDL_max(0, app->description_scroll - ev->wheel.y * direction * 24);
+        return;
+    }
+    if (ev->type == SDL_KEYDOWN && (ev->key.keysym.sym == SDLK_PAGEUP || ev->key.keysym.sym == SDLK_PAGEDOWN)) {
+        app->description_scroll = SDL_max(0, app->description_scroll + (ev->key.keysym.sym == SDLK_PAGEUP ? -48 : 48));
+        return;
+    }
     CarouselRow *row = &app->rows[app->active_row];
 
     if (ev->type == SDL_KEYDOWN) {
@@ -693,7 +754,7 @@ static void render_hero_banner(WolodriveApp *app) {
     bx += draw_glass_badge(r, app->font_small, size_lbl, bx, by, 12, 5,
                            24, 24, 30, 220, 180, 180, 190, false) + 12;
 
-    bx += draw_glass_badge(r, app->font_small, sys_format_to_string(hero->format), bx, by, 12, 5,
+    bx += draw_glass_badge(r, app->font_small, sys_format_to_string(app, hero->format), bx, by, 12, 5,
                            24, 24, 30, 220, 180, 180, 190, false) + 12;
 
     /* Elegancki separator poziomy z czerwonym akcentem */
@@ -701,15 +762,34 @@ static void render_hero_banner(WolodriveApp *app) {
     fill_rect(r, left_x + 90, 240, 1080, 1, 255, 255, 255, 30);
 
     /* Opis gry (#94949C) */
-    char description[512];
-    if (hero->description_id == TXT_DESCRIPTION_FALLBACK) {
-        snprintf(description, sizeof(description), TR(app, TXT_DESCRIPTION_FALLBACK),
-                 hero->source_name, hero->version);
-    } else {
-        snprintf(description, sizeof(description), "%s", hero->description_id == TEXT_COUNT
-                 ? hero->description : TR(app, hero->description_id));
+    char description[MAX_TRANSLATED_DESCRIPTION_BYTES];
+    description_text(app, hero, description, sizeof(description));
+    SDL_Surface *description_surface = TTF_RenderUTF8_Blended_Wrapped(app->font_body, description, muted, DESCRIPTION_AREA.w);
+    if (description_surface) {
+        int maximum_scroll = SDL_max(0, description_surface->h - DESCRIPTION_AREA.h);
+        app->description_scroll = SDL_min(app->description_scroll, maximum_scroll);
+        SDL_Texture *texture = SDL_CreateTextureFromSurface(r, description_surface);
+        if (texture) {
+            SDL_Rect destination = {DESCRIPTION_AREA.x, DESCRIPTION_AREA.y - app->description_scroll,
+                                    description_surface->w, description_surface->h};
+            SDL_RenderSetClipRect(r, &DESCRIPTION_AREA);
+            SDL_RenderCopy(r, texture, NULL, &destination);
+            SDL_RenderSetClipRect(r, NULL);
+            SDL_DestroyTexture(texture);
+        }
+        if (maximum_scroll > 0) {
+            fill_rect(r, DESCRIPTION_AREA.x + DESCRIPTION_AREA.w + 4, DESCRIPTION_AREA.y, 3, DESCRIPTION_AREA.h, 65, 65, 75, 255);
+            int thumb_y = DESCRIPTION_AREA.y + (DESCRIPTION_AREA.h - 12) * app->description_scroll / maximum_scroll;
+            fill_rect(r, DESCRIPTION_AREA.x + DESCRIPTION_AREA.w + 4, thumb_y, 3, 12, 180, 180, 190, 255);
+        }
+        SDL_FreeSurface(description_surface);
     }
-    draw_text(r, app->font_body, description, left_x, 254, muted, 1180);
+    if (hero->description_id == TEXT_COUNT) {
+        fill_rect(r, DESCRIPTION_BUTTON.x, DESCRIPTION_BUTTON.y, DESCRIPTION_BUTTON.w, DESCRIPTION_BUTTON.h, 35, 35, 43, 255);
+        TextId label = app->show_original_description ? TXT_TRANSLATED_DESCRIPTION : TXT_ORIGINAL_DESCRIPTION;
+        draw_single_line(r, app->font_small, TR(app, label), DESCRIPTION_BUTTON.x + 12,
+                         DESCRIPTION_BUTTON.y + 10, white, DESCRIPTION_BUTTON);
+    }
 
     /* Docelowa ścieżka montażu / instalacji */
     char path_line[320];

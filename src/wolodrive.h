@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "i18n.h"
+#include "translation.h"
 
 #define TR(app, id) i18n_text((Language)SDL_AtomicGet(&(app)->language), (id))
 
@@ -54,6 +55,7 @@
 #define MAX_CATALOG_ITEMS       256
 #define MAX_ITEMS_PER_ROW       128
 #define TOTAL_ROWS              4
+#define MAX_DESCRIPTION_BYTES   4096
 
 typedef enum {
     FMT_EXFAT = 0,
@@ -73,7 +75,7 @@ typedef struct {
     char version[32];           /* Wersja np. 01.00 */
     char source_name[64];       /* Nazwa katalogu źródłowego Pegasus-DL */
     TextId description_id;      /* TEXT_COUNT means source-provided description. */
-    char description[384];      /* Opis w Hero Bannerze */
+    char description[MAX_DESCRIPTION_BYTES]; /* Original plain-text catalog description. */
     char install_path[256];     /* Docelowa ścieżka na PS5 */
     char download_url[512];     /* Bezpośredni link do pakietu z katalogu JSON */
     char cover_url[512];        /* URL okładki (posterUrl / coverUrl / iconUrl) */
@@ -120,6 +122,11 @@ typedef struct {
     char language_path[512];
     bool language_menu_open;
     int language_menu_index;
+    TranslationService *translations;
+    GameItem *description_item;
+    bool show_original_description;
+    bool description_hovered;
+    int description_scroll;
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font_logo;
@@ -160,7 +167,7 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...);
 void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);
 void sys_cancel_action(WolodriveApp *app, GameItem *item);
-const char *sys_format_to_string(PackageFormat fmt);
+const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt);
 const char *sys_format_short_badge(PackageFormat fmt);
 
 /* Warstwa katalogu Pegasus-DL i cache'u okładek (src/catalog_pegasus.c) */
