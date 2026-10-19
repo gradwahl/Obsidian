@@ -27,6 +27,10 @@ const char *i18n_language_name(Language language) {
     return names[valid_language(language) ? language : LANG_EN];
 }
 
+const char *i18n_language_code(Language language) {
+    return codes[valid_language(language) ? language : LANG_EN];
+}
+
 static bool parse_language(const char *locale, Language *language) {
     if (!locale || !locale[0] || !locale[1]) return false;
     if (locale[2] && locale[2] != '_' && locale[2] != '-' &&

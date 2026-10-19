@@ -20,9 +20,11 @@ Linux stores the choice in SDL's user preference directory (normally
 `/data/homebrew/wolodrive/language`. If saving fails, the language still changes
 for the current session and a notification explains that it could not be saved.
 
-Built-in descriptions, labels, notifications and catalog sync status are
-translated. Game titles and descriptions received from remote catalogs keep
-their publisher's language. Description markup is converted to plain text:
+Built-in descriptions, labels, the window title, notifications and catalog sync
+status are translated. Remote descriptions can also be translated using the
+configurable service below. Game titles, publisher/source names, IDs, paths,
+technical abbreviations and text embedded in cover images retain their original
+wording. Description markup is converted to plain text:
 HTML tags are removed, paragraphs are separated, and character entities and
 JSON Unicode escapes are decoded. This setting changes the app's
 interface language; it does not change the language inside games.
@@ -37,6 +39,47 @@ Alternatively, provide a font covering all three scripts as `assets/font_cjk.ttc
 and `assets/font_bold.ttf` are also searched. Fonts covering all scripts are
 preferred; a warning is printed if the selected font cannot display Chinese.
 Fonts are loaded locally; no font downloads occur when a language is selected.
+
+### Online catalog descriptions
+
+Configure a [LibreTranslate-compatible `/translate` endpoint](https://docs.libretranslate.com/api/operations/translate/)
+before launching the app. In a Linux or Windows **WSL terminal**:
+
+```sh
+export WOLODRIVE_TRANSLATE_URL="https://your-translator.example/translate"
+# Optional, only if your provider requires an API key:
+export WOLODRIVE_TRANSLATE_API_KEY="your-provider-key"
+make linux
+```
+
+Replace the example URL with your own provider or self-hosted endpoint. There is
+no bundled public translation server or API key. For a self-hosted local service,
+an endpoint such as `http://127.0.0.1:5000/translate` is also accepted. The server
+must support source-language detection and the selected target language; its
+installed language models determine translation availability and quality.
+The same environment variable names apply to a native Windows executable when a
+native build becomes available; set them in that process's launch environment.
+
+Only the focused game's plain-text description is sent to the configured
+provider. Source-language detection is automatic. Requests run in an SDL worker
+thread and up to 64 source-text/language results are cached in memory for the
+current run. Language changes never display an old translation for a different
+language or source description. Pending navigation requests are replaced by the
+latest requested description. TLS verification stays enabled; API keys are sent
+in the request body and are not logged. Provider charges or rate limits apply.
+
+Press **I**, click **Original**, or press the **right stick** to view the
+publisher's original description and switch back. Use **Page Up/Page Down**, or
+the mouse wheel over the description, to read longer text. Up to 4 KiB of source
+description and 32 KiB of service response are accepted. Changing the language or
+focused game resets the original-text view and scroll position.
+
+While a request is pending or unavailable, the app shows a message in the selected
+language rather than silently displaying English. Without configuration, English
+mode keeps showing the original, while other languages explain that a service
+needs configuring. Built-in descriptions work offline in all nine languages.
+Failed requests are held for 30 seconds before retrying. Restart the app after
+changing service configuration.
 
 ## Build and checks
 
@@ -59,6 +102,10 @@ screenshots for each language in `build/`.
 Regression tests also check description cleanup and prevent false installation
 claims. Gradient coverage is checked at four window sizes with opaque and
 translucent drawing, including the fallback for older rendering backends.
+Online translation tests use a local mock HTTP server to verify the provider
+contract, Unicode, all nine target codes, caching, source changes, failure states,
+request replacement and worker shutdown. Tests do not contact a real provider or
+use your configured service credentials.
 
 ## Package availability
 

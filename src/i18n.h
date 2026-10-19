@@ -13,6 +13,7 @@ typedef enum {
 
 const char *i18n_text(Language language, TextId id);
 const char *i18n_language_name(Language language);
+const char *i18n_language_code(Language language);
 Language i18n_detect_language(void);
 Language i18n_load_language(const char *path, Language fallback);
 bool i18n_save_language(const char *path, Language language);

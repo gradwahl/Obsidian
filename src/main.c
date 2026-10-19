@@ -2,19 +2,21 @@
 #include <curl/curl.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
 
-    WolodriveApp app;
-    memset(&app, 0, sizeof(app));
-    app.running = true;
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    if (!app) return 1;
+    app->running = true;
 
     curl_global_init(CURL_GLOBAL_ALL);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER) != 0) {
         fprintf(stderr, "[WOLODRIVE ERROR] SDL_Init: %s\n", SDL_GetError());
+        free(app);
         return 1;
     }
 
@@ -27,10 +29,11 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "[WOLODRIVE ERROR] TTF_Init: %s\n", TTF_GetError());
         IMG_Quit();
         SDL_Quit();
+        free(app);
         return 1;
     }
 
-    app.catalog_mutex = SDL_CreateMutex();
+    app->catalog_mutex = SDL_CreateMutex();
 
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
@@ -51,34 +54,36 @@ int main(int argc, char *argv[]) {
 
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
-    app.window = SDL_CreateWindow(
-        "Wolodrive 2.0 - PS5 Homebrew Store & Pegasus-DL (Netflix UI)",
+    app->window = SDL_CreateWindow(
+        "Wolodrive",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         win_w, win_h, win_flags
     );
 
-    if (!app.window) {
+    if (!app->window) {
         fprintf(stderr, "[WOLODRIVE ERROR] SDL_CreateWindow: %s\n", SDL_GetError());
-        SDL_DestroyMutex(app.catalog_mutex);
+        SDL_DestroyMutex(app->catalog_mutex);
         TTF_Quit();
         IMG_Quit();
         SDL_Quit();
+        free(app);
         return 1;
     }
 
     int exit_code = 1;
-    if (!ui_create_renderer(&app)) goto cleanup;
+    if (!ui_create_renderer(app)) goto cleanup;
 
-    sys_init(&app);
-    if (!ui_init(&app)) goto cleanup;
+    sys_init(app);
+    if (!ui_init(app)) goto cleanup;
+    app->translations = translation_create();
 
     /* Automatyczne pobranie default-sources.json (Pegasus-DL) oraz okładek w tle przy starcie */
-    catalog_start_async_sync(&app);
+    catalog_start_async_sync(app);
 
     uint32_t last_tick = SDL_GetTicks();
-    app.last_stats_update = last_tick;
+    app->last_stats_update = last_tick;
 
-    while (app.running) {
+    while (app->running) {
         uint32_t now = SDL_GetTicks();
         float dt = (now - last_tick) / 1000.0f;
         if (dt > 0.1f) dt = 0.1f;
@@ -87,33 +92,35 @@ int main(int argc, char *argv[]) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_QUIT) {
-                app.running = false;
+                app->running = false;
             } else if (ev.type == SDL_CONTROLLERDEVICEADDED) {
                 SDL_GameControllerOpen(ev.cdevice.which);
-                sys_send_notification(&app, TR(&app, TXT_CONTROLLER));
+                sys_send_notification(app, TR(app, TXT_CONTROLLER));
             } else {
-                ui_handle_input(&app, &ev);
+                ui_handle_input(app, &ev);
             }
         }
 
-        if (now - app.last_stats_update >= 2000) {
-            sys_update_stats(&app.stats);
-            app.last_stats_update = now;
+        if (now - app->last_stats_update >= 2000) {
+            sys_update_stats(&app->stats);
+            app->last_stats_update = now;
         }
 
-        ui_update_animations(&app, dt);
-        ui_render(&app);
+        ui_update_animations(app, dt);
+        ui_render(app);
     }
 
     exit_code = 0;
 cleanup:
-    ui_cleanup(&app);
-    if (app.catalog_mutex) SDL_DestroyMutex(app.catalog_mutex);
-    if (app.renderer)      SDL_DestroyRenderer(app.renderer);
-    if (app.window)        SDL_DestroyWindow(app.window);
+    translation_destroy(app->translations);
+    ui_cleanup(app);
+    if (app->catalog_mutex) SDL_DestroyMutex(app->catalog_mutex);
+    if (app->renderer)      SDL_DestroyRenderer(app->renderer);
+    if (app->window)        SDL_DestroyWindow(app->window);
     TTF_Quit();
     IMG_Quit();
     SDL_Quit();
     curl_global_cleanup();
+    free(app);
     return exit_code;
 }

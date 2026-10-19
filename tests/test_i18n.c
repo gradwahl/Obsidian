@@ -114,6 +114,8 @@ static void test_live_switching(void) {
         ui_handle_input(app, &event);
         assert(!app->language_menu_open);
         assert(SDL_AtomicGet(&app->language) == (int)expected);
+        assert(strcmp(SDL_GetWindowTitle(app->window), TR(app, TXT_WINDOW_TITLE)) == 0);
+        assert(strcmp(sys_format_to_string(app, FMT_FFPKG), TR(app, TXT_FORMAT_FOLDER)) == 0);
         assert(app->rows[0].items[app->rows[0].selected_col] == selected);
         assert(app->catalog[1].state == STATE_AVAILABLE);
         assert(app->catalog[1].progress == 0.0f);

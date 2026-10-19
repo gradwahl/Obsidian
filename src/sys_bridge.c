@@ -30,10 +30,10 @@ extern int sceKernelGetCpuTemperature(int *temp);
 extern int sceKernelGetSocSensorTemperature(int sensor_id, int *temp);
 #endif
 
-const char *sys_format_to_string(PackageFormat fmt) {
+const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt) {
     switch (fmt) {
         case FMT_EXFAT: return ".exfat (ShadowMountPlus)";
-        case FMT_FFPKG: return ".ffpkg (Folder PKG)";
+        case FMT_FFPKG: return TR(app, TXT_FORMAT_FOLDER);
         case FMT_PKG:   return ".pkg (PS4 FPKG)";
         default:        return ".bin";
     }
@@ -163,6 +163,7 @@ void sys_init(WolodriveApp *app) {
 #endif
     SDL_AtomicSet(&app->language, i18n_load_language(app->language_path, i18n_detect_language()));
     app->sync_status_id = TXT_READY;
+    if (app->window) SDL_SetWindowTitle(app->window, TR(app, TXT_WINDOW_TITLE));
 
     /* Bazowe pozycje z prawdziwymi okładkami CDN (automatycznie pobierane do assets/covers/ i łączone z default-sources.json) */
     add_seed_entry(app, "PPSA08338", "Marvel's Spider-Man 2",
@@ -258,6 +259,9 @@ void sys_cancel_action(WolodriveApp *app, GameItem *item) {
 void sys_set_language(WolodriveApp *app, Language language) {
     if (language < LANG_EN || language >= LANG_COUNT) return;
     SDL_AtomicSet(&app->language, language);
+    app->show_original_description = false;
+    app->description_scroll = 0;
+    if (app->window) SDL_SetWindowTitle(app->window, TR(app, TXT_WINDOW_TITLE));
     bool saved = i18n_save_language(app->language_path, language);
     ui_rebuild_carousels(app);
     sys_send_notification(app, TR(app, saved ? TXT_LANGUAGE_CHANGED : TXT_LANGUAGE_UNSAVED),

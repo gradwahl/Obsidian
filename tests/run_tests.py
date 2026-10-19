@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+from translation_server import translation_server
 
 catalog = Path("src/translations.def").read_text(encoding="utf-8")
 count = 0
@@ -33,3 +34,20 @@ with tempfile.TemporaryDirectory(prefix="wolodrive-i18n-") as data_dir:
         env={**os.environ, "XDG_DATA_HOME": data_dir, "SDL_VIDEODRIVER": "dummy"},
         check=True,
     )
+
+    with translation_server() as server:
+        subprocess.run(
+            ["./build/test_translation"],
+            env={**os.environ, "XDG_DATA_HOME": data_dir,
+                 "WOLODRIVE_TRANSLATE_URL": f"http://127.0.0.1:{server.server_port}/translate",
+                 "WOLODRIVE_TRANSLATE_API_KEY": "test-key"},
+            check=True,
+        )
+        assert all(r.get("source") == "auto" and r.get("format") == "text"
+                   and r.get("api_key") == "test-key" for r in server.requests)
+        source = 'Quotes: "test" & newline\n中文 Русский'
+        requests = [r for r in server.requests if r["q"] == source]
+        assert len(requests) == 9, "Cached translations must not issue duplicate requests"
+        assert {r["target"] for r in requests} == {"en", "pl", "es", "fr", "nl", "de", "it", "zh", "ru"}
+        assert not any(r["q"] == "queued old" for r in server.requests)
+        assert sum(r["q"] == "error" for r in server.requests) == 1
