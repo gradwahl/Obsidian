@@ -6,7 +6,7 @@ SDL2 homebrew catalog interface for Linux and PS5.
 
 The interface follows the supplied Netflix TV reference: a dark left navigation
 rail, selected-game artwork across the background, a readable title and description,
-and one horizontal row of landscape covers. The selected cover has a white border
+and horizontal rows of landscape covers. The selected cover has a white border
 and action footer. WoloDrive uses its own branding and the catalog's game artwork;
 portrait covers are cropped to fill the landscape backdrop and cards, so their
 composition depends on the available source image.
@@ -14,11 +14,11 @@ composition depends on the available source image.
 Use **Left/Right** or the controller **D-pad** to select a game. Press **Left**
 again at the first card or leftmost grid column to focus the far-left sidebar.
 Only while the sidebar has its white focus outline, **Up/Down**
-switch between **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**, and
+switch between **Search**, **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**, and
 **Downloads**. Press **Right / Enter / Cross** to return to the content without
 changing its selection. Up/Down within content stays in the current section;
 at the top of a grid, Up keeps focus in the grid.
-Each sidebar entry has a text label and an icon: house, gamepad,
+Each sidebar entry has a text label and an icon: magnifier, house, gamepad,
 joystick, folder, chip, and download arrow. Click an entry to switch sections,
 or click a cover to select it. Click
 the selected card's white action footer, press **Enter/Space**, or press controller
@@ -27,6 +27,26 @@ below. Each category remembers its selection; the row scrolls to bring that game
 to the left edge. **Backspace / Circle** returns to the start or cancels an active
 download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
 information are shown along the bottom. Language controls are at the top left.
+
+**Search**, above Home, opens an on-screen A–Z/0–9 keyboard beside a three-column
+cover grid. Type with a physical keyboard (including Unicode text), click the
+on-screen keys, or select keys with arrows / D-pad and **Enter / Cross**. **Space**
+and **Delete** keys are above the letters; **Backspace / Triangle** also deletes
+one character. Search matches title or title ID anywhere in the loaded catalog,
+including entries outside the 128-item browsing rows. ASCII letters match without
+case sensitivity; other scripts match their entered UTF-8 text. An empty query
+shows the loaded catalog. Unconnected sources are not searched.
+
+Move Right past the keyboard's right edge to browse results. Up/Down pages through
+all matches, nine covers at a time. Left from the first result column returns to
+the keyboard; Left from the keyboard's first column reaches the sidebar.
+**Enter / Cross**, or clicking a result, opens its description and package details.
+**Escape / Backspace / Circle**, or the on-screen Back button, returns to the
+same results. **Enter / Cross**, or clicking the action hint, requests the existing
+package action; downloading and installation remain unavailable as described below.
+In the search grid, **Escape / Circle** focuses the sidebar. **F5** refreshes the
+catalog. The search query persists when switching sections; typing letters there
+does not trigger catalog shortcuts. The globe and **Square** still open languages.
 
 Home shows the **128 latest catalog additions**, newest first across the loaded
 sources. It includes explicit `category: "game"` entries with valid UTC `createdAt`
@@ -197,6 +217,13 @@ selection, cancellation, glyph coverage for every translation, and SDL rendering
 with a dummy video driver. They use a temporary preferences
 directory. Set `WOLODRIVE_TEST_SCREENSHOTS=1` when running `make test` to save
 screenshots for each language in `build/`.
+
+Search regression coverage includes full-catalog title/ID matching beyond the
+carousel limit, UTF-8 deletion, live text input, keyboard/controller/mouse
+navigation, result paging, refresh selection, empty states and result details.
+The Linux build and automated search checks were run through WSL. Native Windows
+and PS5 builds and a separate native Linux graphical session remain unverified;
+the WSLg Search screen's visual and live interaction checks were interrupted.
 
 Regression tests also check description cleanup and prevent false installation
 claims. Gradient coverage is checked at four window sizes with opaque and

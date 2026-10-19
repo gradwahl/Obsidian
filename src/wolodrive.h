@@ -63,6 +63,7 @@ typedef enum {
     VIEW_FILES,
     VIEW_PAYLOADS,
     VIEW_DOWNLOADS,
+    VIEW_SEARCH,
     VIEW_COUNT
 } SidebarView;
 #define TOTAL_ROWS              VIEW_COUNT
@@ -174,6 +175,10 @@ typedef struct {
     int library_company;
     int library_console_selection;
     bool sidebar_focus;
+    char search_query[128];
+    GameItem *search_results[MAX_CATALOG_ITEMS];
+    int search_count, search_selected, search_key;
+    bool search_results_focus, search_detail;
     LibraryArtwork library_artwork[MAX_LIBRARY_ARTWORK];
     int library_artwork_count;
     float vertical_scroll_y;

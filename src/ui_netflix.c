@@ -88,6 +88,8 @@ static const char *library_section_title(WolodriveApp *app) {
 static void select_sidebar_view(WolodriveApp *app, int view) {
     app->active_row = view;
     app->sidebar_focus = true;
+    if (view == VIEW_SEARCH) SDL_StartTextInput();
+    else SDL_StopTextInput();
     if (is_library_view(view)) {
         app->library_depth = LIBRARY_COMPANIES;
         ui_rebuild_carousels(app);
@@ -95,7 +97,7 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
 }
 
 static SDL_Rect sidebar_target(int row) {
-    return (SDL_Rect){0, 240 + row * 90, RAIL_WIDTH, 90};
+    return (SDL_Rect){0, row == VIEW_SEARCH ? 150 : 240 + row * 90, RAIL_WIDTH, 90};
 }
 
 static SDL_Rect card_target(WolodriveApp *app, int col) {
@@ -130,7 +132,8 @@ static void select_menu_language(WolodriveApp *app) {
 
 /* SDL mouse events already use renderer logical coordinates, including after resizing. */
 static bool handle_language_input(WolodriveApp *app, const SDL_Event *ev) {
-    if (ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_l) {
+    if (ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_l &&
+        (app->active_row != VIEW_SEARCH || app->sidebar_focus || app->language_menu_open)) {
         if (!ev->key.repeat) toggle_language_menu(app);
         return true;
     }
@@ -461,6 +464,8 @@ void ui_cleanup(WolodriveApp *app) {
     if (app->font_micro)      TTF_CloseFont(app->font_micro);
 }
 
+static void search_rebuild_locked(WolodriveApp *app);
+
 void ui_rebuild_carousels(WolodriveApp *app) {
     const char *titles[TOTAL_ROWS] = {
         TR(app, TXT_NAV_HOME),
@@ -468,7 +473,8 @@ void ui_rebuild_carousels(WolodriveApp *app) {
         TR(app, TXT_NAV_EMULATORS),
         TR(app, TXT_NAV_FILES),
         TR(app, TXT_NAV_PAYLOADS),
-        TR(app, TXT_NAV_DOWNLOADS)
+        TR(app, TXT_NAV_DOWNLOADS),
+        TR(app, TXT_NAV_SEARCH)
     };
 
     SDL_LockMutex(app->catalog_mutex);
@@ -510,10 +516,13 @@ void ui_rebuild_carousels(WolodriveApp *app) {
     }
 
     app->catalog_dirty = false;
+    search_rebuild_locked(app);
     SDL_UnlockMutex(app->catalog_mutex);
 }
 
 static GameItem *get_focused_item(WolodriveApp *app) {
+    if (app->active_row == VIEW_SEARCH)
+        return app->search_count ? app->search_results[app->search_selected] : NULL;
     if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) return NULL;
     CarouselRow *row = &app->rows[app->active_row];
     if (row->item_count <= 0) return NULL;
@@ -652,6 +661,8 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
     return action != 0 || ev->type == SDL_MOUSEWHEEL;
 }
 
+#include "ui_search.h"
+
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_language_input(app, ev)) return;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
@@ -681,13 +692,16 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             left = button == SDL_CONTROLLER_BUTTON_DPAD_LEFT;
         }
         if (direction) {
-            int view = app->active_row + direction;
-            if (view >= 0 && view < TOTAL_ROWS) select_sidebar_view(app, view);
+            int position = app->active_row == VIEW_SEARCH ? -1 : app->active_row;
+            position += direction;
+            if (position >= -1 && position <= VIEW_DOWNLOADS)
+                select_sidebar_view(app, position == -1 ? VIEW_SEARCH : position);
             return;
         }
         if (enter) { app->sidebar_focus = false; return; }
         if (left) return;
     }
+    if (handle_search_input(app, ev)) return;
     if (handle_library_input(app, ev)) return;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         CarouselRow *clicked_row = &app->rows[app->active_row];
@@ -996,7 +1010,14 @@ static void render_sidebar(WolodriveApp *app) {
         SDL_Color color = {c, c, c, 255};
         SDL_Rect label = {84, target.y + 24, RAIL_WIDTH - 100, 42};
         draw_fitted_text(r, app->font_small, app->rows[row].title, label, color, label, false);
-        if (row == VIEW_HOME) {
+        if (row == VIEW_SEARCH) {
+            SDL_SetRenderDrawColor(r, c, c, c, 255);
+            for (int angle = 0; angle < 360; angle++) {
+                float a = angle * 3.14159265f / 180.0f;
+                SDL_RenderDrawPoint(r, x + 12 + (int)(12 * cosf(a)), y + 12 + (int)(12 * sinf(a)));
+            }
+            SDL_RenderDrawLine(r, x + 21, y + 21, x + 33, y + 33);
+        } else if (row == VIEW_HOME) {
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             SDL_RenderDrawLine(r, x - 2, y + 12, x + 14, y - 1);
             SDL_RenderDrawLine(r, x + 14, y - 1, x + 30, y + 12);
@@ -1087,11 +1108,13 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_Color red = {229, 9, 20, 255};
     SDL_Color muted = {155, 155, 155, 255};
     draw_text(r, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
-    draw_text(r, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
-    draw_single_line(r, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
-                     (SDL_Rect){CONTENT_X + 378, 984, 260, 30});
-    draw_single_line(r, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 658, 984, muted,
-                     (SDL_Rect){CONTENT_X + 658, 984, 600, 30});
+    if (app->active_row != VIEW_SEARCH) {
+        draw_text(r, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
+        draw_single_line(r, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
+                         (SDL_Rect){CONTENT_X + 378, 984, 260, 30});
+        draw_single_line(r, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 658, 984, muted,
+                         (SDL_Rect){CONTENT_X + 658, 984, 600, 30});
+    }
 
     char sync_info[256];
     SDL_LockMutex(app->catalog_mutex);
@@ -1348,7 +1371,10 @@ void ui_render(WolodriveApp *app) {
     SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
     SDL_RenderClear(r);
 
-    if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) {
+    if (app->active_row == VIEW_SEARCH) {
+        if (app->search_detail) render_hero_banner(app);
+        render_search(app);
+    } else if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) {
         render_library_grid(app);
     } else {
         render_hero_banner(app);

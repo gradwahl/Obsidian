@@ -119,6 +119,91 @@ static void test_scaled_gradient(int width, int height, int alpha) {
     SDL_DestroyWindow(window);
 }
 
+static void test_search(WolodriveApp *app) {
+    select_sidebar_view(app, VIEW_HOME);
+    SDL_Event event = {0};
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_UP;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_SEARCH && app->sidebar_focus);
+    assert(sidebar_target(VIEW_SEARCH).y + sidebar_target(VIEW_SEARCH).h == sidebar_target(VIEW_HOME).y);
+    event.key.keysym.sym = SDLK_RIGHT;
+    ui_handle_input(app, &event);
+    assert(!app->sidebar_focus);
+    /* Search beyond the carousel limit, with title IDs and ASCII case folding. */
+    for (int i = app->catalog_count; i < 300; i++) {
+        snprintf(app->catalog[i].title, sizeof(app->catalog[i].title), "Search fixture %d", i);
+        snprintf(app->catalog[i].id_code, sizeof(app->catalog[i].id_code), "TEST%05d", i);
+    }
+    app->catalog_count = 300;
+    ui_rebuild_carousels(app);
+    assert(app->search_count == 300);
+    search_edit(app, "test00299", false);
+    assert(app->search_count == 1 && app->search_results[0] == &app->catalog[299]);
+    app->search_query[0] = '\0';
+    app->search_count = 0;
+    event.type = SDL_TEXTINPUT;
+    SDL_strlcpy(event.text.text, "SEARCH FIXTURE", sizeof(event.text.text));
+    ui_handle_input(app, &event);
+    assert(app->search_count > MAX_ITEMS_PER_ROW);
+    ui_render(app);
+    app->search_results_focus = true;
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    for (int i = 0; i < 3; i++) ui_handle_input(app, &event);
+    assert(app->search_selected == 9 && app->active_row == VIEW_SEARCH);
+    GameItem *selected = get_focused_item(app);
+    ui_rebuild_carousels(app);
+    assert(get_focused_item(app) == selected);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app, &event);
+    assert(app->search_detail);
+    ui_render(app);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
+    ui_handle_input(app, &event);
+    assert(!app->search_detail && get_focused_item(app) == selected);
+    /* UTF-8 deletion removes a whole character, and L remains usable as text. */
+    app->search_query[0] = '\0';
+    search_edit(app, "é中", false);
+    search_edit(app, "", true);
+    assert(strcmp(app->search_query, "é") == 0);
+    search_edit(app, "", true);
+    assert(!app->search_query[0]);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_l;
+    ui_handle_input(app, &event);
+    assert(!app->language_menu_open);
+    event.type = SDL_TEXTINPUT;
+    SDL_strlcpy(event.text.text, "no-such-entry-xyz", sizeof(event.text.text));
+    ui_handle_input(app, &event);
+    assert(!app->search_count && !get_focused_item(app));
+    ui_render(app);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = search_key_target(37).x + 10;
+    event.button.y = search_key_target(37).y + 10;
+    ui_handle_input(app, &event);
+    assert(strcmp(app->search_query, "no-such-entry-xy") == 0);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_Y;
+    ui_handle_input(app, &event);
+    assert(strcmp(app->search_query, "no-such-entry-x") == 0);
+    search_edit(app, "", false);
+    app->search_query[0] = '\0';
+    search_edit(app, "", false);
+    app->search_key = 0;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app, &event);
+    assert(strcmp(app->search_query, "a") == 0);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+    ui_handle_input(app, &event);
+    assert(app->sidebar_focus);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_HOME);
+    puts("Search: full catalog, title/ID matching, UTF-8 editing, paging, refresh, details and keyboard/controller/mouse input passed.");
+}
+
 static void test_tv_catalog_navigation(void) {
     assert(TTF_Init() == 0);
     IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_WEBP);
@@ -184,7 +269,7 @@ static void test_tv_catalog_navigation(void) {
     /* All six views remain reachable, including the unimplemented sections. */
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
-    for (int r = 1; r < TOTAL_ROWS; r++) {
+    for (int r = 1; r <= VIEW_DOWNLOADS; r++) {
         ui_handle_input(app, &event);
         assert(app->active_row == r);
         if (r >= VIEW_EMULATORS && r <= VIEW_PAYLOADS) {
@@ -481,6 +566,7 @@ static void test_tv_catalog_navigation(void) {
     assert(chdir(working_directory) == 0);
     puts("All 118 artwork files for 58 systems decode, cache and resolve outside the repo.");
     puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
+    test_search(app);
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);
     SDL_DestroyWindow(app->window);
