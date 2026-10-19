@@ -214,8 +214,17 @@ static void test_tv_catalog_navigation(void) {
     assert(app->show_original_description);
 
     /* Games/Roms is a company -> console -> filtered games browser. */
-    assert(library_company_count() == 6);
-    assert(!library_company_at(-1) && !library_company_at(6));
+    assert(library_company_count() == 10);
+    assert(!library_company_at(-1) && !library_company_at(10));
+    const int system_counts[] = {6, 2, 8, 14, 5, 4, 4, 2, 8, 5};
+    int system_total = 0;
+    for (int i = 0; i < library_company_count(); i++) {
+        assert(library_company_at(i)->console_count == system_counts[i]);
+        system_total += library_company_at(i)->console_count;
+    }
+    assert(system_total == 58);
+    assert(strstr(library_console_at(0, 2)->name, "experimental"));
+    assert(strstr(library_console_at(1, 1)->name, "experimental"));
     assert(!library_console_at(0, -1) && !library_console_at(0, 99));
     assert(library_console_matches_id(library_console_at(0, 3), "cusa12345"));
     assert(!library_console_matches_id(library_console_at(0, 3), "PPSA12345"));
@@ -278,6 +287,7 @@ static void test_tv_catalog_navigation(void) {
     event.button.button = SDL_BUTTON_LEFT;
     /* Every company tile opens its own console list. */
     for (int c = 0; c < library_company_count(); c++) {
+        app->library_company_selection = c; /* Select that page before clicking. */
         SDL_Rect tile = library_tile_target(c);
         assert(tile.w == tile.h && tile.x + tile.w <= SCREEN_WIDTH && tile.y + tile.h < 944);
         event.button.x = tile.x + 40;
@@ -291,7 +301,25 @@ static void test_tv_catalog_navigation(void) {
         ui_handle_input(app, &event);
         assert(app->library_depth == LIBRARY_COMPANIES);
     }
+    /* New categories are reachable on the second page using keyboard input. */
+    app->library_company_selection = 4;
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->library_company_selection == 8);
+    ui_render(app);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(app->library_depth == LIBRARY_CONSOLES && app->library_company == 8);
+    assert(library_company_at(8)->console_count == 8);
+    event.key.keysym.sym = SDLK_ESCAPE;
+    ui_handle_input(app, &event);
+    app->library_company_selection = 3;
     SDL_Rect nintendo_tile = library_tile_target(3);
+    SDL_zero(event);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
     event.button.x = nintendo_tile.x + 40;
     event.button.y = nintendo_tile.y + 40;
     ui_handle_input(app, &event);
@@ -321,12 +349,13 @@ static void test_tv_catalog_navigation(void) {
     for (int c = 0; c < library_company_count(); c++) {
         const LibraryCompany *brand = library_company_at(c);
         LibraryArtwork *logo = load_library_artwork(app, brand->artwork_path);
-        assert(logo && logo->texture && logo->width > 0 && logo->height > 0);
+        assert(!brand->artwork_path || (logo && logo->texture && logo->width > 0 && logo->height > 0));
         for (int i = 0; i < brand->console_count; i++) {
             LibraryArtwork *art = load_library_artwork(app, brand->consoles[i].artwork_path);
-            assert(art && art->texture && art->width > 0 && art->height > 0);
+            assert(!brand->consoles[i].artwork_path || (art && art->texture && art->width > 0 && art->height > 0));
             LibraryArtwork *mark = load_library_artwork(app, brand->consoles[i].logo_path);
-            assert(mark && mark->texture && mark->source_bounds.w > 0 && mark->source_bounds.h > 0);
+            assert(!brand->consoles[i].logo_path || (mark && mark->texture && mark->source_bounds.w > 0 && mark->source_bounds.h > 0));
+            if (!brand->consoles[i].artwork_path) continue; /* Arcade uses logos. */
             SDL_Surface *original = IMG_Load(brand->consoles[i].artwork_path);
             assert(original);
             SDL_Surface *rgba = SDL_ConvertSurfaceFormat(original, SDL_PIXELFORMAT_RGBA32, 0);
@@ -344,14 +373,14 @@ static void test_tv_catalog_navigation(void) {
             SDL_FreeSurface(original);
         }
     }
-    assert(app->library_artwork_count == 88);
+    assert(app->library_artwork_count == 118);
     const char *logo_path = library_company_at(0)->artwork_path;
     LibraryArtwork *logo = load_library_artwork(app, logo_path);
-    assert(load_library_artwork(app, logo_path) == logo && app->library_artwork_count == 88);
+    assert(load_library_artwork(app, logo_path) == logo && app->library_artwork_count == 118);
     assert(!render_library_artwork(app, "assets/library/missing-test-image.png", (SDL_Rect){0, 0, 20, 20}));
-    assert(app->library_artwork_count == 89);
+    assert(app->library_artwork_count == 119);
     assert(!render_library_artwork(app, "assets/library/missing-test-image.png", (SDL_Rect){0, 0, 20, 20}));
-    assert(app->library_artwork_count == 89);
+    assert(app->library_artwork_count == 119);
     /* Resolve bundled assets relative to the executable if cwd is not the repo. */
     char working_directory[4096];
     assert(getcwd(working_directory, sizeof(working_directory)));
@@ -364,7 +393,7 @@ static void test_tv_catalog_navigation(void) {
     ui_cleanup(relocated);
     free(relocated);
     assert(chdir(working_directory) == 0);
-    puts("All six company logos, 41 console logos and 41 native-alpha hardware images decode, cache and resolve outside the repo.");
+    puts("All 118 artwork files for 58 systems decode, cache and resolve outside the repo.");
     puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);

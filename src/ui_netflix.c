@@ -1279,13 +1279,15 @@ static void render_library_grid(WolodriveApp *app) {
         fill_rect(r, tile.x, tile.y, tile.w, tile.h, 24, 24, 24, 255);
         SDL_Rect image = companies ? (SDL_Rect){tile.x + 32, tile.y + 66, tile.w - 64, 144} :
                                     (SDL_Rect){tile.x + 16, tile.y + 14, tile.w - 32, 194};
-        if (!render_library_artwork(app, companies ? brand->artwork_path : console->artwork_path, image)) {
+        const char *artwork = companies ? brand->artwork_path :
+            (console->artwork_path ? console->artwork_path : console->logo_path);
+        if (!render_library_artwork(app, artwork, image)) {
             draw_fitted_text(r, app->font_row_title, companies ? brand->name : console->name,
                              image, white, image, true);
         }
         if (!companies) {
             SDL_Rect logo = {tile.x + 36, tile.y + 220, tile.w - 72, 36};
-            render_library_artwork(app, console->logo_path, logo);
+            if (console->artwork_path) render_library_artwork(app, console->logo_path, logo);
             SDL_Rect title = {tile.x + 16, tile.y + 264, tile.w - 32, 24};
             draw_fitted_text(r, app->font_micro, console->name, title, white, title, true);
         }

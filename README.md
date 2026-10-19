@@ -38,10 +38,16 @@ latest games and the first 128 games for each supported console (PS4 and PS5),
 downloading at most 384 distinct covers per sync.
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
-**Sega**, **Nintendo**, **Atari**, and **SNK**. Opening a company shows its consoles,
-including handhelds. Company tiles use their logos; console tiles show hardware
-photos, a console logo, and a small name label. All six company logos, 41 console
-logos and 41 transparent hardware images are bundled under `assets/library/`
+**Sega**, **Nintendo**, **Atari**, **SNK**, **NEC**, **Bandai**, **Other consoles**, and
+**Arcade systems**. These ten groups contain 58 systems: 6 PlayStation, 2 Xbox,
+8 Sega, 14 Nintendo, 5 Atari, 4 SNK, 4 NEC, 2 Bandai, 8 other consoles, and 5 arcade
+entries. PS3 and Xbox 360 are labeled experimental. PS4 and PS5 remain available;
+Vita, Xbox One, Xbox Series and Switch 2 are excluded from this list.
+Opening a company shows its consoles, including handhelds. Company tiles use
+their logos; the mixed Other consoles category uses its name. Console tiles show
+hardware photos, a console logo where available, and a small name label. Arcade
+tiles use system logos. Nine group logos, 56 platform logos and 53 transparent
+hardware images are bundled under `assets/library/`
 and work offline. Cards use charcoal `#181818`; only the focused card has a white
 selection border. Hardware images retain their source alpha and colors, with no
 runtime background removal. Transparent padding is excluded from sizing so the
@@ -49,11 +55,16 @@ products fill a consistent image area without stretching or cutting off hardware
 Company logos retain their original brand colors, including blue SEGA and SNK,
 red Nintendo and Atari, and Microsoft's four-color symbol. Sony's black wordmark
 and the console logos are displayed in white for contrast, preserving their alpha.
-Missing assets fall back to a readable name. The 32X and Switch 2 use cutouts
+Missing assets fall back to a readable name. Super Cassette Vision has a hardware
+photo and name without a separate logo. The 32X and Super Cassette Vision use cutouts
 prepared with imagegen from the attributed photos; other cutouts are sourced PNGs.
 Sources, authors, individual image licenses,
 and download hashes are recorded in [the artwork credits](assets/library/CREDITS.md)
 and `assets/library/SOURCES.json`.
+
+This list organizes the browser; it does not install emulators or assert that
+emulation is configured. The current game catalog maps PS4/PS5 title IDs only;
+other systems show an empty catalog until a corresponding source is connected.
 
 For PS5 deployment, copy `assets/library/` to
 `/data/homebrew/wolodrive/assets/library/` alongside the payload. Desktop builds
