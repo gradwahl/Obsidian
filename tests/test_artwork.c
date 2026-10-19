@@ -26,6 +26,70 @@ static void expire_locations(WolodriveApp *app) {
     for (int i = 0; i < 128; i++) app->artwork->locations[i].checked -= 1000;
 }
 
+static void test_scroll_queue(SDL_Renderer *renderer) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->renderer = renderer;
+    ART_MKDIR("assets"); ART_MKDIR("assets/artwork");
+    SDL_Surface *fixture = SDL_CreateRGBSurfaceWithFormat(0, 37, 51, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(fixture);
+    GameItem old_selection[3], visible = {0};
+    memset(old_selection, 0, sizeof(old_selection));
+    for (int i = 0; i < 3; i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "assets/artwork/scroll-%d.png", i);
+        assert(IMG_SavePNG(fixture, path) == 0);
+        snprintf(old_selection[i].cover_url, sizeof(old_selection[i].cover_url), "local:%s", path);
+        artwork_prefetch(app, &old_selection[i], 110);
+    }
+    assert(IMG_SavePNG(fixture, "assets/artwork/scroll-visible.png") == 0);
+    SDL_FreeSurface(fixture);
+    SDL_strlcpy(visible.cover_url, "local:assets/artwork/scroll-visible.png", sizeof(visible.cover_url));
+    int pending = 0;
+    for (int tries = 0; tries < 200 && pending < 3; tries++) {
+        SDL_Delay(5); pending = 0;
+        SDL_LockMutex(app->artwork->mutex);
+        for (int i = 0; i < ART_SLOTS; i++) if (app->artwork->entries[i].surface) pending++;
+        SDL_UnlockMutex(app->artwork->mutex);
+    }
+    assert(pending == 3);
+    /* Three old hero images should not block a current lower-priority cover. */
+    Uint32 start = SDL_GetTicks();
+    SDL_Texture *texture = NULL;
+    int w = 0, h = 0;
+    do {
+        texture = artwork_get(app, &visible, false, 80, &w, &h);
+        if (!texture) SDL_Delay(5);
+    } while (!texture && SDL_GetTicks()-start < 500);
+    assert(texture && w == 37 && h == 51);
+    printf("Visible cached cover replaced stale hero prefetch in %u ms.\n", SDL_GetTicks()-start);
+    /* Discarding decoded work is not a load failure or a reason to delay reuse. */
+    SDL_LockMutex(app->artwork->mutex);
+    for (int i = 0; i < ART_SLOTS; i++) {
+        ArtworkEntry *entry = &app->artwork->entries[i];
+        assert(!entry->failed);
+    }
+    SDL_UnlockMutex(app->artwork->mutex);
+    for (int old = 0; old < 3; old++) {
+        start = SDL_GetTicks(); texture = NULL;
+        do {
+            texture = artwork_get(app, &old_selection[old], false, 100, &w, &h);
+            if (!texture) SDL_Delay(5);
+        } while (!texture && SDL_GetTicks()-start < 500);
+        assert(texture && w == 37 && h == 51);
+    }
+    SDL_LockMutex(app->artwork->mutex);
+    int reserved = 0;
+    for (int i = 0; i < ART_SLOTS; i++) {
+        ArtworkEntry *entry = &app->artwork->entries[i];
+        reserved += (entry->surface != NULL) + entry->busy;
+    }
+    assert(reserved <= 3 && app->artwork->bytes <= ART_BUDGET);
+    SDL_UnlockMutex(app->artwork->mutex);
+    artwork_destroy(app);
+    free(app);
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_WEBP);
@@ -37,6 +101,7 @@ int main(void) {
     SDL_Surface *screen = SDL_CreateRGBSurfaceWithFormat(0, 640, 360, 32, SDL_PIXELFORMAT_RGBA32);
     app->renderer = SDL_CreateSoftwareRenderer(screen);
     assert(app->renderer);
+    test_scroll_queue(app->renderer);
     SDL_Rect fit = artwork_fit(200, 400, (SDL_Rect){10,20,320,180}, false);
     assert(fit.x == 125 && fit.y == 20 && fit.w == 90 && fit.h == 180);
     fit = artwork_fit(400,400,(SDL_Rect){0,0,320,180},false);

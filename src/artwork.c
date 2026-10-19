@@ -13,6 +13,7 @@
 
 #define ART_SLOTS 64
 #define ART_BUDGET (48u * 1024u * 1024u)
+#define ART_PRIORITY_WINDOW_MS 100u
 #ifdef __PS5__
 #define ART_OVERRIDES WOLODRIVE_DATA_PATH "/artwork"
 #else
@@ -185,6 +186,12 @@ static SDL_Surface *artwork_resize(SDL_Surface *source, bool soft) {
     return small;
 }
 
+static int artwork_priority(const ArtworkEntry *entry, Uint32 now) {
+    /* Requests outside the current browsing window must not retain hero priority
+       until the two-second stale-surface cleanup. */
+    return now - entry->used <= ART_PRIORITY_WINDOW_MS ? entry->priority : 0;
+}
+
 static int artwork_run_worker(struct ArtworkCache *cache, bool downloading) {
     SDL_LockMutex(cache->mutex);
     while (!SDL_AtomicGet(&cache->stop)) {
@@ -211,22 +218,24 @@ static int artwork_run_worker(struct ArtworkCache *cache, bool downloading) {
                 if (entry->disk_tried && now-entry->disk_checked < 1000) continue;
                 if (entry->failed && !entry->needs_download && (Sint32)(now-entry->retry) < 0) continue;
             }
-            if (!next || entry->priority > next->priority ||
-                (entry->priority == next->priority && entry->used > next->used)) next = entry;
+            if (!next || artwork_priority(entry, now) > artwork_priority(next, now) ||
+                (artwork_priority(entry, now) == artwork_priority(next, now) && now-entry->used < now-next->used)) next = entry;
         }
         if (!next) { SDL_CondWaitTimeout(cache->condition, cache->mutex, 100); continue; }
         if (pending + busy >= 3) {
             ArtworkEntry *lowest = NULL;
             for (int i = 0; i < ART_SLOTS; i++) {
                 ArtworkEntry *entry = &cache->entries[i];
-                if (entry->surface && (!lowest || entry->priority < lowest->priority)) lowest = entry;
+                if (entry->surface && (!lowest || artwork_priority(entry, now) < artwork_priority(lowest, now))) lowest = entry;
             }
             /* Nearby prefetch must never block a newly selected visible image. */
-            if (!lowest || lowest->priority >= next->priority) {
+            if (!lowest || artwork_priority(lowest, now) >= artwork_priority(next, now)) {
                 SDL_CondWaitTimeout(cache->condition, cache->mutex, 100); continue;
             }
             SDL_FreeSurface(lowest->surface); lowest->surface = NULL;
-            lowest->failed = true; lowest->retry = now + 2000;
+            /* Requeue discarded decoded work without inventing a load failure
+               and its retry cooldown. Priority/capacity rules prevent thrashing. */
+            lowest->failed = false; lowest->retry = 0;
             lowest->needs_download = false;
             lowest->disk_tried = false;
         }
@@ -334,7 +343,7 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
         entry = oldest;
     }
     if (entry) {
-        if (now-entry->priority_tick > 100) {
+        if (now-entry->priority_tick > ART_PRIORITY_WINDOW_MS) {
             entry->priority = priority; entry->priority_tick = now;
         } else entry->priority = SDL_max(entry->priority, priority);
         entry->used = now;

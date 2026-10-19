@@ -259,6 +259,25 @@ remain unverified; WSL's software renderer default and explicit override are pre
 The updated WSLg preview was inspected fully visible, with readable text, loaded
 covers, and live Right-key selection, carousel and background updates.
 
+The subsequent scrolling fix expires artwork request priority after 100 ms without
+a new request. This lets currently visible covers displace decoded backgrounds
+from old selections. Discarding decoded work now requeues it without marking the
+image as failed or imposing the former two-second cooldown. Network failure retry
+delays, the three-load/surface limit and 48 MiB texture budget remain unchanged.
+A headless rapid-scroll replay using 128 real catalog items and their local cache
+reproduced 1,929–2,003 ms waits after stopping before the fix; the same eight stops
+completed with all visible covers ready in 16–111 ms afterward. The offline UI
+benchmark measured 15.95 ms/frame (62.7 FPS) during navigation at 1280×720.
+
+This follow-up passed the Linux build and full automated suite through WSL,
+including a regression that fills the decoded queue with old high-priority
+backgrounds, requests a lower-priority visible cover, then revisits discarded
+images. The standalone downloader tests also passed on native Windows. Native
+Windows app build/launch still lacks a configured target/toolchain, a native Linux
+graphical session is unavailable, and the PS5 SDK is missing. No live graphical
+checks were performed for this follow-up: repository instructions prohibit
+Computer Use and UI automation. Headless timing/tests do not verify live graphics.
+
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
 **Sega**, **Nintendo**, **Atari**, **SNK**, **NEC**, **Bandai**, **Other consoles**, and
