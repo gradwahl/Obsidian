@@ -119,11 +119,12 @@ typedef struct {
     float target_scroll_x;
 } CarouselRow;
 
-#define MAX_LIBRARY_ARTWORK 64
+#define MAX_LIBRARY_ARTWORK 128
 typedef struct {
     const char *path;
     SDL_Texture *texture;
     int width, height;
+    SDL_Rect source_bounds;
 } LibraryArtwork;
 
 typedef struct {

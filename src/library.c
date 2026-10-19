@@ -4,57 +4,57 @@
 #define COUNT(items) ((int)(sizeof(items) / sizeof((items)[0])))
 
 static const LibraryConsole sony[] = {
-    {"PlayStation", NULL, "assets/library/consoles/sony-ps1.png"},
-    {"PlayStation 2", NULL, "assets/library/consoles/sony-ps2.png"},
-    {"PlayStation 3", NULL, "assets/library/consoles/sony-ps3.jpg"},
-    {"PlayStation 4", "CUSA", "assets/library/consoles/sony-ps4.png"},
-    {"PlayStation 5", "PPSA", "assets/library/consoles/sony-ps5.png"},
-    {"PSP", NULL, "assets/library/consoles/sony-psp.png"},
-    {"PlayStation Vita", NULL, "assets/library/consoles/sony-vita.png"}
+    {"PlayStation", NULL, "assets/library/consoles/sony-ps1.png", "assets/library/logos/sony-ps1.png"},
+    {"PlayStation 2", NULL, "assets/library/consoles/sony-ps2.png", "assets/library/logos/sony-ps2.png"},
+    {"PlayStation 3", NULL, "assets/library/consoles/sony-ps3.png", "assets/library/logos/sony-ps3.png"},
+    {"PlayStation 4", "CUSA", "assets/library/consoles/sony-ps4.png", "assets/library/logos/sony-ps4.png"},
+    {"PlayStation 5", "PPSA", "assets/library/consoles/sony-ps5.png", "assets/library/logos/sony-ps5.png"},
+    {"PSP", NULL, "assets/library/consoles/sony-psp.png", "assets/library/logos/sony-psp.png"},
+    {"PlayStation Vita", NULL, "assets/library/consoles/sony-vita.png", "assets/library/logos/sony-vita.png"}
 };
 static const LibraryConsole microsoft[] = {
-    {"Xbox", NULL, "assets/library/consoles/microsoft-xbox.png"},
-    {"Xbox 360", NULL, "assets/library/consoles/microsoft-xbox360.png"},
-    {"Xbox One", NULL, "assets/library/consoles/microsoft-xboxone.jpg"},
-    {"Xbox Series X / S", NULL, "assets/library/consoles/microsoft-series.png"}
+    {"Xbox", NULL, "assets/library/consoles/microsoft-xbox.png", "assets/library/logos/microsoft-xbox.png"},
+    {"Xbox 360", NULL, "assets/library/consoles/microsoft-xbox360.png", "assets/library/logos/microsoft-xbox360.png"},
+    {"Xbox One", NULL, "assets/library/consoles/microsoft-xboxone.png", "assets/library/logos/microsoft-xboxone.png"},
+    {"Xbox Series X / S", NULL, "assets/library/consoles/microsoft-series.png", "assets/library/logos/microsoft-series.png"}
 };
 static const LibraryConsole sega[] = {
-    {"Master System", NULL, "assets/library/consoles/sega-master.png"},
-    {"Mega Drive / Genesis", NULL, "assets/library/consoles/sega-megadrive.jpg"},
-    {"Game Gear", NULL, "assets/library/consoles/sega-gamegear.png"},
-    {"Sega CD / Mega-CD", NULL, "assets/library/consoles/sega-cd.jpg"},
-    {"32X", NULL, "assets/library/consoles/sega-32x.jpg"},
-    {"Saturn", NULL, "assets/library/consoles/sega-saturn.png"},
-    {"Dreamcast", NULL, "assets/library/consoles/sega-dreamcast.png"}
+    {"Master System", NULL, "assets/library/consoles/sega-master.png", "assets/library/logos/sega-master.png"},
+    {"Mega Drive / Genesis", NULL, "assets/library/consoles/sega-megadrive.png", "assets/library/logos/sega-megadrive.png"},
+    {"Game Gear", NULL, "assets/library/consoles/sega-gamegear.png", "assets/library/logos/sega-gamegear.png"},
+    {"Sega CD / Mega-CD", NULL, "assets/library/consoles/sega-cd.png", "assets/library/logos/sega-cd.png"},
+    {"32X", NULL, "assets/library/consoles/sega-32x.png", "assets/library/logos/sega-32x.png"},
+    {"Saturn", NULL, "assets/library/consoles/sega-saturn.png", "assets/library/logos/sega-saturn.png"},
+    {"Dreamcast", NULL, "assets/library/consoles/sega-dreamcast.png", "assets/library/logos/sega-dreamcast.png"}
 };
 static const LibraryConsole nintendo[] = {
-    {"NES / Famicom", NULL, "assets/library/consoles/nintendo-nes.png"},
-    {"Super Nintendo", NULL, "assets/library/consoles/nintendo-snes.png"},
-    {"Nintendo 64", NULL, "assets/library/consoles/nintendo-n64.png"},
-    {"GameCube", NULL, "assets/library/consoles/nintendo-gamecube.png"},
-    {"Wii", NULL, "assets/library/consoles/nintendo-wii.png"},
-    {"Wii U", NULL, "assets/library/consoles/nintendo-wiiu.png"},
-    {"Nintendo Switch", NULL, "assets/library/consoles/nintendo-switch.png"},
-    {"Nintendo Switch 2", NULL, "assets/library/consoles/nintendo-switch2.jpg"},
-    {"Game Boy", NULL, "assets/library/consoles/nintendo-gameboy.png"},
-    {"Game Boy Color", NULL, "assets/library/consoles/nintendo-gbc.png"},
-    {"Game Boy Advance", NULL, "assets/library/consoles/nintendo-gba.png"},
-    {"Nintendo DS", NULL, "assets/library/consoles/nintendo-ds.png"},
-    {"Nintendo 3DS", NULL, "assets/library/consoles/nintendo-3ds.png"},
-    {"Virtual Boy", NULL, "assets/library/consoles/nintendo-virtualboy.png"}
+    {"NES / Famicom", NULL, "assets/library/consoles/nintendo-nes.png", "assets/library/logos/nintendo-nes.png"},
+    {"Super Nintendo", NULL, "assets/library/consoles/nintendo-snes.png", "assets/library/logos/nintendo-snes.png"},
+    {"Nintendo 64", NULL, "assets/library/consoles/nintendo-n64.png", "assets/library/logos/nintendo-n64.png"},
+    {"GameCube", NULL, "assets/library/consoles/nintendo-gamecube.png", "assets/library/logos/nintendo-gamecube.png"},
+    {"Wii", NULL, "assets/library/consoles/nintendo-wii.png", "assets/library/logos/nintendo-wii.png"},
+    {"Wii U", NULL, "assets/library/consoles/nintendo-wiiu.png", "assets/library/logos/nintendo-wiiu.png"},
+    {"Nintendo Switch", NULL, "assets/library/consoles/nintendo-switch.png", "assets/library/logos/nintendo-switch.png"},
+    {"Nintendo Switch 2", NULL, "assets/library/consoles/nintendo-switch2.png", "assets/library/logos/nintendo-switch2.png"},
+    {"Game Boy", NULL, "assets/library/consoles/nintendo-gameboy.png", "assets/library/logos/nintendo-gameboy.png"},
+    {"Game Boy Color", NULL, "assets/library/consoles/nintendo-gbc.png", "assets/library/logos/nintendo-gbc.png"},
+    {"Game Boy Advance", NULL, "assets/library/consoles/nintendo-gba.png", "assets/library/logos/nintendo-gba.png"},
+    {"Nintendo DS", NULL, "assets/library/consoles/nintendo-ds.png", "assets/library/logos/nintendo-ds.png"},
+    {"Nintendo 3DS", NULL, "assets/library/consoles/nintendo-3ds.png", "assets/library/logos/nintendo-3ds.png"},
+    {"Virtual Boy", NULL, "assets/library/consoles/nintendo-virtualboy.png", "assets/library/logos/nintendo-virtualboy.png"}
 };
 static const LibraryConsole atari[] = {
-    {"Atari 2600", NULL, "assets/library/consoles/atari-2600.png"},
-    {"Atari 5200", NULL, "assets/library/consoles/atari-5200.jpg"},
-    {"Atari 7800", NULL, "assets/library/consoles/atari-7800.png"},
-    {"Atari Lynx", NULL, "assets/library/consoles/atari-lynx.png"},
-    {"Atari Jaguar", NULL, "assets/library/consoles/atari-jaguar.png"}
+    {"Atari 2600", NULL, "assets/library/consoles/atari-2600.png", "assets/library/logos/atari-2600.png"},
+    {"Atari 5200", NULL, "assets/library/consoles/atari-5200.png", "assets/library/logos/atari-5200.png"},
+    {"Atari 7800", NULL, "assets/library/consoles/atari-7800.png", "assets/library/logos/atari-7800.png"},
+    {"Atari Lynx", NULL, "assets/library/consoles/atari-lynx.png", "assets/library/logos/atari-lynx.png"},
+    {"Atari Jaguar", NULL, "assets/library/consoles/atari-jaguar.png", "assets/library/logos/atari-jaguar.png"}
 };
 static const LibraryConsole snk[] = {
-    {"Neo Geo AES / MVS", NULL, "assets/library/consoles/snk-neogeo.png"},
-    {"Neo Geo CD", NULL, "assets/library/consoles/snk-cd.png"},
-    {"Neo Geo Pocket", NULL, "assets/library/consoles/snk-pocket.jpg"},
-    {"Neo Geo Pocket Color", NULL, "assets/library/consoles/snk-pocketcolor.jpg"}
+    {"Neo Geo AES / MVS", NULL, "assets/library/consoles/snk-neogeo.png", "assets/library/logos/snk-neogeo.png"},
+    {"Neo Geo CD", NULL, "assets/library/consoles/snk-cd.png", "assets/library/logos/snk-cd.png"},
+    {"Neo Geo Pocket", NULL, "assets/library/consoles/snk-pocket.png", "assets/library/logos/snk-pocket.png"},
+    {"Neo Geo Pocket Color", NULL, "assets/library/consoles/snk-pocketcolor.png", "assets/library/logos/snk-pocketcolor.png"}
 };
 static const LibraryCompany companies[] = {
     {"Sony", 0, 112, 204, sony, COUNT(sony), "assets/library/companies/sony.png"},

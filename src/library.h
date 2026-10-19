@@ -11,6 +11,7 @@ typedef struct {
     /* NULL means this platform has no supported catalog mapping yet. */
     const char *title_id_prefix;
     const char *artwork_path;
+    const char *logo_path;
 } LibraryConsole;
 
 typedef struct {

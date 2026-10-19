@@ -39,15 +39,16 @@ downloading at most 384 distinct covers per sync.
 
 **Games/Roms** opens large square company tiles for **Sony**, **Microsoft**,
 **Sega**, **Nintendo**, **Atari**, and **SNK**. Opening a company shows its consoles,
-including handhelds. Company tiles use their logos; console tiles show photos of
-the actual hardware with a small name label. All six logos and 41 console photos
-are bundled under `assets/library/` and work offline. Images retain their aspect
-ratio and are fitted completely inside the tile rather than cropped. Missing
-assets fall back to a readable name. Tiles and image panels are black. During
-texture loading, plain near-white backgrounds connected to the image border are
-made transparent, while enclosed white parts of the hardware are preserved.
-Dark logo pixels are lightened for contrast; colored branding is retained. These
-display adjustments are cached and do not alter the bundled source files.
+including handhelds. Company tiles use their logos; console tiles show hardware
+photos, a console logo, and a small name label. All six company logos, 41 console
+logos and 41 transparent hardware images are bundled under `assets/library/`
+and work offline. Cards use charcoal `#181818`; only the focused card has a white
+selection border. Hardware images retain their source alpha and colors, with no
+runtime background removal. Transparent padding is excluded from sizing so the
+products fill a consistent image area without stretching or cutting off hardware.
+Logos are displayed in white with their original alpha for consistent contrast.
+Missing assets fall back to a readable name. The 32X and Switch 2 use cutouts
+prepared with imagegen from the attributed photos; other cutouts are sourced PNGs.
 Sources, authors, individual image licenses,
 and download hashes are recorded in [the artwork credits](assets/library/CREDITS.md)
 and `assets/library/SOURCES.json`.

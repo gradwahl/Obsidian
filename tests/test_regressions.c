@@ -325,16 +325,33 @@ static void test_tv_catalog_navigation(void) {
         for (int i = 0; i < brand->console_count; i++) {
             LibraryArtwork *art = load_library_artwork(app, brand->consoles[i].artwork_path);
             assert(art && art->texture && art->width > 0 && art->height > 0);
+            LibraryArtwork *mark = load_library_artwork(app, brand->consoles[i].logo_path);
+            assert(mark && mark->texture && mark->source_bounds.w > 0 && mark->source_bounds.h > 0);
+            SDL_Surface *original = IMG_Load(brand->consoles[i].artwork_path);
+            assert(original);
+            SDL_Surface *rgba = SDL_ConvertSurfaceFormat(original, SDL_PIXELFORMAT_RGBA32, 0);
+            assert(rgba);
+            bool transparent = false, opaque = false;
+            for (int y = 0; y < rgba->h; y++) {
+                for (int x = 0; x < rgba->w; x++) {
+                    Uint8 alpha = *((Uint8 *)rgba->pixels + y * rgba->pitch + x * 4 + 3);
+                    transparent |= alpha == 0;
+                    opaque |= alpha == 255;
+                }
+            }
+            assert(transparent && opaque); /* Native cutout, no runtime white key. */
+            SDL_FreeSurface(rgba);
+            SDL_FreeSurface(original);
         }
     }
-    assert(app->library_artwork_count == 47);
+    assert(app->library_artwork_count == 88);
     const char *logo_path = library_company_at(0)->artwork_path;
     LibraryArtwork *logo = load_library_artwork(app, logo_path);
-    assert(load_library_artwork(app, logo_path) == logo && app->library_artwork_count == 47);
+    assert(load_library_artwork(app, logo_path) == logo && app->library_artwork_count == 88);
     assert(!render_library_artwork(app, "assets/library/missing-test-image.png", (SDL_Rect){0, 0, 20, 20}));
-    assert(app->library_artwork_count == 48);
+    assert(app->library_artwork_count == 89);
     assert(!render_library_artwork(app, "assets/library/missing-test-image.png", (SDL_Rect){0, 0, 20, 20}));
-    assert(app->library_artwork_count == 48);
+    assert(app->library_artwork_count == 89);
     /* Resolve bundled assets relative to the executable if cwd is not the repo. */
     char working_directory[4096];
     assert(getcwd(working_directory, sizeof(working_directory)));
@@ -347,7 +364,7 @@ static void test_tv_catalog_navigation(void) {
     ui_cleanup(relocated);
     free(relocated);
     assert(chdir(working_directory) == 0);
-    puts("All six logos and 41 hardware images decode, cache, fit tiles, and resolve outside the repo working directory.");
+    puts("All six company logos, 41 console logos and 41 native-alpha hardware images decode, cache and resolve outside the repo.");
     puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);
@@ -359,29 +376,24 @@ static void test_tv_catalog_navigation(void) {
     puts("Six labeled sidebar views, keyboard/controller/mouse navigation, mixed game formats, action footer and empty states passed.");
 }
 
-static void test_black_artwork_background(void) {
+static void test_native_artwork_bounds(void) {
     SDL_Surface *image = SDL_CreateRGBSurfaceWithFormat(0, 5, 5, 32, SDL_PIXELFORMAT_RGBA32);
     assert(image);
-    SDL_FillRect(image, NULL, SDL_MapRGBA(image->format, 255, 255, 255, 255));
-    SDL_Rect hardware = {1, 1, 3, 3}, white_panel = {2, 2, 1, 1}, colored_logo = {1, 1, 1, 1};
-    SDL_FillRect(image, &hardware, SDL_MapRGBA(image->format, 0, 0, 0, 255));
-    SDL_FillRect(image, &white_panel, SDL_MapRGBA(image->format, 255, 255, 255, 255));
-    SDL_FillRect(image, &colored_logo, SDL_MapRGBA(image->format, 0, 80, 200, 180));
-    prepare_library_artwork(image, false);
-    Uint8 *outside = image->pixels;
-    Uint8 *body = (Uint8 *)image->pixels + image->pitch + 2 * 4;
-    Uint8 *panel = (Uint8 *)image->pixels + 2 * image->pitch + 2 * 4;
-    Uint8 *color = (Uint8 *)image->pixels + image->pitch + 4;
-    assert(outside[3] == 0);
-    assert(body[0] == 0 && body[1] == 0 && body[2] == 0 && body[3] == 255);
-    assert(panel[0] == 255 && panel[1] == 255 && panel[2] == 255 && panel[3] == 255);
-    assert(color[0] == 0 && color[1] == 80 && color[2] == 200 && color[3] == 180);
-    prepare_library_artwork(image, true);
-    assert(outside[3] == 0);
-    assert(body[0] == 245 && body[1] == 245 && body[2] == 245 && body[3] == 255);
-    assert(color[0] == 0 && color[1] == 80 && color[2] == 200 && color[3] == 180);
+    SDL_FillRect(image, NULL, SDL_MapRGBA(image->format, 0, 0, 0, 0));
+    SDL_Rect body = {1, 1, 3, 3}, panel_rect = {2, 2, 1, 1};
+    SDL_FillRect(image, &body, SDL_MapRGBA(image->format, 0, 0, 0, 255));
+    SDL_FillRect(image, &panel_rect, SDL_MapRGBA(image->format, 255, 255, 255, 255));
+    SDL_Rect bounds = library_alpha_bounds(image);
+    assert(bounds.x == 1 && bounds.y == 1 && bounds.w == 3 && bounds.h == 3);
+    Uint8 *white_panel = (Uint8 *)image->pixels + 2 * image->pitch + 2 * 4;
+    Uint8 *black_body = (Uint8 *)image->pixels + image->pitch + 4;
+    assert(white_panel[0] == 255 && white_panel[3] == 255);
+    assert(black_body[0] == 0 && black_body[3] == 255);
+    prepare_library_logo(image);
+    assert(black_body[0] == 245 && black_body[3] == 255);
+    assert(((Uint8 *)image->pixels)[3] == 0);
     SDL_FreeSurface(image);
-    puts("Black tile artwork: exterior white removed, white hardware preserved, dark logos readable, colors and alpha retained.");
+    puts("Native-alpha fitting preserves white and black hardware; monochrome logos retain their alpha.");
 }
 
 static void test_latest_catalog_games(void) {
@@ -459,7 +471,7 @@ int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
     test_truthful_catalog_state();
-    test_black_artwork_background();
+    test_native_artwork_bounds();
     test_latest_catalog_games();
     test_tv_catalog_navigation();
     const int sizes[][2] = {{1280, 720}, {1365, 767}, {1920, 1080}, {800, 600}};

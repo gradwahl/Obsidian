@@ -1167,60 +1167,32 @@ static void render_library_breadcrumb(WolodriveApp *app) {
                      (SDL_Rect){CONTENT_X + 204, 24, 1150, 50});
 }
 
-/* Change the display matte without changing bundled source photographs.
-   Only near-white pixels connected to an image edge are made transparent;
-   enclosed white console panels remain intact. RGBA32 has byte order RGBA. */
-static void prepare_library_artwork(SDL_Surface *surface, bool logo) {
-    if (SDL_LockSurface(surface) != 0) return;
-    size_t count = (size_t)surface->w * surface->h;
-    Uint8 *visited = calloc(count, 1);
-    size_t *queue = count <= SIZE_MAX / sizeof(size_t) ? malloc(count * sizeof(size_t)) : NULL;
-    if (!visited || !queue) {
-        free(visited);
-        free(queue);
-        SDL_UnlockSurface(surface);
-        return;
-    }
-    size_t head = 0, tail = 0;
+/* Native alpha defines the product bounds; hardware pixels are never keyed out. */
+static SDL_Rect library_alpha_bounds(SDL_Surface *surface) {
+    int left = surface->w, top = surface->h, right = -1, bottom = -1;
+    if (SDL_LockSurface(surface) != 0) return (SDL_Rect){0, 0, surface->w, surface->h};
     for (int y = 0; y < surface->h; y++) {
         for (int x = 0; x < surface->w; x++) {
-            if (x && y && x != surface->w - 1 && y != surface->h - 1) continue;
+            const Uint8 *pixel = (const Uint8 *)surface->pixels + y * surface->pitch + x * 4;
+            if (pixel[3] < 16) continue;
+            left = SDL_min(left, x); top = SDL_min(top, y);
+            right = SDL_max(right, x); bottom = SDL_max(bottom, y);
+        }
+    }
+    SDL_UnlockSurface(surface);
+    return right < left ? (SDL_Rect){0, 0, 0, 0} :
+                         (SDL_Rect){left, top, right - left + 1, bottom - top + 1};
+}
+
+/* White marks have consistent contrast on charcoal; preserve the logo's alpha. */
+static void prepare_library_logo(SDL_Surface *surface) {
+    if (SDL_LockSurface(surface) != 0) return;
+    for (int y = 0; y < surface->h; y++) {
+        for (int x = 0; x < surface->w; x++) {
             Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
-            size_t index = (size_t)y * surface->w + x;
-            if (!pixel[3] || (pixel[0] >= 248 && pixel[1] >= 248 && pixel[2] >= 248)) {
-                visited[index] = 1;
-                queue[tail++] = index;
-            }
+            pixel[0] = pixel[1] = pixel[2] = 245;
         }
     }
-    while (head < tail) {
-        size_t index = queue[head++];
-        int x = (int)(index % surface->w), y = (int)(index / surface->w);
-        Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
-        pixel[3] = 0;
-        const int dx[] = {-1, 1, 0, 0}, dy[] = {0, 0, -1, 1};
-        for (int i = 0; i < 4; i++) {
-            int nx = x + dx[i], ny = y + dy[i];
-            if (nx < 0 || ny < 0 || nx >= surface->w || ny >= surface->h) continue;
-            size_t next = (size_t)ny * surface->w + nx;
-            if (visited[next]) continue;
-            visited[next] = 1;
-            Uint8 *neighbor = (Uint8 *)surface->pixels + ny * surface->pitch + nx * 4;
-            if (!neighbor[3] || (neighbor[0] >= 248 && neighbor[1] >= 248 && neighbor[2] >= 248))
-                queue[tail++] = next;
-        }
-    }
-    if (logo) {
-        for (int y = 0; y < surface->h; y++) {
-            for (int x = 0; x < surface->w; x++) {
-                Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
-                if (pixel[0] < 96 && pixel[1] < 96 && pixel[2] < 96)
-                    pixel[0] = pixel[1] = pixel[2] = 245;
-            }
-        }
-    }
-    free(visited);
-    free(queue);
     SDL_UnlockSurface(surface);
 }
 
@@ -1263,8 +1235,10 @@ static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path)
     if (display) {
         SDL_FreeSurface(surface);
         surface = display;
-        prepare_library_artwork(surface, strstr(path, "/companies/") != NULL);
+        if (strstr(path, "/companies/") || strstr(path, "/logos/")) prepare_library_logo(surface);
+        art->source_bounds = library_alpha_bounds(surface);
     }
+    if (!display) art->source_bounds = (SDL_Rect){0, 0, surface->w, surface->h};
     art->texture = SDL_CreateTextureFromSurface(app->renderer, surface);
     SDL_FreeSurface(surface);
     if (art->texture) SDL_SetTextureBlendMode(art->texture, SDL_BLENDMODE_BLEND);
@@ -1274,11 +1248,12 @@ static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path)
 static bool render_library_artwork(WolodriveApp *app, const char *path, SDL_Rect bounds) {
     LibraryArtwork *art = load_library_artwork(app, path);
     if (!art || !art->texture || art->width <= 0 || art->height <= 0) return false;
-    float scale = fminf((float)bounds.w / art->width, (float)bounds.h / art->height);
-    int width = (int)(art->width * scale), height = (int)(art->height * scale);
+    if (art->source_bounds.w <= 0 || art->source_bounds.h <= 0) return false;
+    float scale = fminf((float)bounds.w / art->source_bounds.w, (float)bounds.h / art->source_bounds.h);
+    int width = (int)(art->source_bounds.w * scale), height = (int)(art->source_bounds.h * scale);
     SDL_Rect destination = {bounds.x + (bounds.w - width) / 2,
                             bounds.y + (bounds.h - height) / 2, width, height};
-    SDL_RenderCopy(app->renderer, art->texture, NULL, &destination);
+    SDL_RenderCopy(app->renderer, art->texture, &art->source_bounds, &destination);
     return true;
 }
 
@@ -1299,28 +1274,26 @@ static void render_library_grid(WolodriveApp *app) {
         const LibraryCompany *brand = companies ? library_company_at(i) : company;
         const LibraryConsole *console = companies ? NULL : library_console_at(app->library_company, i);
         bool focused = !app->library_sidebar_focus && i == selected;
-        fill_rect(r, tile.x, tile.y, tile.w, tile.h, 0, 0, 0, 255);
-        fill_rect(r, tile.x, tile.y, tile.w, 5, brand->r, brand->g, brand->b, 255);
-        draw_border(r, tile.x, tile.y, tile.w, tile.h, 1, 65, 65, 65, 255);
-        SDL_Rect panel = {tile.x + 16, tile.y + 20, tile.w - 32, 208};
-        fill_rect(r, panel.x, panel.y, panel.w, panel.h, 0, 0, 0, 255);
-        SDL_Rect image = {panel.x + 16, panel.y + 16, panel.w - 32, panel.h - 32};
+        fill_rect(r, tile.x, tile.y, tile.w, tile.h, 24, 24, 24, 255);
+        SDL_Rect image = companies ? (SDL_Rect){tile.x + 32, tile.y + 66, tile.w - 64, 144} :
+                                    (SDL_Rect){tile.x + 16, tile.y + 14, tile.w - 32, 194};
         if (!render_library_artwork(app, companies ? brand->artwork_path : console->artwork_path, image)) {
             draw_fitted_text(r, app->font_row_title, companies ? brand->name : console->name,
                              image, white, image, true);
         }
         if (!companies) {
-            SDL_Rect title = {tile.x + 16, tile.y + 234, tile.w - 32, 34};
-            draw_fitted_text(r, app->font_small, console->name, title, white, title, true);
+            SDL_Rect logo = {tile.x + 36, tile.y + 220, tile.w - 72, 36};
+            render_library_artwork(app, console->logo_path, logo);
+            SDL_Rect title = {tile.x + 16, tile.y + 264, tile.w - 32, 24};
+            draw_fitted_text(r, app->font_micro, console->name, title, white, title, true);
         }
         char subtitle[100];
         snprintf(subtitle, sizeof(subtitle), TR(app, companies ? TXT_CONSOLE_COUNT : TXT_LIBRARY_GAME_COUNT),
                  companies ? brand->console_count : library_console_game_count(app, console));
-        SDL_Rect footer = {tile.x + 24, tile.y + (companies ? 248 : 276), tile.w - 48, companies ? 40 : 28};
+        SDL_Rect footer = {tile.x + 24, tile.y + (companies ? 256 : 292), tile.w - 48, companies ? 32 : 20};
         draw_fitted_text(r, companies ? app->font_small : app->font_micro,
                          subtitle, footer, muted, footer, true);
-        if (focused) draw_border(r, tile.x - 4, tile.y - 4, tile.w + 8, tile.h + 8,
-                                 4, 245, 245, 245, 255);
+        if (focused) draw_border(r, tile.x, tile.y, tile.w, tile.h, 3, 245, 245, 245, 255);
     }
     char position[50];
     snprintf(position, sizeof(position), "%d / %d", selected + 1, count);
