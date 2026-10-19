@@ -68,6 +68,7 @@ typedef enum {
 } SidebarView;
 #define TOTAL_ROWS              VIEW_COUNT
 #define MAX_DESCRIPTION_BYTES   4096
+#define MAX_GAME_SCREENSHOTS    6
 
 typedef enum {
     FMT_EXFAT = 0,
@@ -87,6 +88,10 @@ typedef struct {
     char version[32];           /* Wersja np. 01.00 */
     char source_name[64];       /* Nazwa katalogu źródłowego Pegasus-DL */
     bool is_game;              /* Explicit category=game; utilities/DLC stay off Home. */
+    bool is_dlc;
+    char parent_title_id[32];
+    char screenshot_urls[MAX_GAME_SCREENSHOTS][512];
+    int screenshot_count;
     uint64_t catalog_added_at;  /* Validated UTC YYYYMMDDhhmmss, zero means unknown. */
     TextId description_id;      /* TEXT_COUNT means source-provided description. */
     char description[MAX_DESCRIPTION_BYTES]; /* Original plain-text catalog description. */
@@ -178,7 +183,10 @@ typedef struct {
     char search_query[128];
     GameItem *search_results[MAX_CATALOG_ITEMS];
     int search_count, search_selected, search_key;
-    bool search_results_focus, search_detail;
+    bool search_results_focus;
+    bool detail_open, detail_content_focus;
+    GameItem *detail_item, *detail_parent;
+    int detail_tab, detail_selection, detail_scroll;
     LibraryArtwork library_artwork[MAX_LIBRARY_ARTWORK];
     int library_artwork_count;
     float vertical_scroll_y;

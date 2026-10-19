@@ -157,11 +157,11 @@ static void test_search(WolodriveApp *app) {
     assert(get_focused_item(app) == selected);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
     ui_handle_input(app, &event);
-    assert(app->search_detail);
+    assert(app->detail_open);
     ui_render(app);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
     ui_handle_input(app, &event);
-    assert(!app->search_detail && get_focused_item(app) == selected);
+    assert(!app->detail_open && get_focused_item(app) == selected);
     /* UTF-8 deletion removes a whole character, and L remains usable as text. */
     app->search_query[0] = '\0';
     search_edit(app, "é中", false);
@@ -226,29 +226,117 @@ static void test_search(WolodriveApp *app) {
     assert(app->catalog_count == 311); /* Package variants remain intact. */
     app->search_selected = 0;
     app->sidebar_focus = false;
-    app->search_detail = true;
+    ui_open_game(app, &app->catalog[300]);
+    app->detail_content_focus = true;
     event.type = SDL_KEYDOWN;
     event.key.keysym.sym = SDLK_RIGHT;
     ui_handle_input(app, &event);
-    assert(get_focused_item(app) == &app->catalog[301]);
+    assert(app->detail_selection == 1);
     ui_rebuild_carousels(app);
-    assert(app->search_count == 7 && get_focused_item(app) == &app->catalog[301]);
+    assert(app->search_count == 7 && app->detail_selection == 1);
     event.key.keysym.sym = SDLK_LEFT;
     ui_handle_input(app, &event);
-    assert(get_focused_item(app) == &app->catalog[300]);
-    event.type = SDL_MOUSEBUTTONDOWN;
-    event.button.button = SDL_BUTTON_LEFT;
-    event.button.x = 950;
-    event.button.y = 650;
-    ui_handle_input(app, &event);
-    assert(get_focused_item(app) == &app->catalog[301]);
-    event.type = SDL_CONTROLLERBUTTONDOWN;
-    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
-    ui_handle_input(app, &event);
-    assert(get_focused_item(app) == &app->catalog[300]);
+    assert(app->detail_selection == 0);
     ui_render(app);
+    app->detail_open = false;
     puts("Search groups format/typography duplicates, preserves DLC/editions/platforms and cycles every retained package.");
     puts("Search: full catalog, title/ID matching, UTF-8 editing, paging, refresh, details and keyboard/controller/mouse input passed.");
+}
+
+static void test_game_details(WolodriveApp *app) {
+    const char *json = "{\"games\":["
+        "{\"titleId\":\"PPSA90000\",\"title\":\"Detail Test\",\"category\":\"game\","
+        "\"description\":\"<p>Game overview &amp; information.</p>\","
+        "\"screenshots\":[\"https://example.com/one.png\",{\"url\":\"https://example.com/two.png\"},"
+        "\"javascript:bad\",\"https://example.com/one.png\"]},"
+        "{\"titleId\":\"PPSA90000\",\"title\":\"[exFAT] Detail Test\",\"category\":\"game\"},"
+        "{\"titleId\":\"DLC90001\",\"title\":\"Expansion\",\"category\":\"dlc\",\"baseTitleId\":\"PPSA90000\"},"
+        "{\"titleId\":\"DLC90002\",\"title\":\"Unrelated expansion\",\"category\":\"dlc\",\"parentTitleId\":\"PPSA99999\"},"
+        "{\"titleId\":\"PPSA90000\",\"title\":\"Bonus DLC\",\"category\":\"dlc\"}]}";
+    int base_index = app->catalog_count;
+    assert(parse_catalog_json(app, json, "Panel source", NULL, NULL, 0) == 5);
+    GameItem *base = &app->catalog[base_index];
+    assert(base->screenshot_count == 2 && !base->download_url[0]);
+    assert(app->catalog[base_index+2].is_dlc);
+    assert(strcmp(app->catalog[base_index+2].parent_title_id, base->id_code) == 0);
+    app->active_row = VIEW_HOME;
+    app->sidebar_focus = false;
+    app->rows[VIEW_HOME].items[0] = base;
+    app->rows[VIEW_HOME].item_count = 1;
+    app->rows[VIEW_HOME].selected_col = 0;
+    SDL_Event event = {0};
+    SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_RETURN;
+    app->toast_message[0] = '\0';
+    ui_handle_input(app, &event);
+    assert(app->detail_open && app->detail_item == base && !app->toast_message[0]);
+    GameItem *entries[MAX_CATALOG_ITEMS];
+    assert(game_entries(app, entries) == 2);
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->detail_content_focus && !app->language_menu_open);
+    event.key.keysym.sym = SDLK_RETURN;
+    ui_handle_input(app, &event);
+    assert(base->state == STATE_AVAILABLE);
+    assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
+    app->toast_expire_tick = 0;
+    for (int tab = 0; tab < GAME_TAB_COUNT; tab++) {
+        event.type = SDL_MOUSEBUTTONDOWN;
+        event.button.button = SDL_BUTTON_LEFT;
+        event.button.x = game_tab_target(tab).x + 20;
+        event.button.y = game_tab_target(tab).y + 20;
+        ui_handle_input(app, &event);
+        assert(app->detail_tab == tab && app->active_row == VIEW_HOME);
+        ui_render(app);
+        if (getenv("WOLODRIVE_TEST_SCREENSHOTS")) {
+            int w, h;
+            SDL_GetRendererOutputSize(app->renderer, &w, &h);
+            SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+            assert(surface && SDL_RenderReadPixels(app->renderer, NULL, surface->format->format, surface->pixels, surface->pitch) == 0);
+            char path[80];
+            snprintf(path, sizeof(path), "build/game-panel-%d.bmp", tab);
+            assert(SDL_SaveBMP(surface, path) == 0);
+            SDL_FreeSurface(surface);
+        }
+    }
+    game_select_tab(app, GAME_DLC);
+    assert(game_entries(app, entries) == 2);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    ui_handle_input(app, &event);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app, &event);
+    assert(app->detail_parent == base && app->detail_item == &app->catalog[base_index+2]);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
+    ui_handle_input(app, &event);
+    assert(app->detail_item == base && app->detail_tab == GAME_DLC);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+    ui_handle_input(app, &event);
+    assert(app->detail_tab == GAME_SCREENSHOTS);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_B;
+    ui_handle_input(app, &event);
+    assert(!app->detail_open && app->rows[VIEW_HOME].selected_col == 0 && app->running);
+    app->active_row = VIEW_GAMES;
+    app->library_depth = LIBRARY_GAMES;
+    app->rows[VIEW_GAMES].items[0] = base;
+    app->rows[VIEW_GAMES].selected_col = 0;
+    app->rows[VIEW_GAMES].item_count = 1;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
+    ui_handle_input(app, &event);
+    assert(app->detail_open && app->detail_item == base);
+    app->detail_item = &app->catalog[base_index+1];
+    game_select_tab(app, GAME_DLC);
+    ui_render(app);
+    game_select_tab(app, GAME_SCREENSHOTS);
+    ui_render(app);
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = GAME_CLOSE.x+10;
+    event.button.y = GAME_CLOSE.y+10;
+    ui_handle_input(app, &event);
+    assert(!app->detail_open);
+    puts("Shared game panel: all entry points, four tabs, install truthfulness, related DLC, screenshot metadata and modal return passed.");
 }
 
 static void test_tv_catalog_navigation(void) {
@@ -283,13 +371,15 @@ static void test_tv_catalog_navigation(void) {
     event.button.y = CARDS_Y + 20;
     app->toast_message[0] = '\0';
     ui_handle_input(app, &event);
-    assert(app->rows[0].selected_col == 2 && !app->toast_message[0]);
+    assert(app->rows[0].selected_col == 2 && app->detail_open && !app->toast_message[0]);
+    app->detail_open = false;
     ui_update_animations(app, 1.0f);
     event.button.x = CONTENT_X + 20;
     event.button.y = CARDS_Y + CARD_HEIGHT + 20;
     ui_handle_input(app, &event);
-    assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
+    assert(app->detail_open && !app->toast_message[0]);
     assert(get_focused_item(app)->state == STATE_AVAILABLE);
+    app->detail_open = false;
 
     /* Content arrows never switch sections; only Left at the edge enters the rail. */
     event.type = SDL_KEYDOWN;
@@ -614,6 +704,7 @@ static void test_tv_catalog_navigation(void) {
     puts("All 118 artwork files for 58 systems decode, cache and resolve outside the repo.");
     puts("Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.");
     test_search(app);
+    test_game_details(app);
     ui_cleanup(app);
     SDL_DestroyRenderer(app->renderer);
     SDL_DestroyWindow(app->window);

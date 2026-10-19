@@ -521,6 +521,7 @@ void ui_rebuild_carousels(WolodriveApp *app) {
 }
 
 static GameItem *get_focused_item(WolodriveApp *app) {
+    if (app->detail_open) return app->detail_item;
     if (app->active_row == VIEW_SEARCH)
         return app->search_count ? app->search_results[app->search_selected] : NULL;
     if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) return NULL;
@@ -661,10 +662,14 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
     return action != 0 || ev->type == SDL_MOUSEWHEEL;
 }
 
+static void ui_open_game(WolodriveApp *app, GameItem *item);
+static const char *action_label(WolodriveApp *app, GameItem *item);
 #include "ui_search.h"
+#include "ui_game_details.h"
 
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_language_input(app, ev)) return;
+    if (app->detail_open) { handle_game_details_input(app, ev); return; }
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         for (int r = 0; r < TOTAL_ROWS; r++) {
             if (contains_point(sidebar_target(r), ev->button.x, ev->button.y)) {
@@ -710,11 +715,9 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 SDL_Rect card = card_target(app, col);
                 if (contains_point(card, ev->button.x, ev->button.y)) {
                     app->sidebar_focus = false;
-                    bool activate = clicked_row->selected_col == col &&
-                                    ev->button.y >= CARDS_Y + CARD_HEIGHT;
                     clicked_row->selected_col = col;
                     track_description_focus(app, get_focused_item(app));
-                    if (activate) sys_trigger_action(app, get_focused_item(app));
+                    ui_open_game(app, get_focused_item(app));
                     return;
                 }
             }
@@ -765,7 +768,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 break;
             case SDLK_RETURN:
             case SDLK_SPACE:
-                sys_trigger_action(app, get_focused_item(app));
+                ui_open_game(app, get_focused_item(app));
                 break;
             case SDLK_BACKSPACE:
             case SDLK_b:
@@ -796,7 +799,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
                 break;
             case SDL_CONTROLLER_BUTTON_A: /* [X] Cross na DualSense */
-                sys_trigger_action(app, get_focused_item(app));
+                ui_open_game(app, get_focused_item(app));
                 break;
             case SDL_CONTROLLER_BUTTON_B: /* [O] Circle na DualSense */
                 sys_cancel_action(app, get_focused_item(app));
@@ -971,7 +974,7 @@ static void render_carousels(WolodriveApp *app) {
         fill_rect(r, card.x, footer_y, card.w, CARD_FOOTER,
                   selected ? 240 : 0, selected ? 240 : 0, selected ? 240 : 0, 255);
         char status[256];
-        if (selected) snprintf(status, sizeof(status), "[X] %s", action_label(app, item));
+        if (selected) snprintf(status, sizeof(status), "[X] %s", TR(app, TXT_GAME_DETAILS));
         else snprintf(status, sizeof(status), "%s  /  %.1f GB", sys_format_short_badge(item->format), item->size_gb);
         SDL_Rect footer_clip = {SDL_max(card.x + 8, clip.x), footer_y, 0, CARD_FOOTER};
         footer_clip.w = SDL_max(0, SDL_min(card.x + card.w - 8, SCREEN_WIDTH) - footer_clip.x);
@@ -1372,7 +1375,6 @@ void ui_render(WolodriveApp *app) {
     SDL_RenderClear(r);
 
     if (app->active_row == VIEW_SEARCH) {
-        if (app->search_detail) render_hero_banner(app);
         render_search(app);
     } else if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) {
         render_library_grid(app);
@@ -1383,6 +1385,7 @@ void ui_render(WolodriveApp *app) {
     }
     render_sidebar(app);
     render_top_bar(app);
+    if (app->detail_open) render_game_details(app);
     render_toast_notification(app);
     render_language_menu(app);
 

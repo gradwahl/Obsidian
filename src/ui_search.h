@@ -33,7 +33,7 @@ static int search_platform(const GameItem *item) {
 
 static bool search_same_game(const GameItem *a, const GameItem *b) {
     char first[128], second[128];
-    if (a->is_game != b->is_game || search_platform(a) != search_platform(b)) return false;
+    if (a->is_game != b->is_game || a->is_dlc != b->is_dlc || search_platform(a) != search_platform(b)) return false;
     search_title_key(a->title, first);
     search_title_key(b->title, second);
     return first[0] && strcmp(first, second) == 0;
@@ -82,24 +82,7 @@ static void search_rebuild_locked(WolodriveApp *app) {
         }
     if (!app->search_count) {
         app->search_results_focus = false;
-        app->search_detail = false;
     }
-}
-
-/* Retain every source package; grouping is only a presentation change. */
-static void search_cycle_variant(WolodriveApp *app, int direction) {
-    GameItem *current = get_focused_item(app);
-    if (!current) return;
-    int index = (int)(current - app->catalog);
-    SDL_LockMutex(app->catalog_mutex);
-    for (int step = 1; step <= app->catalog_count; step++) {
-        int candidate = (index + direction * step + app->catalog_count) % app->catalog_count;
-        if (search_same_game(current, &app->catalog[candidate])) {
-            app->search_results[app->search_selected] = &app->catalog[candidate];
-            break;
-        }
-    }
-    SDL_UnlockMutex(app->catalog_mutex);
 }
 
 static void search_edit(WolodriveApp *app, const char *text, bool erase) {
@@ -134,25 +117,11 @@ static void search_type_key(WolodriveApp *app, int key) {
 
 static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
     if (app->active_row != VIEW_SEARCH) return false;
-    if (ev->type == SDL_TEXTINPUT && !app->sidebar_focus && !app->search_detail) {
+    if (ev->type == SDL_TEXTINPUT && !app->sidebar_focus) {
         search_edit(app, ev->text.text, false);
         return true;
     }
-    if (app->search_detail && ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
-        if (contains_point((SDL_Rect){900, 620, 900, 70}, ev->button.x, ev->button.y)) {
-            search_cycle_variant(app, 1);
-            return true;
-        }
-        if (contains_point((SDL_Rect){CONTENT_X, 24, 180, 50}, ev->button.x, ev->button.y)) {
-            app->search_detail = false;
-            return true;
-        } else if (contains_point((SDL_Rect){CONTENT_X, 915, 1100, 65}, ev->button.x, ev->button.y)) {
-            sys_trigger_action(app, get_focused_item(app));
-            return true;
-        }
-        return false;
-    }
-    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT && !app->search_detail) {
+    if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         for (int k = 0; k < SEARCH_KEYS; k++) if (contains_point(search_key_target(k), ev->button.x, ev->button.y)) {
             app->sidebar_focus = app->search_results_focus = false;
             app->search_key = k;
@@ -165,7 +134,7 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
                 app->sidebar_focus = false;
                 app->search_results_focus = true;
                 app->search_selected = i;
-                app->search_detail = true;
+                ui_open_game(app, get_focused_item(app));
                 return true;
             }
     }
@@ -179,10 +148,7 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
             case SDLK_DOWN: action = 4; break;
             case SDLK_RETURN: action = 5; break;
             case SDLK_ESCAPE: action = 6; break;
-            case SDLK_BACKSPACE:
-                if (app->search_detail) app->search_detail = false;
-                else search_edit(app, "", true);
-                return true;
+            case SDLK_BACKSPACE: search_edit(app, "", true); return true;
             case SDLK_F5: catalog_start_async_sync(app); return true;
             default: break;
         }
@@ -196,16 +162,10 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
             case SDL_CONTROLLER_BUTTON_A: action = 5; break;
             case SDL_CONTROLLER_BUTTON_B: action = 6; break;
             case SDL_CONTROLLER_BUTTON_Y:
-                if (!app->search_detail) search_edit(app, "", true);
+                search_edit(app, "", true);
                 return true;
             default: break;
         }
-    }
-    if (app->search_detail) {
-        if (action == 6) app->search_detail = false;
-        else if (action == 5) sys_trigger_action(app, get_focused_item(app));
-        else if (action == 1 || action == 2) search_cycle_variant(app, action == 1 ? -1 : 1);
-        return action != 0; /* Reuse description scrolling and Original controls. */
     }
     if (action == 6) { app->sidebar_focus = true; return true; }
     if (app->search_results_focus) {
@@ -217,7 +177,7 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
         else if (action == 3 && *selected >= 3) *selected -= 3;
         else if (action == 4 && (*selected / 3 + 1) * 3 < app->search_count)
             *selected = SDL_min(*selected + 3, app->search_count - 1);
-        else if (action == 5 && app->search_count) app->search_detail = true;
+        else if (action == 5 && app->search_count) ui_open_game(app, get_focused_item(app));
     } else {
         int *key = &app->search_key;
         if (action == 1) {
@@ -240,28 +200,6 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
 static void render_search(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245,245,245,255}, muted = {170,170,170,255};
-    if (app->search_detail) {
-        GameItem *item = get_focused_item(app);
-        if (item) render_cover_or_placeholder(app, item, CONTENT_X, 600, 530, 300, false);
-        if (item) {
-            int count = 0, position = 0;
-            SDL_LockMutex(app->catalog_mutex);
-            for (int i = 0; i < app->catalog_count; i++) if (search_same_game(item, &app->catalog[i])) {
-                count++;
-                if (item == &app->catalog[i]) position = count;
-            }
-            char label[256];
-            snprintf(label, sizeof(label), TR(app, TXT_SEARCH_VARIANTS), position, count);
-            draw_text(r, app->font_small, label, 900, 620, white, 850);
-            snprintf(label, sizeof(label), "%s   |   %s   |   %s   |   %s", item->source_name,
-                     sys_format_short_badge(item->format), item->id_code, item->version);
-            SDL_UnlockMutex(app->catalog_mutex);
-            draw_text(r, app->font_small, label, 900, 720, muted, 850);
-        }
-        draw_text(r, app->font_small, TR(app, TXT_SEARCH_DETAIL_HINT), CONTENT_X, 930, white, 0);
-        draw_text(r, app->font_small, TR(app, TXT_LIBRARY_BACK), CONTENT_X, 28, white, 0);
-        return;
-    }
     draw_text(r, app->font_row_title, TR(app, TXT_NAV_SEARCH), CONTENT_X, 70, white, 0);
     SDL_Rect query = {CONTENT_X, 130, 1540, 52};
     fill_rect(r, query.x, query.y, query.w, query.h, 24,24,24,255);

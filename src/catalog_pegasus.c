@@ -173,6 +173,31 @@ static bool json_extract_string(const char *obj_start, const char *obj_end, cons
     return false;
 }
 
+/* Locate a direct member, excluding URLs nested in media arrays or metadata. */
+static const char *json_object_value(const char *start, const char *end, const char *key) {
+    int objects = 0, arrays = 0;
+    size_t length = strlen(key);
+    for (const char *p = start; p < end; p++) {
+        if (*p == '{') objects++;
+        else if (*p == '}') objects--;
+        else if (*p == '[') arrays++;
+        else if (*p == ']') arrays--;
+        else if (*p == '"') {
+            const char *first = ++p;
+            while (p < end && *p != '"') {
+                if (*p == '\\' && p+1 < end) p++;
+                p++;
+            }
+            if (p >= end) return NULL;
+            if (objects == 1 && arrays == 0 && (size_t)(p-first) == length && strncmp(first, key, length) == 0) {
+                const char *colon = skip_ws(p+1, end);
+                if (colon < end && *colon == ':') return skip_ws(colon+1, end);
+            }
+        }
+    }
+    return NULL;
+}
+
 /* Wyciąga liczbę (np. sizeBytes lub size) dla podanego klucza */
 static double json_extract_number(const char *obj_start, const char *obj_end, const char *key) {
     char pattern[128];
@@ -212,7 +237,8 @@ static bool json_extract_download_link(const char *obj_start, const char *obj_en
     }
     if (json_extract_string(obj_start, obj_end, "downloadUrl", out, out_sz)) return true;
     if (json_extract_string(obj_start, obj_end, "pkgUrl", out, out_sz)) return true;
-    if (json_extract_string(obj_start, obj_end, "url", out, out_sz)) return true;
+    const char *url = json_object_value(obj_start, obj_end, "url");
+    if (url && url < obj_end && *url == '"') return text_decode_json_string(url+1, obj_end, out, out_sz);
     return false;
 }
 
@@ -340,12 +366,48 @@ static int cover_prefetch_locked(WolodriveApp *app, GameItem **items) {
     return count;
 }
 
+static void json_extract_screenshots(const char *start, const char *end, GameItem *item) {
+    const char *array = json_object_value(start, end, "screenshots");
+    if (!array) array = json_object_value(start, end, "screenshotUrls");
+    if (!array) return;
+    if (array >= end || *array != '[') return;
+    const char *last = find_matching_bracket(array, end, '[', ']');
+    if (!last) return;
+    item->screenshot_count = 0;
+    const char *p = array + 1;
+    while (p < last && item->screenshot_count < MAX_GAME_SCREENSHOTS) {
+        p = skip_ws(p, last);
+        if (p >= last) break;
+        if (*p == ',') { p++; continue; }
+        char url[512] = {0};
+        if (*p == '"') {
+            if (!text_decode_json_string(p+1, last, url, sizeof(url))) break;
+            p++;
+            while (p < last && *p != '"') {
+                if (*p == '\\' && p+1 < last) p++;
+                p++;
+            }
+            if (p < last) p++;
+        } else if (*p == '{') {
+            const char *object_end = find_matching_bracket(p, last, '{', '}');
+            if (!object_end) break;
+            json_extract_string(p, object_end, "url", url, sizeof(url));
+            p = object_end+1;
+        } else break;
+        if (strncmp(url, "https://", 8) != 0 && strncmp(url, "http://", 7) != 0) continue;
+        bool duplicate = false;
+        for (int i = 0; i < item->screenshot_count; i++) if (strcmp(url, item->screenshot_urls[i]) == 0) duplicate = true;
+        if (!duplicate) SDL_strlcpy(item->screenshot_urls[item->screenshot_count++], url, 512);
+    }
+}
+
 static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
                                  const char *id_code, const char *title,
                                  const char *version, const char *desc,
                                  const char *dl_url, const char *cover_url,
                                  float size_gb, PackageFormat fmt,
-                                 const char *category, uint64_t added_at) {
+                                 const char *category, uint64_t added_at,
+                                 const char *object_start, const char *object_end) {
     if (!title || title[0] == '\0') return;
 
     SDL_LockMutex(app->catalog_mutex);
@@ -377,6 +439,12 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
     if (category && category[0]) target->is_game = strcasecmp(category, "game") == 0;
+    if (category && category[0]) target->is_dlc = strcasecmp(category, "dlc") == 0;
+    char parent[32] = {0};
+    if (json_extract_string(object_start, object_end, "baseTitleId", parent, sizeof(parent)) ||
+        json_extract_string(object_start, object_end, "parentTitleId", parent, sizeof(parent)))
+        SDL_strlcpy(target->parent_title_id, parent, sizeof(target->parent_title_id));
+    json_extract_screenshots(object_start, object_end, target);
     /* A newer source for the same game counts as its newest catalog addition. */
     if (added_at > target->catalog_added_at) target->catalog_added_at = added_at;
 
@@ -524,7 +592,7 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
 
             PackageFormat fmt = detect_package_format(id_code, dl_url, fmt_str);
             register_parsed_game(app, catalog_name, id_code, title, version, desc, dl_url, cover_url,
-                                 size_gb, fmt, category, parse_catalog_date(created_at));
+                                 size_gb, fmt, category, parse_catalog_date(created_at), obj_start, obj_end);
             games_added++;
         }
 

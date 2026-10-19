@@ -20,9 +20,8 @@ changing its selection. Up/Down within content stays in the current section;
 at the top of a grid, Up keeps focus in the grid.
 Each sidebar entry has a text label and an icon: magnifier, house, gamepad,
 joystick, folder, chip, and download arrow. Click an entry to switch sections,
-or click a cover to select it. Click
-the selected card's white action footer, press **Enter/Space**, or press controller
-**Cross** to request its action. Download and installation availability is described
+or click a cover to open its game panel. **Enter/Space** or controller **Cross**
+also opens the focused game's panel. Download and installation availability is described
 below. Each category remembers its selection; the row scrolls to bring that game
 to the left edge. **Backspace / Circle** returns to the start or cancels an active
 download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
@@ -39,21 +38,45 @@ shows the loaded catalog. Unconnected sources are not searched.
 
 Search groups the same title across package formats and source typography
 (format prefixes, punctuation and trademark symbols). PS4 and PS5, DLC and named
-editions stay separate. On a result's details screen, use **Left/Right** or click
-the **Package** selector to choose another retained source package. Its source,
-format, title ID and version are shown beside the cover. Catalog entries and
+editions stay separate. The game panel's **Install** tab lists retained source
+packages with their source, format, title ID and version. Catalog entries and
 download choices are preserved; only the search cards are grouped.
 
 Move Right past the keyboard's right edge to browse results. Up/Down pages through
 all matches, nine covers at a time. Left from the first result column returns to
 the keyboard; Left from the keyboard's first column reaches the sidebar.
 **Enter / Cross**, or clicking a result, opens its description and package details.
-**Escape / Backspace / Circle**, or the on-screen Back button, returns to the
-same results. **Enter / Cross**, or clicking the action hint, requests the existing
-package action; downloading and installation remain unavailable as described below.
+**Escape / Backspace / Circle**, or the panel's **X** button, returns to the
+same results. Package actions are inside the **Install** tab.
 In the search grid, **Escape / Circle** focuses the sidebar. **F5** refreshes the
 catalog. The search query persists when switching sections; typing letters there
 does not trigger catalog shortcuts. The globe and **Square** still open languages.
+
+### Game panels
+
+Opening a game from Home, Games/Roms, Search or Downloads expands a dark panel
+with a cover strip, backdrop, title and four tabs: **Install**, **DLC**,
+**Screenshots** and **Details**. **Left/Right** changes tabs; **Down / Enter / Cross**
+focuses the content. Use **Left/Right** to browse package or DLC cards, then
+**Enter / Cross** to select. **Up** returns focus to the tabs. Mouse clicks work
+on tabs and cards. **Escape / Backspace / Circle** returns to the original list;
+from a DLC panel it first returns to the parent game. **X** closes the panel.
+
+Install lists source packages and invokes the existing package action. Installation
+and downloads are still unavailable; the panel says so and never simulates success.
+DLC includes entries with `category: "dlc"` whose `baseTitleId` or `parentTitleId`
+matches the game, or whose own title ID matches when no parent ID is supplied.
+Unrelated entries are excluded, and missing relationships show an empty state.
+
+Screenshots accepts up to six unique HTTP(S) links from a catalog's `screenshots`
+or `screenshotUrls` array, as URL strings or objects with a `url` field. Selecting
+a link opens the source image in the desktop system's default browser/viewer.
+These are external links, not an in-app screenshot gallery. PS5 cannot currently
+open them and reports this explicitly. Sources without screenshot metadata show
+an empty state; cover artwork is never presented as gameplay screenshots.
+Details shows the catalog description and package metadata. **Page Up/Down**,
+the mouse wheel or controller Down scrolls text; **I / right stick** toggles the
+original description when online translation is configured.
 
 Home shows the **128 latest catalog additions**, newest first across the loaded
 sources. It includes explicit `category: "game"` entries with valid UTC `createdAt`
@@ -231,6 +254,11 @@ navigation, result paging, refresh selection, empty states and result details.
 It also reproduces duplicate source typography/format labels, verifies grouping
 without merging DLC, named editions or PS4/PS5, and exercises retained package
 selection with keyboard, controller and mouse events.
+Game-panel regressions check Home/Games/Search activation, tab navigation,
+package availability, explicit DLC relationships, screenshot-link parsing and
+filtering, empty states and modal close/return behavior. Saved SDL renders were
+inspected for layout, and the panel with real artwork and readable details was
+inspected in WSLg. Live interaction checks were interrupted by Escape.
 The Linux build and automated search checks were run through WSL. Native Windows
 and PS5 builds and a separate native Linux graphical session remain unverified;
 the WSLg Search screen's visual and live interaction checks were interrupted.
