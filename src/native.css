@@ -7,7 +7,7 @@
 .tv-stage button:focus-visible, .tv-stage input:focus-visible { outline: 3px solid #f5f5f5; outline-offset: 3px; }
 .tv-app, .tv-shell { position: absolute; inset: 0; }
 .tv-shell { display: flex; }
-.tv-main { position: relative; width: 1648px; height: 1016px; overflow: hidden; display: flex; flex-direction: column; margin-left: 272px; }
+.tv-main { position: relative; width: 1828px; height: 1016px; overflow: hidden; display: flex; flex-direction: column; margin-left: 92px; }
 .tv-sidebar { position: absolute; top: 0; left: 0; height: 1080px; background: rgba(12, 12, 14, 0.98); border-right: 1px solid #303030; z-index: 40; overflow: visible; transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease; }
 .tv-sidebar-collapsed { width: 92px; }
 .tv-sidebar-expanded, .tv-sidebar:hover { width: 272px !important; box-shadow: 18px 0 48px rgba(0, 0, 0, 0.8); }
@@ -89,7 +89,7 @@
 .tv-home-hints { position: absolute; left: 38px; top: 984px; display: flex; align-items: center; gap: 38px; color: #aaa; font-size: 16px; font-weight: 700; }
 .tv-home-hints button { text-align: left; }
 .tv-home-logo { position: absolute; left: 1348px; top: 956px; color: #e50914; font-size: 32px; font-weight: 700; }
-.tv-status { position: absolute; left: 272px; right: 0; top: 1016px; height: 64px; padding: 16px 38px; background: #000; display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; color: #aaa; font-size: 16px; font-weight: 700; z-index: 20; }
+.tv-status { position: absolute; left: 92px; right: 0; top: 1016px; height: 64px; padding: 16px 38px; background: #000; display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; color: #aaa; font-size: 16px; font-weight: 700; z-index: 20; }
 .tv-status span { max-width: 850px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tv-detail-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.86); }
 .tv-neighbors { position: absolute; top: 20px; left: 310px; display: flex; width: 1560px; height: 165px; }

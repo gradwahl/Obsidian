@@ -1,6 +1,6 @@
 // Logical coordinates from feature/game-information's SDL layout.
 export const TV_LAYOUT = {
-  width: 1920, height: 1080, rail: 272, contentX: 310,
+  width: 1920, height: 1080, rail: 92, contentX: 130,
   cardsY: 576, cardWidth: 216, cardHeight: 300, cardGap: 16,
   cardTitle: 28, cardFooter: 40
 } as const;

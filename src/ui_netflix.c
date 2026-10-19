@@ -58,11 +58,12 @@ static TTF_Font *open_first_available_font(const char **candidates, int ptsize) 
 static const Language LANGUAGE_ORDER[LANG_COUNT] = {
     LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
 };
-enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
+enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 272,
+       CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
        CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40,
        HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
-static const SDL_Rect LANGUAGE_BUTTON = {0, 24, RAIL_WIDTH, 90};
-static const SDL_Rect LANGUAGE_MENU = {14, 122, RAIL_WIDTH - 28, LANG_COUNT * 44 + 16};
+static const SDL_Rect LANGUAGE_BUTTON = {0, 24, SIDEBAR_EXPANDED_W, 90};
+static const SDL_Rect LANGUAGE_MENU = {14, 122, SIDEBAR_EXPANDED_W - 28, LANG_COUNT * 44 + 16};
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
 static const SDL_Rect HERO_PLAY_BUTTON = {CONTENT_X + 344, 478, 206, 42};
@@ -109,7 +110,7 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
 
 static SDL_Rect sidebar_target(int row) {
     int position = row == VIEW_SETTINGS ? VIEW_DOWNLOADS+1 : row;
-    return (SDL_Rect){0, row == VIEW_SEARCH ? 150 : 240 + position * 90, RAIL_WIDTH, 90};
+    return (SDL_Rect){0, row == VIEW_SEARCH ? 150 : 240 + position * 90, SIDEBAR_EXPANDED_W, 90};
 }
 
 static CarouselRow *active_home_row(WolodriveApp *app) {
@@ -853,7 +854,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (app->detail_open) { handle_game_details_input(app, ev); return; }
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         int sidebar_hit_w = (app->sidebar_hovered || app->sidebar_focus || app->sidebar_expand > 0.35f)
-                                ? RAIL_WIDTH
+                                ? SIDEBAR_EXPANDED_W
                                 : SIDEBAR_COLLAPSED_W;
         for (int r = 0; r < TOTAL_ROWS; r++) {
             SDL_Rect sb = sidebar_target(r);
@@ -1328,7 +1329,7 @@ void ui_update_animations(WolodriveApp *app, float dt) {
         if (app->sidebar_expand < 0.001f) app->sidebar_expand = 0.0f;
         if (app->sidebar_expand > 0.999f) app->sidebar_expand = 1.0f;
         app->sidebar_width = (float)SIDEBAR_COLLAPSED_W +
-                             ((float)(RAIL_WIDTH - SIDEBAR_COLLAPSED_W) * app->sidebar_expand);
+                             ((float)(SIDEBAR_EXPANDED_W - SIDEBAR_COLLAPSED_W) * app->sidebar_expand);
 
         /* Płynne powiększanie wybranego kafelka (scale up) */
         app->card_focus_scale += (1.06f - app->card_focus_scale) * fminf(1.0f, 14.0f * dt);
@@ -1682,7 +1683,7 @@ static void render_sidebar(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     int sb_w = (int)lroundf(app->sidebar_width);
     if (sb_w < SIDEBAR_COLLAPSED_W) sb_w = SIDEBAR_COLLAPSED_W;
-    if (sb_w > RAIL_WIDTH) sb_w = RAIL_WIDTH;
+    if (sb_w > SIDEBAR_EXPANDED_W) sb_w = SIDEBAR_EXPANDED_W;
 
     /* Lekkie przyciemnienie reszty interfejsu, gdy pasek boczny jest rozwinięty */
     if (app->sidebar_expand > 0.02f) {
