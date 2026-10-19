@@ -76,6 +76,11 @@ static void test_live_switching(void) {
     assert(strcmp(info.name, "software") == 0);
     setenv("LC_ALL", "en_US.UTF-8", 1);
     sys_init(app);
+    /* Dated game fixtures keep Home populated without contacting live sources. */
+    for (int i = 0; i < app->catalog_count; i++) {
+        app->catalog[i].is_game = true;
+        app->catalog[i].catalog_added_at = 20261018120000ULL - (uint64_t)i * 10000;
+    }
     assert(ui_init(app));
     assert(app->font_body && app->font_small && app->font_hero_title);
     /* Validate actual glyph coverage for every translated label and language name. */

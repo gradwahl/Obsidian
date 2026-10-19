@@ -52,7 +52,7 @@
 #define COLOR_MUTED_G           148
 #define COLOR_MUTED_B           156
 
-#define MAX_CATALOG_ITEMS       256
+#define MAX_CATALOG_ITEMS       4096
 #define MAX_ITEMS_PER_ROW       128
 typedef enum {
     VIEW_HOME,
@@ -83,6 +83,8 @@ typedef struct {
     char title[128];            /* Tytuł gry */
     char version[32];           /* Wersja np. 01.00 */
     char source_name[64];       /* Nazwa katalogu źródłowego Pegasus-DL */
+    bool is_game;              /* Explicit category=game; utilities/DLC stay off Home. */
+    uint64_t catalog_added_at;  /* Validated UTC YYYYMMDDhhmmss, zero means unknown. */
     TextId description_id;      /* TEXT_COUNT means source-provided description. */
     char description[MAX_DESCRIPTION_BYTES]; /* Original plain-text catalog description. */
     char install_path[256];     /* Docelowa ścieżka na PS5 */
@@ -182,6 +184,8 @@ const char *sys_format_short_badge(PackageFormat fmt);
 /* Warstwa katalogu Pegasus-DL i cache'u okładek (src/catalog_pegasus.c) */
 void catalog_start_async_sync(WolodriveApp *app);
 void catalog_free_textures(WolodriveApp *app);
+/* Caller holds catalog_mutex; returns newest dated games up to capacity. */
+int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacity);
 
 /* Warstwa interfejsu Premium Netflix/PS5 UI (src/ui_netflix.c) */
 bool ui_init(WolodriveApp *app);

@@ -23,8 +23,21 @@ to the left edge. **Backspace / Circle** returns to the start or cancels an acti
 download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
 information are shown along the bottom. Language controls are at the top left.
 
-Home and Games/Roms currently browse the same existing package catalog, including
-both PS4 and PS5 formats. ROM browsing, emulator management, the file browser, and
+Home shows the **128 latest catalog additions**, newest first across the loaded
+sources. It includes explicit `category: "game"` entries with valid UTC `createdAt`
+timestamps, excluding DLC, utilities, and entries without a usable date. The date
+beside the focused game's metadata is its catalog addition date, not its original
+retail release date. If multiple sources list a game, its newest addition timestamp
+is used. Refreshing keeps a selected game when browsing beyond the first card;
+the first card follows the newest addition. Without dated catalog data, Home
+shows a refresh prompt instead of calling the built-in sample games new releases.
+
+The catalog holds up to 4096 entries, accommodating the current default sources;
+sources beyond that limit are not retained. Cover prefetch prioritizes Home's
+latest games and Games/Roms' first 128 entries, downloading at most 256 distinct
+covers per sync. This avoids downloading the enlarged catalog's entire cover set.
+Games/Roms keeps the existing catalog order and includes PS4 and PS5 formats.
+ROM browsing, emulator management, the file browser, and
 payload management are not implemented; the corresponding sections explicitly
 show that they are unavailable. Downloads shows downloading and installed entries,
 or an empty-state message. These navigation entries do not enable new backends.

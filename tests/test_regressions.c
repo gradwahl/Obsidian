@@ -129,6 +129,10 @@ static void test_tv_catalog_navigation(void) {
     assert(app->catalog_mutex && app->window);
     assert(ui_create_renderer(app));
     sys_init(app);
+    for (int i = 0; i < app->catalog_count; i++) {
+        app->catalog[i].is_game = true;
+        app->catalog[i].catalog_added_at = 20261018120000ULL - (uint64_t)i * 10000;
+    }
     assert(ui_init(app));
     SDL_Event event = {0};
     event.type = SDL_KEYDOWN;
@@ -217,10 +221,82 @@ static void test_tv_catalog_navigation(void) {
     puts("Six labeled sidebar views, keyboard/controller/mouse navigation, mixed game formats, action footer and empty states passed.");
 }
 
+static void test_latest_catalog_games(void) {
+    assert(parse_catalog_date("2026-10-18T21:14:29.526Z") == 20261018211429ULL);
+    assert(parse_catalog_date("2024-02-29T23:59:59Z") == 20240229235959ULL);
+    const char *invalid[] = {"", "2026-02-29T12:00:00Z", "2026-04-31T12:00:00Z",
+        "2026-13-01T00:00:00Z", "2026-10-18T24:00:00Z", "2026-10-18T00:60:00Z",
+        "2026-10-18T00:00:60Z", "2026-10-18", "2026-10-18T00:00:00.Z",
+        "2026-10-18T00:00:00Zjunk", "2026-10-18T00:00:00+01:00"};
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) assert(!parse_catalog_date(invalid[i]));
+
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    const char *json = "{\"packages\":["
+        "{\"titleId\":\"OLD\",\"title\":\"Older game\",\"category\":\"game\",\"createdAt\":\"2026-01-01T00:00:00Z\"},"
+        "{\"titleId\":\"NEW\",\"title\":\"New game\",\"category\":\"game\",\"createdAt\":\"2026-10-18T21:14:29.526Z\"},"
+        "{\"titleId\":\"DLC\",\"title\":\"New DLC\",\"category\":\"dlc\",\"createdAt\":\"2026-10-19T00:00:00Z\"},"
+        "{\"titleId\":\"APP\",\"title\":\"Utility\",\"category\":\"PKG\",\"createdAt\":\"2026-10-19T00:00:00Z\"},"
+        "{\"titleId\":\"UNKNOWN\",\"title\":\"Unknown date\",\"category\":\"game\",\"updatedAt\":\"2026-10-19T00:00:00Z\"},"
+        "{\"titleId\":\"INVALID\",\"title\":\"Invalid date\",\"category\":\"game\",\"createdAt\":\"2026-02-30T00:00:00Z\"}]}";
+    assert(parse_catalog_json(app, json, "First source", NULL, NULL, 0) == 6);
+    ui_rebuild_carousels(app);
+    CarouselRow *home = &app->rows[VIEW_HOME];
+    assert(home->item_count == 2 && app->rows[VIEW_GAMES].item_count == 6);
+    assert(strcmp(home->items[0]->title, "New game") == 0);
+    assert(strcmp(home->items[1]->title, "Older game") == 0);
+    home->selected_col = 1;
+    GameItem *selected = home->items[1];
+    /* A later source's older timestamp must not move a duplicate game backwards. */
+    const char *later = "{\"packages\":["
+        "{\"titleId\":\"NEW\",\"title\":\"New game\",\"category\":\"game\",\"createdAt\":\"2025-01-01T00:00:00Z\"},"
+        "{\"titleId\":\"NEWEST\",\"title\":\"Newest game\",\"category\":\"game\",\"createdAt\":\"2026-10-19T00:00:00Z\"}]}";
+    assert(parse_catalog_json(app, later, "Later source", NULL, NULL, 0) == 2);
+    ui_rebuild_carousels(app);
+    assert(home->item_count == 3 && strcmp(home->items[0]->title, "Newest game") == 0);
+    assert(home->items[home->selected_col] == selected);
+    assert(home->items[1]->catalog_added_at == 20261018211429ULL);
+
+    /* A newest game past the former 256-entry cutoff must still lead Home. */
+    for (int i = app->catalog_count; i < 300; i++) {
+        GameItem *item = &app->catalog[i];
+        snprintf(item->title, sizeof(item->title), "Catalog game %03d", i);
+        item->is_game = true;
+        item->catalog_added_at = 20200101000000ULL;
+    }
+    app->catalog_count = 300;
+    assert(parse_catalog_json(app, "{\"packages\":[{\"titleId\":\"LATE\",\"title\":\"Late-source newest\","
+        "\"category\":\"game\",\"createdAt\":\"2026-10-19T12:00:00Z\"}]}", "Last source", NULL, NULL, 0) == 1);
+    home->selected_col = 0;
+    ui_rebuild_carousels(app);
+    assert(home->item_count == MAX_ITEMS_PER_ROW);
+    assert(home->items[0] == &app->catalog[300]);
+    for (int i = 1; i < home->item_count; i++) {
+        assert(home->items[i - 1]->catalog_added_at >= home->items[i]->catalog_added_at);
+    }
+    GameItem *covers[MAX_ITEMS_PER_ROW * 2];
+    int count = cover_prefetch_locked(app, covers);
+    assert(count <= MAX_ITEMS_PER_ROW * 2 && covers[0] == home->items[0]);
+    for (int i = 0; i < home->item_count; i++) assert(covers[i] == home->items[i]);
+    for (int i = 0; i < count; i++) {
+        for (int j = i + 1; j < count; j++) assert(covers[i] != covers[j]);
+    }
+    /* Missing dates never turn seed order into a supposed latest-release feed. */
+    for (int i = 0; i < app->catalog_count; i++) app->catalog[i].catalog_added_at = 0;
+    ui_rebuild_carousels(app);
+    assert(home->item_count == 0 && home->selected_col == 0);
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection and bounded cover priority passed.");
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
     test_truthful_catalog_state();
+    test_latest_catalog_games();
     test_tv_catalog_navigation();
     const int sizes[][2] = {{1280, 720}, {1365, 767}, {1920, 1080}, {800, 600}};
     for (int fallback = 0; fallback < 2; fallback++) {

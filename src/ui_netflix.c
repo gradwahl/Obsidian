@@ -437,17 +437,24 @@ void ui_rebuild_carousels(WolodriveApp *app) {
 
     SDL_LockMutex(app->catalog_mutex);
 
+    CarouselRow *home = &app->rows[VIEW_HOME];
+    GameItem *selected_home = home->selected_col > 0 && home->selected_col < home->item_count
+                             ? home->items[home->selected_col] : NULL;
     for (int r = 0; r < TOTAL_ROWS; r++) {
         snprintf(app->rows[r].title, sizeof(app->rows[r].title), "%s", titles[r]);
         app->rows[r].item_count = 0;
+    }
+    home->item_count = catalog_latest_games_locked(app, home->items, MAX_ITEMS_PER_ROW);
+    home->selected_col = 0;
+    if (selected_home) {
+        for (int i = 0; i < home->item_count; i++) {
+            if (home->items[i] == selected_home) { home->selected_col = i; break; }
+        }
     }
 
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *it = &app->catalog[i];
 
-        if (app->rows[VIEW_HOME].item_count < MAX_ITEMS_PER_ROW) {
-            app->rows[VIEW_HOME].items[app->rows[VIEW_HOME].item_count++] = it;
-        }
         /* The existing catalog has no reliable emulator/file/payload/ROM type.
            Keep those views explicit rather than guessing from package titles. */
         if (app->rows[VIEW_GAMES].item_count < MAX_ITEMS_PER_ROW) {
@@ -673,6 +680,7 @@ static const char *action_label(WolodriveApp *app, GameItem *item) {
 }
 
 static const char *empty_view_message(WolodriveApp *app) {
+    if (app->active_row == VIEW_HOME) return TR(app, TXT_NO_LATEST_GAMES);
     if (app->active_row == VIEW_EMULATORS || app->active_row == VIEW_FILES ||
         app->active_row == VIEW_PAYLOADS) return TR(app, TXT_SECTION_UNAVAILABLE);
     return TR(app, app->active_row == VIEW_DOWNLOADS ? TXT_NO_DOWNLOADS : TXT_NO_PACKAGES);
@@ -684,7 +692,8 @@ static void render_hero_banner(WolodriveApp *app) {
     SDL_Color white = {245, 245, 245, 255};
     SDL_Color muted = {185, 185, 185, 255};
     if (!hero) {
-        draw_text(r, app->font_hero_title, app->rows[app->active_row].title,
+        draw_text(r, app->font_hero_title, app->active_row == VIEW_HOME ?
+                  TR(app, TXT_LATEST_GAMES) : app->rows[app->active_row].title,
                   CONTENT_X, 150, white, 900);
         draw_text(r, app->font_body, empty_view_message(app), CONTENT_X, 320, muted, 690);
         return;
@@ -706,6 +715,12 @@ static void render_hero_banner(WolodriveApp *app) {
     char metadata[256];
     snprintf(metadata, sizeof(metadata), "%s   v%s   %s   %.1f GB",
              hero->id_code, hero->version, sys_format_short_badge(hero->format), hero->size_gb);
+    if (app->active_row == VIEW_HOME) {
+        uint64_t date = hero->catalog_added_at / 1000000;
+        snprintf(metadata, sizeof(metadata), "%s   %s   %.1f GB   %04u-%02u-%02u",
+                 hero->id_code, sys_format_short_badge(hero->format), hero->size_gb,
+                 (unsigned)(date / 10000), (unsigned)(date / 100 % 100), (unsigned)(date % 100));
+    }
     draw_single_line(r, app->font_small, metadata, CONTENT_X, 276, muted,
                      (SDL_Rect){CONTENT_X, 276, 800, 34});
     char description[MAX_TRANSLATED_DESCRIPTION_BYTES];
@@ -743,7 +758,8 @@ static void render_carousels(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 245, 255}, muted = {170, 170, 170, 255};
     CarouselRow *row = &app->rows[app->active_row];
-    draw_text(r, app->font_row_title, row->title, CONTENT_X, 552, white, 0);
+    draw_text(r, app->font_row_title, app->active_row == VIEW_HOME ?
+              TR(app, TXT_LATEST_GAMES) : row->title, CONTENT_X, 552, white, 0);
     if (!row->item_count) {
         return;
     }

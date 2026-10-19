@@ -262,11 +262,80 @@ static PackageFormat detect_package_format(const char *id_code, const char *dl_u
     return FMT_EXFAT;
 }
 
+/* The sources publish ISO 8601 UTC createdAt timestamps, not retail dates.
+   Reject partial/invalid dates instead of inventing an ordering for them. */
+static uint64_t parse_catalog_date(const char *text) {
+    size_t length = strlen(text);
+    if (length < 20 || text[4] != '-' || text[7] != '-' || text[10] != 'T' ||
+        text[13] != ':' || text[16] != ':') return 0;
+    const int positions[] = {0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18};
+    uint64_t value = 0;
+    for (size_t i = 0; i < sizeof(positions) / sizeof(positions[0]); i++) {
+        char c = text[positions[i]];
+        if (c < '0' || c > '9') return 0;
+        value = value * 10 + (unsigned)(c - '0');
+    }
+    size_t suffix = 19;
+    if (text[suffix] == '.') {
+        suffix++;
+        size_t first_digit = suffix;
+        while (suffix < length && isdigit((unsigned char)text[suffix])) suffix++;
+        if (suffix == first_digit) return 0;
+    }
+    if (suffix + 1 != length || text[suffix] != 'Z') return 0;
+    int year = (int)(value / 10000000000ULL);
+    int month = (int)(value / 100000000ULL % 100);
+    int day = (int)(value / 1000000ULL % 100);
+    int hour = (int)(value / 10000 % 100);
+    int minute = (int)(value / 100 % 100), second = (int)(value % 100);
+    static const int days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if (year < 1 || month < 1 || month > 12 || day < 1 || hour > 23 || minute > 59 || second > 59) return 0;
+    int maximum = days[month - 1] + (month == 2 && year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+    return day <= maximum ? value : 0;
+}
+
+static bool newer_game(const GameItem *a, const GameItem *b) {
+    if (a->catalog_added_at != b->catalog_added_at) return a->catalog_added_at > b->catalog_added_at;
+    int title_order = strcmp(a->title, b->title);
+    return title_order ? title_order < 0 : strcmp(a->id_code, b->id_code) < 0;
+}
+
+int catalog_latest_games_locked(WolodriveApp *app, GameItem **items, int capacity) {
+    int count = 0;
+    if (capacity <= 0) return 0;
+    for (int i = 0; i < app->catalog_count; i++) {
+        GameItem *item = &app->catalog[i];
+        if (!item->is_game || !item->catalog_added_at) continue;
+        int position = 0;
+        while (position < count && !newer_game(item, items[position])) position++;
+        if (position >= capacity) continue;
+        if (count < capacity) count++;
+        for (int j = count - 1; j > position; j--) items[j] = items[j - 1];
+        items[position] = item;
+    }
+    return count;
+}
+
+/* Keep cover prefetch bounded to the same two visible catalog rows. */
+static int cover_prefetch_locked(WolodriveApp *app, GameItem **items) {
+    int count = catalog_latest_games_locked(app, items, MAX_ITEMS_PER_ROW);
+    for (int i = 0; i < app->catalog_count && i < MAX_ITEMS_PER_ROW; i++) {
+        GameItem *item = &app->catalog[i];
+        bool duplicate = false;
+        for (int j = 0; j < count; j++) {
+            if (items[j] == item) { duplicate = true; break; }
+        }
+        if (!duplicate) items[count++] = item;
+    }
+    return count;
+}
+
 static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
                                  const char *id_code, const char *title,
                                  const char *version, const char *desc,
                                  const char *dl_url, const char *cover_url,
-                                 float size_gb, PackageFormat fmt) {
+                                 float size_gb, PackageFormat fmt,
+                                 const char *category, uint64_t added_at) {
     if (!title || title[0] == '\0') return;
 
     SDL_LockMutex(app->catalog_mutex);
@@ -297,6 +366,9 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     snprintf(target->title, sizeof(target->title), "%s", title);
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
+    if (category && category[0]) target->is_game = strcasecmp(category, "game") == 0;
+    /* A newer source for the same game counts as its newest catalog addition. */
+    if (added_at > target->catalog_added_at) target->catalog_added_at = added_at;
 
     text_plain_description(desc, target->description, sizeof(target->description));
     target->description_id = target->description[0] ? TEXT_COUNT : TXT_DESCRIPTION_FALLBACK;
@@ -374,6 +446,8 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
         char cover_url[512]  = {0};
         char dl_url[512]     = {0};
         char fmt_str[32]     = {0};
+        char category[32]    = {0};
+        char created_at[64]  = {0};
 
         /* 1. Sprawdź czy to wpis gry (posiada titleId / cusa / ppsa lub title + downloadLinks/posterUrl) */
         bool has_id = json_extract_string(obj_start, obj_end, "titleId", id_code, sizeof(id_code)) ||
@@ -422,6 +496,8 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
             json_extract_string(obj_start, obj_end, "version", version, sizeof(version));
             json_extract_string(obj_start, obj_end, "description", desc, sizeof(desc));
             json_extract_string(obj_start, obj_end, "format", fmt_str, sizeof(fmt_str));
+            json_extract_string(obj_start, obj_end, "category", category, sizeof(category));
+            json_extract_string(obj_start, obj_end, "createdAt", created_at, sizeof(created_at));
 
             double size_bytes = json_extract_number(obj_start, obj_end, "sizeBytes");
             float size_gb = 0.0f;
@@ -437,7 +513,8 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
             }
 
             PackageFormat fmt = detect_package_format(id_code, dl_url, fmt_str);
-            register_parsed_game(app, catalog_name, id_code, title, version, desc, dl_url, cover_url, size_gb, fmt);
+            register_parsed_game(app, catalog_name, id_code, title, version, desc, dl_url, cover_url,
+                                 size_gb, fmt, category, parse_catalog_date(created_at));
             games_added++;
         }
 
@@ -485,9 +562,10 @@ static void *catalog_sync_worker(void *userdata) {
     /* Krok 2: Pobieranie i cache'owanie okładek do assets/covers/ dla wszystkich pozycji w katalogu */
     int cached_ok = 0;
     int total_items = 0;
+    GameItem *cover_items[MAX_ITEMS_PER_ROW * 2];
 
     SDL_LockMutex(app->catalog_mutex);
-    total_items = app->catalog_count;
+    total_items = cover_prefetch_locked(app, cover_items);
     SDL_UnlockMutex(app->catalog_mutex);
 
     for (int i = 0; i < total_items && app->running; i++) {
@@ -496,9 +574,9 @@ static void *catalog_sync_worker(void *userdata) {
         char title[128] = {0};
 
         SDL_LockMutex(app->catalog_mutex);
-        snprintf(url, sizeof(url), "%s", app->catalog[i].cover_url);
-        snprintf(local_path, sizeof(local_path), "%s", app->catalog[i].cover_local_path);
-        snprintf(title, sizeof(title), "%s", app->catalog[i].title);
+        snprintf(url, sizeof(url), "%s", cover_items[i]->cover_url);
+        snprintf(local_path, sizeof(local_path), "%s", cover_items[i]->cover_local_path);
+        snprintf(title, sizeof(title), "%s", cover_items[i]->title);
         SDL_UnlockMutex(app->catalog_mutex);
 
         if (url[0] != '\0') {
@@ -515,7 +593,7 @@ static void *catalog_sync_worker(void *userdata) {
 
             if (file_exists_and_valid(local_path)) {
                 SDL_LockMutex(app->catalog_mutex);
-                app->catalog[i].cover_ready_on_disk = true;
+                cover_items[i]->cover_ready_on_disk = true;
                 cached_ok++;
                 app->covers_cached_count = cached_ok;
                 SDL_UnlockMutex(app->catalog_mutex);
@@ -527,7 +605,7 @@ static void *catalog_sync_worker(void *userdata) {
     app->sync_in_progress = false;
     app->sync_status_id = TXT_SYNC_DONE;
     app->sync_current = cached_ok;
-    app->sync_total = app->catalog_count;
+    app->sync_total = total_items;
     app->sync_sources = subcatalog_count;
     app->catalog_dirty = true;
     SDL_UnlockMutex(app->catalog_mutex);
