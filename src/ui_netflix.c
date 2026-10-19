@@ -87,9 +87,9 @@ static const char *library_section_title(WolodriveApp *app) {
 
 static void select_sidebar_view(WolodriveApp *app, int view) {
     app->active_row = view;
+    app->sidebar_focus = true;
     if (is_library_view(view)) {
         app->library_depth = LIBRARY_COMPANIES;
-        app->library_sidebar_focus = true;
         ui_rebuild_carousels(app);
     }
 }
@@ -557,11 +557,11 @@ static void description_text(WolodriveApp *app, GameItem *item, char *out, size_
 static void library_back(WolodriveApp *app) {
     if (app->library_depth == LIBRARY_GAMES) app->library_depth = LIBRARY_CONSOLES;
     else if (app->library_depth == LIBRARY_CONSOLES) app->library_depth = LIBRARY_COMPANIES;
-    else app->library_sidebar_focus = true;
+    else app->sidebar_focus = true;
 }
 
 static void library_open_selected(WolodriveApp *app) {
-    app->library_sidebar_focus = false;
+    app->sidebar_focus = false;
     if (app->library_depth == LIBRARY_COMPANIES) {
         app->library_company = app->library_company_selection;
         app->library_console_selection = 0;
@@ -584,12 +584,12 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         if (app->library_depth != LIBRARY_COMPANIES &&
             contains_point(LIBRARY_BACK_BUTTON, ev->button.x, ev->button.y)) {
-            app->library_sidebar_focus = false;
+            app->sidebar_focus = false;
             library_back(app);
             return true;
         }
         if (app->library_depth == LIBRARY_GAMES) {
-            if (ev->button.x >= CONTENT_X) app->library_sidebar_focus = false;
+            if (ev->button.x >= CONTENT_X) app->sidebar_focus = false;
             return false;
         }
         int page_start = *selection / LIBRARY_PAGE_SIZE * LIBRARY_PAGE_SIZE;
@@ -626,26 +626,25 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
         }
     }
     if (action == 6) { library_back(app); return true; }
-    if (app->library_sidebar_focus) {
-        if (action == 2 || action == 5) { app->library_sidebar_focus = false; return true; }
+    if (app->sidebar_focus) {
+        if (action == 2 || action == 5) { app->sidebar_focus = false; return true; }
         if (action == 1) return true;
         return false; /* Up/down still navigate the sidebar. */
     }
     if (app->library_depth == LIBRARY_GAMES) {
         if (action == 1 && app->rows[app->active_row].selected_col == 0) {
-            app->library_sidebar_focus = true;
+            app->sidebar_focus = true;
             return true;
         }
         return action == 3 || action == 4; /* Console games use a horizontal row. */
     }
     if (action == 1) {
-        if (*selection % LIBRARY_COLUMNS == 0) app->library_sidebar_focus = true;
+        if (*selection % LIBRARY_COLUMNS == 0) app->sidebar_focus = true;
         else (*selection)--;
     } else if (action == 2) {
         if (*selection % LIBRARY_COLUMNS < LIBRARY_COLUMNS - 1 && *selection + 1 < count) (*selection)++;
     } else if (action == 3) {
         if (*selection >= LIBRARY_COLUMNS) *selection -= LIBRARY_COLUMNS;
-        else app->library_sidebar_focus = true;
     } else if (action == 4) {
         if ((*selection / LIBRARY_COLUMNS + 1) * LIBRARY_COLUMNS < count)
             *selection = SDL_min(*selection + LIBRARY_COLUMNS, count - 1);
@@ -664,6 +663,31 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             }
         }
     }
+    /* Category navigation belongs exclusively to the left rail. Consume entry
+       keys so returning to content preserves its selection without activating it. */
+    if (app->sidebar_focus) {
+        int direction = 0;
+        bool enter = false, left = false;
+        if (ev->type == SDL_KEYDOWN) {
+            SDL_Keycode key = ev->key.keysym.sym;
+            direction = (key == SDLK_DOWN || key == SDLK_s) - (key == SDLK_UP || key == SDLK_w);
+            enter = key == SDLK_RIGHT || key == SDLK_d || key == SDLK_RETURN || key == SDLK_SPACE;
+            left = key == SDLK_LEFT || key == SDLK_a;
+        } else if (ev->type == SDL_CONTROLLERBUTTONDOWN) {
+            Uint8 button = ev->cbutton.button;
+            direction = (button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) -
+                        (button == SDL_CONTROLLER_BUTTON_DPAD_UP);
+            enter = button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT || button == SDL_CONTROLLER_BUTTON_A;
+            left = button == SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+        }
+        if (direction) {
+            int view = app->active_row + direction;
+            if (view >= 0 && view < TOTAL_ROWS) select_sidebar_view(app, view);
+            return;
+        }
+        if (enter) { app->sidebar_focus = false; return; }
+        if (left) return;
+    }
     if (handle_library_input(app, ev)) return;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         CarouselRow *clicked_row = &app->rows[app->active_row];
@@ -671,6 +695,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             for (int col = 0; col < clicked_row->item_count; col++) {
                 SDL_Rect card = card_target(app, col);
                 if (contains_point(card, ev->button.x, ev->button.y)) {
+                    app->sidebar_focus = false;
                     bool activate = clicked_row->selected_col == col &&
                                     ev->button.y >= CARDS_Y + CARD_HEIGHT;
                     clicked_row->selected_col = col;
@@ -712,6 +737,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             case SDLK_LEFT:
             case SDLK_a:
                 if (row->selected_col > 0) row->selected_col--;
+                else app->sidebar_focus = true;
                 break;
             case SDLK_RIGHT:
             case SDLK_d:
@@ -719,13 +745,9 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 break;
             case SDLK_UP:
             case SDLK_w:
-                if (app->active_row > 0) select_sidebar_view(app, app->active_row - 1);
                 break;
             case SDLK_DOWN:
             case SDLK_s:
-                if (app->active_row + 1 < TOTAL_ROWS) {
-                    select_sidebar_view(app, app->active_row + 1);
-                }
                 break;
             case SDLK_RETURN:
             case SDLK_SPACE:
@@ -750,17 +772,14 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         switch (ev->cbutton.button) {
             case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
                 if (row->selected_col > 0) row->selected_col--;
+                else app->sidebar_focus = true;
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
                 if (row->selected_col + 1 < row->item_count) row->selected_col++;
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_UP:
-                if (app->active_row > 0) select_sidebar_view(app, app->active_row - 1);
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-                if (app->active_row + 1 < TOTAL_ROWS) {
-                    select_sidebar_view(app, app->active_row + 1);
-                }
                 break;
             case SDL_CONTROLLER_BUTTON_A: /* [X] Cross na DualSense */
                 sys_trigger_action(app, get_focused_item(app));
@@ -949,7 +968,7 @@ static void render_carousels(WolodriveApp *app) {
             int progress = (int)(card.w * fminf(100.0f, fmaxf(0.0f, item->progress)) / 100.0f);
             fill_rect(r, card.x, footer_y - 4, progress, 4, 229, 9, 20, 255);
         }
-        if (selected) draw_border(r, card.x - 4, card.y - 4, card.w + 8, card.h + 8,
+        if (selected && !app->sidebar_focus) draw_border(r, card.x - 4, card.y - 4, card.w + 8, card.h + 8,
                                   4, 240, 240, 240, 255);
     }
     SDL_RenderSetClipRect(r, NULL);
@@ -971,6 +990,8 @@ static void render_sidebar(WolodriveApp *app) {
         if (selected) {
             fill_rect(r, 0, target.y, RAIL_WIDTH - 1, target.h, 25, 25, 25, 255);
             fill_rect(r, 0, target.y, 4, target.h, 229, 9, 20, 255);
+            if (app->sidebar_focus)
+                draw_border(r, 5, target.y + 2, RAIL_WIDTH - 9, target.h - 4, 2, 245, 245, 245, 255);
         }
         SDL_Color color = {c, c, c, 255};
         SDL_Rect label = {84, target.y + 24, RAIL_WIDTH - 100, 42};
@@ -1286,7 +1307,7 @@ static void render_library_grid(WolodriveApp *app) {
         SDL_Rect tile = library_tile_target(i);
         const LibraryCompany *brand = companies ? library_company_at(i) : company;
         const LibraryConsole *console = companies ? NULL : library_console_at(app->library_company, i);
-        bool focused = !app->library_sidebar_focus && i == selected;
+        bool focused = !app->sidebar_focus && i == selected;
         fill_rect(r, tile.x, tile.y, tile.w, tile.h, 24, 24, 24, 255);
         SDL_Rect image = companies ? (SDL_Rect){tile.x + 32, tile.y + 66, tile.w - 64, 144} :
                                     (SDL_Rect){tile.x + 16, tile.y + 14, tile.w - 32, 194};
@@ -1315,7 +1336,7 @@ static void render_library_grid(WolodriveApp *app) {
     char position[50];
     snprintf(position, sizeof(position), "%d / %d", selected + 1, count);
     draw_text(r, app->font_micro, position, CONTENT_X, 910, muted, 0);
-    draw_text(r, app->font_micro, TR(app, app->library_sidebar_focus ?
+    draw_text(r, app->font_micro, TR(app, app->sidebar_focus ?
               TXT_LIBRARY_ENTER_HINT : TXT_LIBRARY_NAV_HINT), CONTENT_X, 944, muted, 1200);
     render_library_breadcrumb(app);
 }

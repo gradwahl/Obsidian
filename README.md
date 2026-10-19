@@ -11,9 +11,14 @@ and action footer. WoloDrive uses its own branding and the catalog's game artwor
 portrait covers are cropped to fill the landscape backdrop and cards, so their
 composition depends on the available source image.
 
-Use **Left/Right** or the controller **D-pad** to select a game. In the sidebar, **Up/Down**
+Use **Left/Right** or the controller **D-pad** to select a game. Press **Left**
+again at the first card or leftmost grid column to focus the far-left sidebar.
+Only while the sidebar has its white focus outline, **Up/Down**
 switch between **Home**, **Games/Roms**, **Emulators**, **Files**, **Payloads**, and
-**Downloads**. Each sidebar entry has a text label and an icon: house, gamepad,
+**Downloads**. Press **Right / Enter / Cross** to return to the content without
+changing its selection. Up/Down within content stays in the current section;
+at the top of a grid, Up keeps focus in the grid.
+Each sidebar entry has a text label and an icon: house, gamepad,
 joystick, folder, chip, and download arrow. Click an entry to switch sections,
 or click a cover to select it. Click
 the selected card's white action footer, press **Enter/Space**, or press controller

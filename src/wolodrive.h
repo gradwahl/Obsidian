@@ -173,7 +173,7 @@ typedef struct {
     int library_company_selection;
     int library_company;
     int library_console_selection;
-    bool library_sidebar_focus;
+    bool sidebar_focus;
     LibraryArtwork library_artwork[MAX_LIBRARY_ARTWORK];
     int library_artwork_count;
     float vertical_scroll_y;

@@ -159,6 +159,28 @@ static void test_tv_catalog_navigation(void) {
     assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
     assert(get_focused_item(app)->state == STATE_AVAILABLE);
 
+    /* Content arrows never switch sections; only Left at the edge enters the rail. */
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_HOME && !app->sidebar_focus);
+    event.key.keysym.sym = SDLK_LEFT;
+    ui_handle_input(app, &event);
+    ui_handle_input(app, &event);
+    assert(!app->sidebar_focus && app->rows[VIEW_HOME].selected_col == 0);
+    ui_handle_input(app, &event);
+    assert(app->sidebar_focus);
+    event.key.keysym.sym = SDLK_RIGHT;
+    ui_handle_input(app, &event);
+    assert(!app->sidebar_focus && app->rows[VIEW_HOME].selected_col == 0);
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    ui_handle_input(app, &event);
+    assert(app->active_row == VIEW_HOME && !app->sidebar_focus);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+    ui_handle_input(app, &event);
+    assert(app->sidebar_focus);
+    app->rows[VIEW_HOME].selected_col = 2; /* Selection persists while using the rail. */
     /* All six views remain reachable, including the unimplemented sections. */
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
@@ -231,14 +253,23 @@ static void test_tv_catalog_navigation(void) {
     event.button.x = 50;
     event.button.y = sidebar_target(VIEW_GAMES).y + 40;
     ui_handle_input(app, &event);
-    assert(app->library_depth == LIBRARY_COMPANIES && app->library_sidebar_focus);
+    assert(app->library_depth == LIBRARY_COMPANIES && app->sidebar_focus);
     assert(!get_focused_item(app));
     ui_render(app);
     SDL_zero(event);
     event.type = SDL_KEYDOWN;
     event.key.keysym.sym = SDLK_RIGHT;
     ui_handle_input(app, &event);
-    assert(!app->library_sidebar_focus);
+    assert(!app->sidebar_focus);
+    event.key.keysym.sym = SDLK_UP;
+    ui_handle_input(app, &event);
+    assert(!app->sidebar_focus && app->active_row == VIEW_GAMES);
+    event.key.keysym.sym = SDLK_DOWN;
+    ui_handle_input(app, &event);
+    assert(!app->sidebar_focus && app->active_row == VIEW_GAMES);
+    event.key.keysym.sym = SDLK_UP;
+    ui_handle_input(app, &event);
+    assert(app->library_company_selection == 0);
     event.key.keysym.sym = SDLK_RETURN;
     ui_handle_input(app, &event);
     assert(app->library_depth == LIBRARY_CONSOLES && app->library_company == 0);
@@ -274,7 +305,7 @@ static void test_tv_catalog_navigation(void) {
     ui_handle_input(app, &event);
     assert(app->library_depth == LIBRARY_COMPANIES);
     ui_handle_input(app, &event);
-    assert(app->library_sidebar_focus);
+    assert(app->sidebar_focus);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
     ui_handle_input(app, &event);
     assert(app->active_row == VIEW_EMULATORS);
@@ -347,7 +378,7 @@ static void test_tv_catalog_navigation(void) {
     assert(app->library_depth == LIBRARY_CONSOLES && app->library_console_selection == 12);
     /* Emulators uses the same groups, pages and tiles, without exposing games. */
     select_sidebar_view(app, VIEW_EMULATORS);
-    assert(app->library_depth == LIBRARY_COMPANIES && app->library_sidebar_focus);
+    assert(app->library_depth == LIBRARY_COMPANIES && app->sidebar_focus);
     assert(strcmp(library_section_title(app), TR(app, TXT_NAV_EMULATORS)) == 0);
     ui_render(app);
     for (int c = 0; c < library_company_count(); c++) {
@@ -394,7 +425,7 @@ static void test_tv_catalog_navigation(void) {
     ui_handle_input(app, &event);
     assert(app->library_depth == LIBRARY_COMPANIES);
     ui_handle_input(app, &event);
-    assert(app->library_sidebar_focus);
+    assert(app->sidebar_focus);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
     ui_handle_input(app, &event);
     assert(app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_COMPANIES);
