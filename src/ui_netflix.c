@@ -1167,6 +1167,63 @@ static void render_library_breadcrumb(WolodriveApp *app) {
                      (SDL_Rect){CONTENT_X + 204, 24, 1150, 50});
 }
 
+/* Change the display matte without changing bundled source photographs.
+   Only near-white pixels connected to an image edge are made transparent;
+   enclosed white console panels remain intact. RGBA32 has byte order RGBA. */
+static void prepare_library_artwork(SDL_Surface *surface, bool logo) {
+    if (SDL_LockSurface(surface) != 0) return;
+    size_t count = (size_t)surface->w * surface->h;
+    Uint8 *visited = calloc(count, 1);
+    size_t *queue = count <= SIZE_MAX / sizeof(size_t) ? malloc(count * sizeof(size_t)) : NULL;
+    if (!visited || !queue) {
+        free(visited);
+        free(queue);
+        SDL_UnlockSurface(surface);
+        return;
+    }
+    size_t head = 0, tail = 0;
+    for (int y = 0; y < surface->h; y++) {
+        for (int x = 0; x < surface->w; x++) {
+            if (x && y && x != surface->w - 1 && y != surface->h - 1) continue;
+            Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
+            size_t index = (size_t)y * surface->w + x;
+            if (!pixel[3] || (pixel[0] >= 248 && pixel[1] >= 248 && pixel[2] >= 248)) {
+                visited[index] = 1;
+                queue[tail++] = index;
+            }
+        }
+    }
+    while (head < tail) {
+        size_t index = queue[head++];
+        int x = (int)(index % surface->w), y = (int)(index / surface->w);
+        Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
+        pixel[3] = 0;
+        const int dx[] = {-1, 1, 0, 0}, dy[] = {0, 0, -1, 1};
+        for (int i = 0; i < 4; i++) {
+            int nx = x + dx[i], ny = y + dy[i];
+            if (nx < 0 || ny < 0 || nx >= surface->w || ny >= surface->h) continue;
+            size_t next = (size_t)ny * surface->w + nx;
+            if (visited[next]) continue;
+            visited[next] = 1;
+            Uint8 *neighbor = (Uint8 *)surface->pixels + ny * surface->pitch + nx * 4;
+            if (!neighbor[3] || (neighbor[0] >= 248 && neighbor[1] >= 248 && neighbor[2] >= 248))
+                queue[tail++] = next;
+        }
+    }
+    if (logo) {
+        for (int y = 0; y < surface->h; y++) {
+            for (int x = 0; x < surface->w; x++) {
+                Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
+                if (pixel[0] < 96 && pixel[1] < 96 && pixel[2] < 96)
+                    pixel[0] = pixel[1] = pixel[2] = 245;
+            }
+        }
+    }
+    free(visited);
+    free(queue);
+    SDL_UnlockSurface(surface);
+}
+
 static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path) {
     if (!path || !path[0]) return NULL;
     for (int i = 0; i < app->library_artwork_count; i++) {
@@ -1202,6 +1259,12 @@ static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path)
     }
     art->width = surface->w;
     art->height = surface->h;
+    SDL_Surface *display = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+    if (display) {
+        SDL_FreeSurface(surface);
+        surface = display;
+        prepare_library_artwork(surface, strstr(path, "/companies/") != NULL);
+    }
     art->texture = SDL_CreateTextureFromSurface(app->renderer, surface);
     SDL_FreeSurface(surface);
     if (art->texture) SDL_SetTextureBlendMode(art->texture, SDL_BLENDMODE_BLEND);
@@ -1236,16 +1299,15 @@ static void render_library_grid(WolodriveApp *app) {
         const LibraryCompany *brand = companies ? library_company_at(i) : company;
         const LibraryConsole *console = companies ? NULL : library_console_at(app->library_company, i);
         bool focused = !app->library_sidebar_focus && i == selected;
-        fill_rect(r, tile.x, tile.y, tile.w, tile.h,
-                  (Uint8)(18 + brand->r / 8), (Uint8)(18 + brand->g / 8), (Uint8)(18 + brand->b / 8), 255);
+        fill_rect(r, tile.x, tile.y, tile.w, tile.h, 0, 0, 0, 255);
         fill_rect(r, tile.x, tile.y, tile.w, 5, brand->r, brand->g, brand->b, 255);
         draw_border(r, tile.x, tile.y, tile.w, tile.h, 1, 65, 65, 65, 255);
         SDL_Rect panel = {tile.x + 16, tile.y + 20, tile.w - 32, 208};
-        fill_rect(r, panel.x, panel.y, panel.w, panel.h, 245, 245, 245, 255);
+        fill_rect(r, panel.x, panel.y, panel.w, panel.h, 0, 0, 0, 255);
         SDL_Rect image = {panel.x + 16, panel.y + 16, panel.w - 32, panel.h - 32};
         if (!render_library_artwork(app, companies ? brand->artwork_path : console->artwork_path, image)) {
             draw_fitted_text(r, app->font_row_title, companies ? brand->name : console->name,
-                             image, (SDL_Color){25, 25, 25, 255}, image, true);
+                             image, white, image, true);
         }
         if (!companies) {
             SDL_Rect title = {tile.x + 16, tile.y + 234, tile.w - 32, 34};

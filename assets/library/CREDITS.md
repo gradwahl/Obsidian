@@ -55,3 +55,8 @@ Images are Wikimedia-generated thumbnails, with no other changes. Asset licenses
 | [consoles/snk-pocketcolor.jpg](https://commons.wikimedia.org/wiki/File:Neo-Geo-Pocket-Color-Blue-Left.jpg) | Evan-Amos | Public domain |
 
 Exact download URLs and SHA-256 hashes are recorded in SOURCES.json.
+
+Display treatment in WoloDrive: near-white backgrounds connected to an image edge
+are rendered transparent, and dark logo pixels are lightened for black tiles.
+These display adaptations retain the original image licenses. The bundled source
+thumbnails and their recorded hashes are unchanged.

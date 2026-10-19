@@ -359,6 +359,31 @@ static void test_tv_catalog_navigation(void) {
     puts("Six labeled sidebar views, keyboard/controller/mouse navigation, mixed game formats, action footer and empty states passed.");
 }
 
+static void test_black_artwork_background(void) {
+    SDL_Surface *image = SDL_CreateRGBSurfaceWithFormat(0, 5, 5, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(image);
+    SDL_FillRect(image, NULL, SDL_MapRGBA(image->format, 255, 255, 255, 255));
+    SDL_Rect hardware = {1, 1, 3, 3}, white_panel = {2, 2, 1, 1}, colored_logo = {1, 1, 1, 1};
+    SDL_FillRect(image, &hardware, SDL_MapRGBA(image->format, 0, 0, 0, 255));
+    SDL_FillRect(image, &white_panel, SDL_MapRGBA(image->format, 255, 255, 255, 255));
+    SDL_FillRect(image, &colored_logo, SDL_MapRGBA(image->format, 0, 80, 200, 180));
+    prepare_library_artwork(image, false);
+    Uint8 *outside = image->pixels;
+    Uint8 *body = (Uint8 *)image->pixels + image->pitch + 2 * 4;
+    Uint8 *panel = (Uint8 *)image->pixels + 2 * image->pitch + 2 * 4;
+    Uint8 *color = (Uint8 *)image->pixels + image->pitch + 4;
+    assert(outside[3] == 0);
+    assert(body[0] == 0 && body[1] == 0 && body[2] == 0 && body[3] == 255);
+    assert(panel[0] == 255 && panel[1] == 255 && panel[2] == 255 && panel[3] == 255);
+    assert(color[0] == 0 && color[1] == 80 && color[2] == 200 && color[3] == 180);
+    prepare_library_artwork(image, true);
+    assert(outside[3] == 0);
+    assert(body[0] == 245 && body[1] == 245 && body[2] == 245 && body[3] == 255);
+    assert(color[0] == 0 && color[1] == 80 && color[2] == 200 && color[3] == 180);
+    SDL_FreeSurface(image);
+    puts("Black tile artwork: exterior white removed, white hardware preserved, dark logos readable, colors and alpha retained.");
+}
+
 static void test_latest_catalog_games(void) {
     assert(parse_catalog_date("2026-10-18T21:14:29.526Z") == 20261018211429ULL);
     assert(parse_catalog_date("2024-02-29T23:59:59Z") == 20240229235959ULL);
@@ -434,6 +459,7 @@ int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
     test_truthful_catalog_state();
+    test_black_artwork_background();
     test_latest_catalog_games();
     test_tv_catalog_navigation();
     const int sizes[][2] = {{1280, 720}, {1365, 767}, {1920, 1080}, {800, 600}};

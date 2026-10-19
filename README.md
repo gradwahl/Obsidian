@@ -43,7 +43,12 @@ including handhelds. Company tiles use their logos; console tiles show photos of
 the actual hardware with a small name label. All six logos and 41 console photos
 are bundled under `assets/library/` and work offline. Images retain their aspect
 ratio and are fitted completely inside the tile rather than cropped. Missing
-assets fall back to a readable name. Sources, authors, individual image licenses,
+assets fall back to a readable name. Tiles and image panels are black. During
+texture loading, plain near-white backgrounds connected to the image border are
+made transparent, while enclosed white parts of the hardware are preserved.
+Dark logo pixels are lightened for contrast; colored branding is retained. These
+display adjustments are cached and do not alter the bundled source files.
+Sources, authors, individual image licenses,
 and download hashes are recorded in [the artwork credits](assets/library/CREDITS.md)
 and `assets/library/SOURCES.json`.
 
