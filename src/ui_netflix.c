@@ -55,8 +55,8 @@ static TTF_Font *open_first_available_font(const char **candidates, int ptsize) 
 static const Language LANGUAGE_ORDER[LANG_COUNT] = {
     LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
 };
-static const SDL_Rect LANGUAGE_BUTTON = {1510, 14, 360, 44};
-static const SDL_Rect LANGUAGE_MENU = {1510, 66, 360, LANG_COUNT * 44 + 16};
+static const SDL_Rect LANGUAGE_BUTTON = {14, 14, 360, 44};
+static const SDL_Rect LANGUAGE_MENU = {14, 66, 360, LANG_COUNT * 44 + 16};
 enum { RAIL_WIDTH = 272, CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 600,
        CARD_WIDTH = 350, CARD_HEIGHT = 198, CARD_GAP = 12, CARD_FOOTER = 44 };
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};

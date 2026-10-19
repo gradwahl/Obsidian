@@ -21,7 +21,7 @@ the selected card's white action footer, press **Enter/Space**, or press control
 below. Each category remembers its selection; the row scrolls to bring that game
 to the left edge. **Backspace / Circle** returns to the start or cancels an active
 download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
-information are shown along the bottom. Language controls remain at the top right.
+information are shown along the bottom. Language controls are at the top left.
 
 Home and Games/Roms currently browse the same existing package catalog, including
 both PS4 and PS5 formats. ROM browsing, emulator management, the file browser, and
@@ -31,7 +31,7 @@ or an empty-state message. These navigation entries do not enable new backends.
 
 ## Languages
 
-Click the **language button at the top right** to choose Polish, English, French,
+Click the **language button at the top left** to choose Polish, English, French,
 Dutch, German, Spanish, Italian, Chinese (Simplified), or Russian. The list shows
 each language's own name. Press **L** or **DualSense Square** to open or close the
 menu, use **Up/Down** or the **D-pad** to navigate, and press **Enter/Space** or

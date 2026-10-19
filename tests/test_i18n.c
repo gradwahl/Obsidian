@@ -106,7 +106,7 @@ static void test_live_switching(void) {
         SDL_zero(event);
         event.type = SDL_MOUSEBUTTONDOWN;
         event.button.button = SDL_BUTTON_LEFT;
-        event.button.x = 1600;
+        event.button.x = 100;
         event.button.y = 30;
         ui_handle_input(app, &event);
         assert(app->language_menu_open);
@@ -192,7 +192,7 @@ static void test_live_switching(void) {
     SDL_zero(event);
     event.type = SDL_MOUSEBUTTONDOWN;
     event.button.button = SDL_BUTTON_LEFT;
-    event.button.x = 100;
+    event.button.x = 1000;
     event.button.y = 100;
     ui_handle_input(app, &event);
     assert(!app->language_menu_open && SDL_AtomicGet(&app->language) == LANG_PL);
