@@ -570,6 +570,7 @@ static void library_open_selected(WolodriveApp *app) {
         CarouselRow *row = &app->rows[app->active_row];
         row->selected_col = 0;
         row->scroll_x = row->target_scroll_x = 0;
+        row->scroll_velocity = 0;
         ui_rebuild_carousels(app);
     }
 }
@@ -818,7 +819,24 @@ void ui_update_animations(WolodriveApp *app, float dt) {
         CarouselRow *row = &app->rows[r];
         /* Keep the focused card at the left edge, as in the TV interface. */
         row->target_scroll_x = row->selected_col * card_stride;
-        row->scroll_x += (row->target_scroll_x - row->scroll_x) * fminf(1.0f, dt * 12.0f);
+        if (dt <= 0.0f) continue;
+        /* Exact critically damped motion: gentle acceleration, continuous
+           velocity on repeated input, and identical timing at different FPS. */
+        const float speed = 24.0f;
+        float offset = row->scroll_x - row->target_scroll_x;
+        float motion = (row->scroll_velocity + speed * offset) * dt;
+        float decay = expf(-speed * dt);
+        row->scroll_x = row->target_scroll_x + (offset + motion) * decay;
+        row->scroll_velocity = (row->scroll_velocity - speed * motion) * decay;
+        float maximum = SDL_max(0, row->item_count - 1) * card_stride;
+        if (row->scroll_x < 0 || row->scroll_x > maximum) {
+            row->scroll_x = fmaxf(0, fminf(row->scroll_x, maximum));
+            row->scroll_velocity = 0;
+        }
+        if (fabsf(row->scroll_x - row->target_scroll_x) < 0.05f && fabsf(row->scroll_velocity) < 0.5f) {
+            row->scroll_x = row->target_scroll_x;
+            row->scroll_velocity = 0;
+        }
     }
 }
 

@@ -4,6 +4,7 @@
 static char *no_screenshot_network(void *userdata, const char *url) { (void)userdata; (void)url; return NULL; }
 
 #include "text.h"
+#include "frame_timing.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1011,6 +1012,68 @@ static void test_latest_catalog_games(void) {
     puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection passed.");
 }
 
+static void test_scroll_motion(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    CarouselRow *row = &app->rows[VIEW_HOME];
+    row->item_count = 10;
+    row->selected_col = 1;
+    ui_update_animations(app, 1.0f/60);
+    float first_step = row->scroll_x;
+    assert(first_step > 0 && first_step < 20);
+    ui_update_animations(app, 1.0f/60);
+    assert(row->scroll_x-first_step > first_step); /* Accelerate from rest. */
+    row->selected_col = 2;
+    float previous = row->scroll_x;
+    float velocity = row->scroll_velocity;
+    ui_update_animations(app, 1.0f/60);
+    assert(row->scroll_x > previous && row->scroll_velocity > velocity);
+    row->selected_col = 0; /* A reversal keeps motion continuous, then returns. */
+    for (int i = 0; i < 90; i++) {
+        ui_update_animations(app, 1.0f/60);
+        assert(row->scroll_x >= 0 && row->scroll_x <= 9*(CARD_WIDTH+CARD_GAP));
+    }
+    assert(row->scroll_x == 0 && row->scroll_velocity == 0);
+    float positions[3], velocities[3];
+    const int rates[] = {30,60,120};
+    for (int rate = 0; rate < 3; rate++) {
+        row->selected_col = 1; row->scroll_x = row->scroll_velocity = 0;
+        for (int i = 0; i < rates[rate]/5; i++) ui_update_animations(app, 1.0f/rates[rate]);
+        positions[rate] = row->scroll_x; velocities[rate] = row->scroll_velocity;
+    }
+    assert(fabsf(positions[0]-positions[1]) < 0.01f && fabsf(positions[1]-positions[2]) < 0.01f);
+    assert(fabsf(velocities[0]-velocities[1]) < 0.02f && fabsf(velocities[1]-velocities[2]) < 0.02f);
+    row->scroll_x = row->scroll_velocity = 0;
+    ui_update_animations(app, 0.1f);
+    assert(row->scroll_x > 0 && row->scroll_x < row->target_scroll_x); /* No snap on a slow frame. */
+    ui_update_animations(app, 1.0f);
+    assert(row->scroll_x == row->target_scroll_x && row->scroll_velocity == 0);
+    row->selected_col = 0; row->scroll_x = 100; row->scroll_velocity = -20000;
+    ui_update_animations(app, 0.1f);
+    assert(row->scroll_x == 0 && row->scroll_velocity == 0);
+    row->selected_col = 9; row->scroll_x = 2000; row->scroll_velocity = 20000;
+    ui_update_animations(app, 0.1f);
+    assert(row->scroll_x == row->target_scroll_x && row->scroll_velocity == 0);
+    free(app);
+    puts("Scroll motion: gentle acceleration, repeated input, reversal, bounds, slow frames and matching timing at 30/60/120 FPS passed.");
+}
+
+static void test_frame_pacing(void) {
+    assert(frame_next_deadline(5000,5500,60000) == 6000);
+    assert(frame_next_deadline(5000,6500,60000) == 6500);
+    assert(frame_next_deadline(6500,7000,60000) == 7500);
+    Uint64 frequency = SDL_GetPerformanceFrequency();
+    Uint64 start = SDL_GetPerformanceCounter(), deadline = start;
+    for (int frame = 0; frame < 12; frame++) {
+        deadline = frame_next_deadline(deadline, SDL_GetPerformanceCounter(), frequency);
+        frame_wait_until(deadline, frequency);
+        assert(SDL_GetPerformanceCounter() >= deadline);
+    }
+    double elapsed = (double)(SDL_GetPerformanceCounter()-start)/frequency;
+    assert(elapsed >= 0.199);
+    printf("Software frame pacing: 12 frames in %.3f s; absolute deadlines and overrun recovery passed.\n", elapsed);
+}
+
 static void test_text_cache(void) {
     assert(TTF_Init() == 0);
     WolodriveApp *app = calloc(1, sizeof(*app));
@@ -1057,6 +1120,8 @@ int main(void) {
     test_native_artwork_bounds();
     test_latest_catalog_games();
     test_tv_catalog_navigation();
+    test_scroll_motion();
+    test_frame_pacing();
     test_text_cache();
     const int sizes[][2] = {{1280, 720}, {1365, 767}, {1920, 1080}, {800, 600}};
     for (int fallback = 0; fallback < 2; fallback++) {

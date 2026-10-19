@@ -29,6 +29,14 @@ to the left edge. **Backspace / Circle** returns to the start or cancels an acti
 download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
 information are shown along the bottom. Language controls are at the top left.
 
+Carousel motion accelerates and slows smoothly, preserving velocity across repeated
+Left/Right input and reversals. Its timing is independent of frame rate, with
+high-resolution elapsed time and bounds that keep cards inside the catalog.
+Renderers without active VSync target a paced 60 FPS rather than free-running;
+VSync renderers retain their presentation timing. Missed frames do not trigger
+catch-up bursts. Actual frame rates still depend on window size and rendering cost.
+The WSL software-rendering default and renderer override remain unchanged.
+
 **Search**, above Home, opens an on-screen A–Z/0–9 keyboard beside a three-column
 cover grid. Type with a physical keyboard (including Unicode text), click the
 on-screen keys, or select keys with arrows / D-pad and **Enter / Cross**. **Space**
@@ -442,6 +450,19 @@ the initial cache change reduced navigation from 206.25 ms/frame (4.8 FPS) to
 These are fixture measurements; real artwork, screen sizes and machines affect
 performance. WSL's software-rendering default and `SDL_RENDER_DRIVER` override
 are unchanged.
+This benchmark measures uncapped render cost; it does not run the main loop's
+60 FPS pacing.
+
+The smooth-scrolling change passed `make build-linux`, the full `make test` suite,
+`make benchmark-ui` and `git diff --check` through WSL. Motion tests cover initial
+acceleration, repeated selection changes, reversals, edges, slow frames, settling,
+and matching motion at 30/60/120 FPS. The pacing test completed 12 frames in
+0.200 seconds and checks deadline recovery after an overrun. Uncapped software
+navigation measured 15.51 ms/frame at 1280×720. Live graphical checks were not
+performed because repository instructions prohibit Computer Use/UI automation.
+Native Windows app build/launch lacks a configured target/toolchain, a separate
+native Linux graphical session is unavailable, and PS5 verification is blocked
+by the missing SDK. These remain unverified.
 
 The navigation cache change passed `make build-linux`, the full `make test`
 suite and `git diff --check` through WSL. Tests cover text reuse, UTF-8, wrapping,

@@ -122,6 +122,7 @@ typedef struct {
     int selected_col;
     float scroll_x;
     float target_scroll_x;
+    float scroll_velocity;
 } CarouselRow;
 
 #define MAX_LIBRARY_ARTWORK 128

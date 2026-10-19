@@ -1,4 +1,5 @@
 #include "wolodrive.h"
+#include "frame_timing.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <string.h>
@@ -80,14 +81,20 @@ int main(int argc, char *argv[]) {
     /* Automatyczne pobranie default-sources.json (Pegasus-DL) oraz okładek w tle przy starcie */
     catalog_start_async_sync(app);
 
-    uint32_t last_tick = SDL_GetTicks();
-    app->last_stats_update = last_tick;
+    Uint64 frequency = SDL_GetPerformanceFrequency();
+    Uint64 last_frame = SDL_GetPerformanceCounter();
+    Uint64 frame_deadline = last_frame;
+    SDL_RendererInfo renderer_info;
+    bool vsync = SDL_GetRendererInfo(app->renderer, &renderer_info) == 0 &&
+                 (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
+    app->last_stats_update = SDL_GetTicks();
 
     while (app->running) {
         uint32_t now = SDL_GetTicks();
-        float dt = (now - last_tick) / 1000.0f;
+        Uint64 frame_start = SDL_GetPerformanceCounter();
+        float dt = (float)((double)(frame_start - last_frame) / frequency);
         if (dt > 0.1f) dt = 0.1f;
-        last_tick = now;
+        last_frame = frame_start;
 
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -108,6 +115,10 @@ int main(int argc, char *argv[]) {
 
         ui_update_animations(app, dt);
         ui_render(app);
+        if (!vsync && app->running) {
+            frame_deadline = frame_next_deadline(frame_deadline, SDL_GetPerformanceCounter(), frequency);
+            frame_wait_until(frame_deadline, frequency);
+        }
     }
 
     exit_code = 0;
