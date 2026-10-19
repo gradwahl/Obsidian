@@ -34,6 +34,8 @@ export interface GameItem {
   download_url?: string;
   cover_url?: string;
   cover_local_path?: string;
+  boxart_url?: string;
+  backdrop_url?: string;
   size_gb: number;
   format: PackageFormat;
   state: PackageState;

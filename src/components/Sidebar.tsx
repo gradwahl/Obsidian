@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { SidebarView, LanguageCode } from '../types';
 import { t, LANGUAGES } from '../translations';
+import { FittedText } from './FittedText';
 
 interface SidebarProps {
   currentView: SidebarView;
@@ -63,10 +64,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const currentLangObj = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
 
   return (
-    <aside className="w-[272px] shrink-0 h-full bg-[#101012] border-r border-[#1e1e24] flex flex-col justify-between select-none z-30">
+    <aside className="tv-sidebar">
       <div>
         {/* Top Header / Language Selector */}
-        <div className="relative p-4 border-b border-[#1f1f26]" ref={menuRef}>
+        <div className="tv-language" ref={menuRef}>
           <button
             onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded bg-[#18181c] hover:bg-[#23232a] text-sm font-medium transition-all ${
@@ -114,41 +115,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation list */}
-        <nav className="p-3 space-y-1.5">
+        <nav className="tv-navigation">
           {navItems.map((item) => {
             const isActive = currentView === item.view;
             return (
               <button
                 key={item.view}
                 onClick={() => onSelectView(item.view)}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded text-sm font-semibold tracking-wide transition-all ${
-                  isActive
-                    ? isSidebarFocused
-                      ? 'bg-[#22222a] text-white border-2 border-white shadow-lg'
-                      : 'bg-[#1c1c22] text-white border-l-4 border-l-[#e50914]'
-                    : 'text-[#94949c] hover:text-white hover:bg-[#18181f]'
-                }`}
+                aria-current={isActive ? 'page' : undefined}
+                className={`tv-nav-item ${isActive ? 'tv-nav-active' : ''} ${isActive && isSidebarFocused ? 'tv-nav-focused' : ''}`}
               >
-                <div className={`${isActive ? 'text-[#e50914]' : 'text-[#858590]'}`}>
+                <div className="tv-nav-icon">
                   {item.icon}
                 </div>
-                <span>{t(language, item.labelKey)}</span>
+                <span className="tv-nav-label"><FittedText>{t(language, item.labelKey)}</FittedText></span>
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Brand & PS5 Homebrew footer */}
-      <div className="p-4 border-t border-[#1a1a20] bg-[#0c0c0e]">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#e50914] animate-pulse"></div>
-          <span className="font-extrabold tracking-wider text-sm text-white">WOLODRIVE</span>
-        </div>
-        <div className="text-[11px] text-[#71717a] font-mono mt-1">
-          v2.0.0-PRO (PS5 13.60)
-        </div>
-      </div>
     </aside>
   );
 };

@@ -1,4 +1,5 @@
 @import "tailwindcss" source(none);
+@import "./native.css";
 @source "./**/*.{ts,tsx}";
 @source "../index.html";
 

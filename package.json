@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "build:static": "tsc && vite build --outDir static-preview",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:web": "node tests/test_react_layout.cjs"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

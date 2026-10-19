@@ -109,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 h-full overflow-y-auto p-8 select-none max-w-5xl">
+    <div className="tv-settings tv-page">
       <div className="mb-6">
         <h2 className="text-2xl font-black text-white tracking-tight">
           {t(language, 'TXT_NAV_SETTINGS')}

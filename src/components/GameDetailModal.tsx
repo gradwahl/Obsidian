@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
-import { X, ExternalLink, Download, HardDrive } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { isSameGame } from '../catalog';
+import { CoverArt } from './GameCard';
 
 interface GameDetailModalProps {
   game: GameItem;
   catalog: GameItem[];
+  neighborGames?: GameItem[];
   language: LanguageCode;
   onClose: () => void;
   onSelectGame: (game: GameItem) => void;
@@ -18,6 +20,7 @@ interface GameDetailModalProps {
 export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   game,
   catalog,
+  neighborGames,
   language,
   onClose,
   onSelectGame,
@@ -28,8 +31,15 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState<'install' | 'dlc' | 'screenshots' | 'details'>('install');
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [showOriginalDesc, setShowOriginalDesc] = useState(false);
+  const [entryPage, setEntryPage] = useState(0);
+  useEffect(() => { setEntryPage(0); setActiveTab('install'); setSelectedScreenshot(null); }, [game]);
 
-  // Neighboring covers for the top preview strip (like SDL2 C version)
+  const neighborCatalog = neighborGames || catalog;
+  const selectedIndex = neighborCatalog.findIndex(item => item === game);
+  const neighbors = selectedIndex < 0 ? [game, ...neighborCatalog.slice(0, 3)]
+    : neighborCatalog.slice(selectedIndex, selectedIndex + 4);
+
+  // Retained source packages for this title.
   const relatedPackages = catalog.filter((candidate) => isSameGame(game, candidate));
 
   // Related DLC
@@ -40,6 +50,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   });
 
   const screenshots = game.screenshot_urls || [];
+  const entryCount = activeTab === 'install' ? relatedPackages.length : activeTab === 'dlc' ? relatedDLC.length : screenshots.length;
   const coverSrc = game.cover_local_path || game.cover_url || '';
 
   let descText = game.description;
@@ -48,15 +59,18 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none">
-      <div className="relative w-full max-w-5xl max-h-[92vh] bg-[#141418] border border-[#2b2b36] rounded-xl shadow-2xl flex flex-col overflow-hidden text-white animate-in fade-in zoom-in-95 duration-150">
+    <div className="tv-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="tv-detail-title">
+      <div className="tv-neighbors" aria-hidden="true">{neighbors.map((neighbor, index) =>
+        <div key={index} className={`tv-neighbor${index === 0 ? ' tv-neighbor-selected' : ''}`}><CoverArt game={neighbor} /></div>
+      )}</div>
+      <div className="tv-detail-panel">
 
         {/* Modal Header with Backdrop Artwork */}
-        <div className="relative h-64 shrink-0 overflow-hidden bg-[#0d0d10] border-b border-[#22222c]">
+        <div className="tv-detail-header">
           {coverSrc && (
             <img
-              src={coverSrc}
-              alt={game.title}
+              src={game.backdrop_url || coverSrc}
+              alt=""
               className="w-full h-full object-cover opacity-25 filter blur-xs scale-105"
             />
           )}
@@ -82,7 +96,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
           )}
 
           {/* Title and metadata in header */}
-          <div className="absolute bottom-5 left-6 right-6">
+          <div className="tv-detail-heading">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#e50914] text-white">
                 {game.format.toUpperCase()}
@@ -94,16 +108,16 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 {game.version} • {game.size_gb.toFixed(1)} GB
               </span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight line-clamp-2">
+            <h2 id="tv-detail-title" className="tv-detail-title">
               {game.title}
             </h2>
           </div>
         </div>
 
         {/* Tab Navigation Bar */}
-        <div className="flex items-center gap-2 px-6 pt-3 border-b border-[#202028] bg-[#111114]">
+        <div className="tv-detail-tabs" role="tablist">
           <button
-            onClick={() => setActiveTab('install')}
+            role="tab" aria-selected={activeTab === 'install'} onClick={() => { setActiveTab('install'); setEntryPage(0); }}
             className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'install'
                 ? 'border-[#e50914] text-white'
@@ -113,7 +127,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
             {t(language, 'TXT_GAME_INSTALL')}
           </button>
           <button
-            onClick={() => setActiveTab('dlc')}
+            role="tab" aria-selected={activeTab === 'dlc'} onClick={() => { setActiveTab('dlc'); setEntryPage(0); }}
             className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'dlc'
                 ? 'border-[#e50914] text-white'
@@ -123,7 +137,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
             {t(language, 'TXT_GAME_DLC')} ({relatedDLC.length})
           </button>
           <button
-            onClick={() => setActiveTab('screenshots')}
+            role="tab" aria-selected={activeTab === 'screenshots'} onClick={() => { setActiveTab('screenshots'); setEntryPage(0); }}
             className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'screenshots'
                 ? 'border-[#e50914] text-white'
@@ -133,7 +147,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
             {t(language, 'TXT_GAME_SCREENSHOTS')} ({screenshots.length})
           </button>
           <button
-            onClick={() => setActiveTab('details')}
+            role="tab" aria-selected={activeTab === 'details'} onClick={() => { setActiveTab('details'); setEntryPage(0); }}
             className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'details'
                 ? 'border-[#e50914] text-white'
@@ -145,100 +159,23 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
         </div>
 
         {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 min-h-[280px]">
-          {/* 1. INSTALL TAB */}
-          {activeTab === 'install' && (
-            <div className="space-y-4">
-              <div className="text-xs text-[#8a8a94] mb-2 font-mono">
-                {t(language, 'TXT_ACTION_UNAVAILABLE')}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {relatedPackages.map((pkg, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-lg bg-[#18181f] border border-[#262632] hover:border-[#444455] flex items-center justify-between transition-all"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#e50914] text-white">
-                          {pkg.format.toUpperCase()}
-                        </span>
-                        <span className="text-xs font-mono font-semibold text-[#c0c0c8]">
-                          {pkg.id_code}
-                        </span>
-                        <span className="text-xs text-[#71717a]">
-                          {pkg.version}
-                        </span>
-                      </div>
-                      <div className="text-xs font-medium text-white/90">
-                        {pkg.source_name}
-                      </div>
-                      <div className="text-[11px] text-[#82828e] mt-0.5">
-                        {pkg.size_gb.toFixed(1)} GB
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => onTriggerAction(pkg)}
-                      className="px-4 py-2 bg-white text-black font-bold text-xs rounded hover:bg-[#e2e2e2] active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
-                    >
-                      {pkg.format === 'exfat' ? (
-                        <HardDrive className="w-3.5 h-3.5" />
-                      ) : (
-                        <Download className="w-3.5 h-3.5" />
-                      )}
-                      <span>
-                        {pkg.format === 'exfat'
-                          ? t(language, 'TXT_MOUNT')
-                          : t(language, 'TXT_DOWNLOAD')}
-                      </span>
+        <div className="tv-detail-body">
+          {(activeTab === 'install' || activeTab === 'dlc') && (
+            <div className="tv-package-list">
+              {activeTab === 'dlc' && relatedDLC.length === 0 ?
+                <p className="tv-panel-empty">{t(language, 'TXT_GAME_NO_DLC')}</p> :
+                <div className="tv-package-grid">
+                  {(activeTab === 'install' ? relatedPackages : relatedDLC).slice(entryPage * 3, entryPage * 3 + 3).map((pkg, index) => (
+                    <button type="button" key={index} className="tv-package-card"
+                      onClick={() => activeTab === 'install' ? onTriggerAction(pkg) : onSelectGame(pkg)}>
+                      <CoverArt className="tv-package-cover" game={pkg} />
+                      <span className="tv-package-name">{activeTab === 'dlc' ? pkg.title : pkg.source_name}</span>
+                      <span className="tv-package-meta">{pkg.id_code} | {pkg.format.toUpperCase()} | {pkg.version}</span>
+                      <span className="tv-package-action">{t(language, activeTab === 'dlc' ? 'TXT_GAME_DETAILS' : pkg.format === 'exfat' ? 'TXT_MOUNT' : 'TXT_DOWNLOAD')}</span>
                     </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 2. DLC TAB */}
-          {activeTab === 'dlc' && (
-            <div>
-              {relatedDLC.length === 0 ? (
-                <div className="text-center py-12 text-sm text-[#8a8a94]">
-                  {t(language, 'TXT_GAME_NO_DLC')}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {relatedDLC.map((dlc, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => onSelectGame(dlc)}
-                      className="p-3.5 rounded-lg bg-[#18181f] border border-[#262632] hover:border-white cursor-pointer transition-all flex items-center gap-3.5"
-                    >
-                      <div className="w-20 h-14 rounded bg-[#101014] overflow-hidden shrink-0">
-                        {dlc.cover_local_path || dlc.cover_url ? (
-                          <img
-                            src={dlc.cover_local_path || dlc.cover_url}
-                            alt={dlc.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-white/40 bg-zinc-800">
-                            DLC
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-white truncate">
-                          {dlc.title}
-                        </div>
-                        <div className="text-[11px] font-mono text-[#8a8a94] mt-0.5">
-                          {dlc.id_code} • {dlc.size_gb.toFixed(1)} GB
-                        </div>
-                      </div>
-                    </div>
                   ))}
-                </div>
-              )}
+                </div>}
+              {activeTab === 'install' && <p className="tv-action-notice">{t(language, 'TXT_ACTION_UNAVAILABLE')}</p>}
             </div>
           )}
 
@@ -250,8 +187,8 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                   {t(language, 'TXT_GAME_NO_SCREENSHOTS')}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
-                  {screenshots.slice(0, 6).map((url, idx) => (
+                <div className="tv-screenshot-grid">
+                  {screenshots.slice(entryPage * 3, entryPage * 3 + 3).map((url, idx) => (
                     <div
                       key={idx}
                       onClick={() => setSelectedScreenshot(url)}
@@ -300,7 +237,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
               </div>
 
               {/* Technical package info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="tv-detail-info">
                 <div className="p-3 rounded bg-[#18181f] border border-[#22222c]">
                   <div className="text-[#7c7c88] text-[10px] uppercase font-bold">SOURCE</div>
                   <div className="text-white font-semibold mt-0.5 truncate">{game.source_name}</div>
@@ -322,8 +259,14 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
           )}
         </div>
 
+        {activeTab !== 'details' && <div className="tv-entry-pagination">
+          <span>{Math.min(entryPage * 3 + 1, entryCount)} / {entryCount}</span>
+          <button type="button" aria-label="Previous entries" disabled={entryPage === 0} onClick={() => setEntryPage(value => value - 1)}>←</button>
+          <button type="button" aria-label="Next entries" disabled={(entryPage + 1) * 3 >= entryCount} onClick={() => setEntryPage(value => value + 1)}>→</button>
+        </div>}
+
         {/* Modal Footer with TV instructions */}
-        <div className="px-6 py-3 bg-[#0d0d10] border-t border-[#202028] flex items-center justify-between text-[11px] text-[#71717a]">
+        <div className="tv-detail-footer">
           <span className="truncate">{t(language, 'TXT_GAME_PANEL_HINT')}</span>
           <button
             onClick={onClose}
@@ -337,13 +280,13 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
       {/* Screenshot lightbox zoom */}
       {selectedScreenshot && (
         <div
-          className="fixed inset-0 z-60 bg-black/95 flex items-center justify-center p-6"
+          className="tv-screenshot-viewer"
           onClick={() => setSelectedScreenshot(null)}
         >
           <img
             src={selectedScreenshot}
             alt="Screenshot enlarged"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            className="tv-screenshot-full"
           />
           <button
             onClick={() => setSelectedScreenshot(null)}

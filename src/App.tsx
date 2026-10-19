@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SidebarView, LanguageCode, GameItem, CatalogFilters, SystemStats } from './types';
 import { Sidebar } from './components/Sidebar';
-import { HeroBanner } from './components/HeroBanner';
-import { GameCard } from './components/GameCard';
+import { HomeView } from './components/HomeView';
+import { NativeViewport } from './components/NativeViewport';
 import { GameDetailModal } from './components/GameDetailModal';
 import { SearchGrid } from './components/SearchGrid';
 import { LibraryBrowser } from './components/LibraryBrowser';
@@ -11,7 +11,6 @@ import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
 import { INITIAL_CATALOG, getLatestGames, getDistinctSources, matchesFilters } from './catalog';
 import { t } from './translations';
-import { HardDriveDownload, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function App() {
   // 1. Language state (saved to localStorage 'language')
@@ -62,6 +61,7 @@ export function App() {
 
   // 5. Selected game for Home carousel
   const [selectedHomeCol, setSelectedHomeCol] = useState(0);
+  const [selectedDownloadCol, setSelectedDownloadCol] = useState(0);
 
   // 6. Modal details state
   const [detailGame, setDetailGame] = useState<GameItem | null>(null);
@@ -133,6 +133,9 @@ export function App() {
     [catalog, filters]
   );
   const activeHeroGame = homeGames[selectedHomeCol] || homeGames[0] || null;
+  useEffect(() => {
+    setSelectedHomeCol(value => Math.max(0, Math.min(value, homeGames.length - 1)));
+  }, [homeGames.length]);
 
   // Downloads view items
   const downloadItems = useMemo(
@@ -231,6 +234,11 @@ export function App() {
         return;
       }
 
+      const target = e.target as HTMLElement;
+      if (target.closest('input,textarea,select')) return;
+      if (target.closest('button') && !target.closest('.tv-carousel,.tv-navigation')) return;
+      if ((currentView === 'home' || isSidebarFocused) && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(e.key)) e.preventDefault();
+
       // Arrow keys navigation for Home carousel
       if (currentView === 'home' && !detailGame && !isSidebarFocused) {
         if (e.key === 'ArrowRight' || e.key === 'd') {
@@ -241,7 +249,7 @@ export function App() {
           } else {
             setSelectedHomeCol((c) => Math.max(0, c - 1));
           }
-        } else if (e.key === 'Enter') {
+        } else if (e.key === 'Enter' || e.key === ' ') {
           if (activeHeroGame) setDetailGame(activeHeroGame);
         }
       } else if (isSidebarFocused) {
@@ -360,12 +368,12 @@ export function App() {
   ]);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#08080a] text-white overflow-hidden font-sans">
+    <NativeViewport><div className="tv-app">
       {/* Toast Notification */}
       <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
 
       {/* Main Container */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="tv-shell">
         {/* Left Navigation Rail */}
         <Sidebar
           currentView={currentView}
@@ -381,83 +389,18 @@ export function App() {
         />
 
         {/* Center / Right Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden relative">
-          {/* VIEW: HOME */}
-          {currentView === 'home' && (
-            <div className="flex-1 flex flex-col overflow-y-auto">
-              {/* Hero Banner Area */}
-              <HeroBanner
-                game={activeHeroGame}
-                language={language}
-                onOpenDetails={(g) => {
-                  setDetailGame(g);
-                  setDetailParentGame(null);
-                }}
-                onTriggerAction={handleTriggerAction}
-                onRefreshCatalog={handleSyncPegasus}
-                syncInProgress={syncInProgress}
-              />
-
-              {/* Horizontal Landscape Cards Carousel */}
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-black text-white tracking-tight">
-                    {t(language, 'TXT_ROW_RECENT')}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-[#8a8a94]">
-                      {homeGames.length > 0 ? selectedHomeCol + 1 : 0} / {homeGames.length}
-                    </span>
-                    <button
-                      onClick={() => setSelectedHomeCol((c) => Math.max(0, c - 1))}
-                      disabled={selectedHomeCol === 0}
-                      className="p-1 rounded bg-[#1e1e24] hover:bg-white hover:text-black disabled:opacity-30 transition-all"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        setSelectedHomeCol((c) => Math.min(homeGames.length - 1, c + 1))
-                      }
-                      disabled={selectedHomeCol >= homeGames.length - 1}
-                      className="p-1 rounded bg-[#1e1e24] hover:bg-white hover:text-black disabled:opacity-30 transition-all"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {homeGames.length === 0 ? (
-                  <div className="py-16 text-center text-[#8a8a94] text-sm bg-[#121216] rounded-xl border border-[#202028]">
-                    {t(language, 'TXT_SETTINGS_NO_MATCHES')}
-                  </div>
-                ) : (
-                  <div className="flex gap-4 overflow-x-auto pb-6 pt-2 scroll-smooth">
-                    {homeGames.map((game, idx) => (
-                      <GameCard
-                        key={game.id_code + '_' + idx}
-                        game={game}
-                        isSelected={selectedHomeCol === idx && !isSidebarFocused}
-                        onSelect={() => {
-                          setSelectedHomeCol(idx);
-                          setIsSidebarFocused(false);
-                        }}
-                        onOpen={() => {
-                          setDetailGame(game);
-                          setDetailParentGame(null);
-                        }}
-                        language={language}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+        <main className="tv-main">
+          {/* The same logical stage and carousel geometry as the native reference. */}
+          {currentView === 'home' && <HomeView games={homeGames} language={language}
+            selected={selectedHomeCol} sidebarFocused={isSidebarFocused}
+            onSelect={(index) => { setSelectedHomeCol(index); setIsSidebarFocused(false); }}
+            onOpen={(game) => { setDetailGame(game); setDetailParentGame(null); }}
+            onRefresh={handleSyncPegasus} syncInProgress={syncInProgress} />}
 
           {/* VIEW: GAMES / ROMS */}
           {currentView === 'games' && (
             <LibraryBrowser
+              onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={false}
               catalog={catalog}
               language={language}
@@ -472,6 +415,7 @@ export function App() {
           {/* VIEW: EMULATORS */}
           {currentView === 'emulators' && (
             <LibraryBrowser
+              onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={true}
               catalog={catalog}
               language={language}
@@ -483,74 +427,15 @@ export function App() {
             />
           )}
 
-          {/* VIEW: FILES */}
-          {currentView === 'files' && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-              <div className="p-4 rounded-2xl bg-[#141418] border border-[#22222c] max-w-md">
-                <AlertCircle className="w-12 h-12 text-[#e50914] mx-auto mb-3 opacity-90" />
-                <h3 className="text-lg font-bold text-white mb-1.5">
-                  {t(language, 'TXT_NAV_FILES')}
-                </h3>
-                <p className="text-xs text-[#8a8a94] leading-relaxed">
-                  {t(language, 'TXT_SECTION_UNAVAILABLE')}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* VIEW: PAYLOADS */}
-          {currentView === 'payloads' && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-              <div className="p-4 rounded-2xl bg-[#141418] border border-[#22222c] max-w-md">
-                <AlertCircle className="w-12 h-12 text-[#e50914] mx-auto mb-3 opacity-90" />
-                <h3 className="text-lg font-bold text-white mb-1.5">
-                  {t(language, 'TXT_NAV_PAYLOADS')}
-                </h3>
-                <p className="text-xs text-[#8a8a94] leading-relaxed">
-                  {t(language, 'TXT_SECTION_UNAVAILABLE')}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* VIEW: DOWNLOADS */}
-          {currentView === 'downloads' && (
-            <div className="flex-1 overflow-y-auto p-8 select-none">
-              <div className="max-w-6xl mb-6">
-                <h2 className="text-2xl font-black text-white tracking-tight">
-                  {t(language, 'TXT_NAV_DOWNLOADS')}
-                </h2>
-                <p className="text-xs text-[#8a8a94] mt-1">
-                  {t(language, 'TXT_ROW_DOWNLOADS')}
-                </p>
-              </div>
-
-              {downloadItems.length === 0 ? (
-                <div className="py-24 text-center max-w-md mx-auto bg-[#121216] border border-[#202028] rounded-2xl p-8">
-                  <HardDriveDownload className="w-12 h-12 text-[#444455] mx-auto mb-3" />
-                  <div className="text-sm font-semibold text-[#a0a0aa]">
-                    {t(language, 'TXT_NO_DOWNLOADS')}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {downloadItems.map((game, idx) => (
-                    <GameCard
-                      key={game.id_code + '_' + idx}
-                      game={game}
-                      isSelected={false}
-                      onSelect={() => {}}
-                      onOpen={() => {
-                        setDetailGame(game);
-                        setDetailParentGame(null);
-                      }}
-                      language={language}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Empty categories and Downloads share the native hero/carousel layout. */}
+          {['files', 'payloads', 'downloads'].includes(currentView) &&
+            <HomeView games={currentView === 'downloads' ? downloadItems : []} language={language}
+              title={t(language, currentView === 'files' ? 'TXT_NAV_FILES' : currentView === 'payloads' ? 'TXT_NAV_PAYLOADS' : 'TXT_NAV_DOWNLOADS')}
+              emptyMessage={t(language, currentView === 'downloads' ? 'TXT_NO_DOWNLOADS' : 'TXT_SECTION_UNAVAILABLE')}
+              showDate={false} selected={currentView === 'downloads' ? selectedDownloadCol : 0}
+              sidebarFocused={isSidebarFocused} onSelect={setSelectedDownloadCol}
+              onOpen={(game) => { setDetailGame(game); setDetailParentGame(null); }}
+              onRefresh={handleSyncPegasus} syncInProgress={syncInProgress} />}
 
           {/* VIEW: SEARCH */}
           {currentView === 'search' && (
@@ -582,6 +467,7 @@ export function App() {
         <GameDetailModal
           game={detailGame}
           catalog={catalog}
+          neighborGames={currentView === 'home' ? homeGames : currentView === 'downloads' ? downloadItems : undefined}
           language={language}
           onClose={() => {
             setDetailGame(null);
@@ -604,7 +490,7 @@ export function App() {
 
       {/* Bottom Telemetry & Status Bar */}
       <SystemStatsBar stats={stats} syncStatus={syncStatus} />
-    </div>
+    </div></NativeViewport>
   );
 }
 

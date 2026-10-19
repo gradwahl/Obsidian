@@ -11,6 +11,16 @@ The browser UI is a separate preview with a bundled catalog, not a web connectio
 to the native app. Native renderer fixes and native-only features do not automatically
 carry over to React. Package downloads/installations are unavailable in the web UI.
 
+The React presentation follows `feature/game-information`: a 1920×1080 logical
+stage scaled uniformly to the browser, a 272px sidebar, the full hero backdrop,
+216×300 portrait artwork with PS4/PS5 strips, selected details footers, and a game
+panel with neighboring covers and bottom tabs. Search uses the native three-column
+grid with small portrait covers; the library uses four-column pages of eight tiles.
+Non-16:9 windows have black margins to preserve these proportions. Browser fonts
+use the native application's system-font families; glyph metrics can differ by OS.
+This is a React recreation of the source layout; pixel-level appearance and input
+behavior still need manual browser verification.
+
 ### Start without Node or Vite
 
 The committed `static-preview/` folder contains compiled HTML, JavaScript, CSS,
@@ -54,6 +64,7 @@ dependencies in `node_modules/` must match the OS running the build.
 
 ```bash
 npm run lint          # TypeScript checks
+npm run test:web      # Geometry, scaling, and server-rendered component checks
 npm run build         # Standalone production output in dist/
 npm run build:static  # Regenerate the committed static-preview/ folder
 python3 tests/check_static_preview.py  # Use python on Windows
@@ -73,6 +84,11 @@ TypeScript checks, and Node-free static HTTP delivery passed on native Windows
 and Arch Linux under WSL. The native Linux build and full `make test` suite also
 passed through WSL. Vite reports a JavaScript bundle-size warning. No manual
 graphical checks, native Windows executable build, or PS5 SDK build were completed.
+
+The layout update also passed React geometry/component tests on Windows and
+Linux/WSL, including comparison with native layout constants, 16:9/4:3/ultrawide/
+portrait viewport fitting, platform strips, selection, empty states, library page
+size, and game-panel structure. These checks do not render a browser window.
 
 ## TV catalog interface
 

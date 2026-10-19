@@ -70,7 +70,7 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
   };
 
   return (
-    <div className="flex-1 h-full overflow-y-auto p-8 select-none">
+    <div className="tv-search tv-page">
       {/* Title & Query input */}
       <div className="max-w-6xl mb-6">
         <h2 className="text-2xl font-black text-white tracking-tight mb-3">
@@ -108,9 +108,9 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
       </div>
 
       {/* Main Container: On-screen Keyboard on the left, Results on the right */}
-      <div className="flex flex-col lg:flex-row gap-8 max-w-7xl">
+      <div className="tv-search-columns">
         {/* On-screen A-Z / 0-9 Keyboard */}
-        <div className="w-full lg:w-[380px] shrink-0 bg-[#121216] border border-[#202028] rounded-xl p-4.5">
+        <div className="tv-search-keyboard">
           {/* Top row: Space & Delete */}
           <div className="grid grid-cols-2 gap-2 mb-2.5">
             <button
@@ -155,7 +155,7 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
             </div>
           ) : (
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="tv-search-results">
                 {currentItems.map((item, idx) => (
                   <GameCard
                     key={item.id_code + '_' + idx}
