@@ -358,8 +358,8 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
             int band = render_box_brand(app, it, box);
             box.y += band; box.h -= band;
         }
-        bool crop = is_hero;
-        SDL_Rect destination = artwork_fit(width, height, box, crop);
+        /* Fill the case below its platform strip without letterboxing. */
+        SDL_Rect destination = artwork_fit(width, height, box, true);
         SDL_Rect previous;
         bool clipped = SDL_RenderIsClipEnabled(r);
         SDL_RenderGetClipRect(r, &previous);

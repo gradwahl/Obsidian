@@ -8,8 +8,8 @@ The interface follows the supplied Netflix TV reference: a dark left navigation
 rail, selected-game artwork across the background, a readable title and description,
 and horizontal rows of portrait box-cover cards. The selected cover has a white border
 and action footer. WoloDrive uses its own branding and the catalog's game artwork;
-portrait covers and square fallback icons are shown in full on cards against a
-matching gradient. PS5 cards have a white platform header and PS4 cards a blue one;
+portrait covers and square fallback icons fill the case below its platform strip,
+preserving proportions and cropping overflow centrally to avoid black gaps. PS5 cards have a white platform header and PS4 cards a blue one;
 complete box-cover images keep their original branding. Titles sit below the art. Backgrounds prefer separate widescreen
 artwork, with a softened, darkened cover fallback when none is supplied.
 
@@ -135,7 +135,8 @@ Cards prefer complete box art, then covers, icons and finally landscape artwork;
 own artwork, then landscape art, then a softened cover/icon. Failed preferred
 artwork falls back to the next available artwork while retrying in the background.
 This does not add a retail box-art database: sources that only supply square images
-continue to use those images inside portrait cases without stretching or cropping.
+continue to use those images inside portrait cases, filling the artwork area
+without stretching and cropping the sides where necessary.
 
 Images download and decode in an SDL worker; texture creation stays on the UI
 thread. URL-keyed files in `assets/covers/*.art` share downloads across package
@@ -403,3 +404,8 @@ The portrait-case follow-up passed the Linux build and full automated suite thro
 WSL. The visible WSLg case cards, titles and selection/backdrop update after a
 Right key were inspected. The preview window was partly off-screen, so full-window
 layout and native Windows/native Linux graphics remain unverified.
+
+The vertical-fill adjustment passed the Linux build and full automated suite via
+WSL. A fully visible WSLg window confirmed artwork fills the cases below the
+platform strip, readable text, and Right-key selection/backdrop updates. Native
+Windows/native Linux graphical sessions and PS5 verification remain unavailable.
