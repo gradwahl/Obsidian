@@ -142,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="tv-nav-icon">{item.icon}</div>
                   <span className="tv-nav-label">
-                    <FittedText>{t(language, item.labelKey)}</FittedText>
+                    <span className="tv-nav-title">{t(language, item.labelKey)}</span>
                   </span>
                 </button>
               );

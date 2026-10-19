@@ -10,9 +10,10 @@
 .tv-main { position: relative; width: 1648px; height: 1016px; overflow: hidden; display: flex; flex-direction: column; margin-left: 272px; }
 .tv-sidebar { position: absolute; top: 0; left: 0; height: 1080px; background: rgba(12, 12, 14, 0.98); border-right: 1px solid #303030; z-index: 40; overflow: visible; transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease; }
 .tv-sidebar-collapsed { width: 92px; }
-.tv-sidebar-expanded { width: 272px; box-shadow: 18px 0 48px rgba(0, 0, 0, 0.8); }
+.tv-sidebar-expanded, .tv-sidebar:hover { width: 272px !important; box-shadow: 18px 0 48px rgba(0, 0, 0, 0.8); }
 .tv-sidebar-collapsed .tv-nav-label { opacity: 0; max-width: 0; pointer-events: none; transition: opacity 0.16s ease, max-width 0.2s ease; }
-.tv-sidebar-expanded .tv-nav-label { opacity: 1; max-width: 180px; transition: opacity 0.22s ease 0.04s, max-width 0.22s ease; }
+.tv-sidebar-expanded .tv-nav-label, .tv-sidebar:hover .tv-nav-label { opacity: 1 !important; max-width: 180px !important; pointer-events: auto !important; transition: opacity 0.22s ease 0.04s, max-width 0.22s ease; }
+.tv-nav-title { display: inline-block; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; }
 .tv-sidebar-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.48); opacity: 0; pointer-events: none; z-index: 35; transition: opacity 0.24s ease; }
 .tv-sidebar-dim-active { opacity: 1; }
 .tv-language { position: absolute; top: 24px; left: 14px; right: 14px; height: 90px; }

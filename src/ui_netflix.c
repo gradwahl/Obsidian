@@ -1692,6 +1692,14 @@ static void render_sidebar(WolodriveApp *app) {
 
     fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 12, 12, 12, 250);
     fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
+
+    /* Ograniczenie rysowania do bieżącej szerokości paska (płynne odsłanianie) */
+    SDL_Rect sb_clip = {0, 0, sb_w, SCREEN_HEIGHT};
+    SDL_Rect prev_clip;
+    bool was_clipped = SDL_RenderIsClipEnabled(r);
+    SDL_RenderGetClipRect(r, &prev_clip);
+    SDL_RenderSetClipRect(r, &sb_clip);
+
     for (int row = 0; row < TOTAL_ROWS; row++) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
@@ -1704,36 +1712,7 @@ static void render_sidebar(WolodriveApp *app) {
                 draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 245, 245, 245, 255);
         }
 
-        /* Renderowanie etykiety tekstowej obok ikony */
-        if (sb_w > SIDEBAR_COLLAPSED_W + 10 && app->sidebar_expand > 0.05f) {
-            Uint8 text_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
-            const char *label_text = sidebar_item_title(app, row);
-            if (label_text && label_text[0] != '\0') {
-                SDL_Color text_color = {c, c, c, 255};
-                UiTextEntry *entry = cached_text(app, app->font_small, label_text, text_color, 0);
-                if (entry && entry->texture) {
-                    int text_x = 84;
-                    int text_y = target.y + (target.h - entry->h) / 2;
-                    int max_text_w = sb_w - text_x - 10;
-                    if (max_text_w > 4) {
-                        SDL_Rect text_clip = {text_x, target.y, max_text_w, target.h};
-                        SDL_Rect dst = {text_x, text_y, entry->w, entry->h};
-                        SDL_Rect previous;
-                        bool clipped = SDL_RenderIsClipEnabled(r);
-                        SDL_RenderGetClipRect(r, &previous);
-                        SDL_RenderSetClipRect(r, &text_clip);
-
-                        SDL_SetTextureBlendMode(entry->texture, SDL_BLENDMODE_BLEND);
-                        SDL_SetTextureAlphaMod(entry->texture, text_alpha);
-                        SDL_RenderCopy(r, entry->texture, NULL, &dst);
-                        SDL_SetTextureAlphaMod(entry->texture, 255);
-
-                        SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
-                    }
-                }
-            }
-        }
-
+        /* Ikony geometryczne */
         if (row == VIEW_SEARCH) {
             SDL_SetRenderDrawColor(r, c, c, c, 255);
             for (int angle = 0; angle < 360; angle++) {
@@ -1791,10 +1770,33 @@ static void render_sidebar(WolodriveApp *app) {
                 fill_rect(r, x+(line == 1 ? 20 : 7), y+line*12-3, 5, 8, c,c,c,255);
             }
         }
+
+        /* Renderowanie podpisu zakładki (tekst obok ikony) */
+        if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
+            Uint8 text_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
+            if (text_alpha > 0) {
+                const char *label_text = sidebar_item_title(app, row);
+                if (label_text && label_text[0] != '\0') {
+                    TTF_Font *font = app->font_small ? app->font_small : app->font_body;
+                    SDL_Color text_color = {c, c, c, 255};
+                    UiTextEntry *entry = cached_text(app, font, label_text, text_color, 0);
+                    if (entry && entry->texture) {
+                        int text_x = 84;
+                        int text_y = target.y + (target.h - entry->h) / 2;
+                        SDL_Rect dst = {text_x, text_y, entry->w, entry->h};
+
+                        SDL_SetTextureBlendMode(entry->texture, SDL_BLENDMODE_BLEND);
+                        SDL_SetTextureAlphaMod(entry->texture, text_alpha);
+                        SDL_RenderCopy(r, entry->texture, NULL, &dst);
+                        SDL_SetTextureAlphaMod(entry->texture, 255);
+                    }
+                }
+            }
+        }
     }
+
+    SDL_RenderSetClipRect(r, was_clipped ? &prev_clip : NULL);
 }
-
-
 
 static void render_language_control(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;

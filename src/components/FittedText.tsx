@@ -1,13 +1,16 @@
 import React, { useLayoutEffect, useRef } from 'react';
 
 export function fittedFontSize(naturalWidth: number, availableWidth: number, baseSize: number) {
-  return naturalWidth > availableWidth && naturalWidth > 0
-    ? baseSize * Math.max(0, availableWidth) / naturalWidth : baseSize;
+  if (naturalWidth <= 0 || availableWidth <= 0) return baseSize;
+  return naturalWidth > availableWidth
+    ? Math.max(10, (baseSize * availableWidth) / naturalWidth)
+    : baseSize;
 }
 
 // The native renderer shrinks translated labels to fit rather than truncating them.
 export function FittedText({ children }: { children: string }) {
   const ref = useRef<HTMLSpanElement>(null);
+
   useLayoutEffect(() => {
     const fit = () => {
       const node = ref.current;
@@ -16,13 +19,27 @@ export function FittedText({ children }: { children: string }) {
       const parent = node.parentElement;
       const padding = getComputedStyle(parent);
       const available = parent.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
-      const base = parseFloat(getComputedStyle(node).fontSize);
-      node.style.fontSize = `${fittedFontSize(node.scrollWidth, available, base)}px`;
+      if (available <= 0) return;
+      const base = parseFloat(getComputedStyle(node).fontSize) || 20;
+      node.style.fontSize = (fittedFontSize(node.scrollWidth, available, base)) + 'px';
     };
+
     fit();
     let active = true;
     document.fonts?.ready.then(() => { if (active) fit(); });
-    return () => { active = false; };
+
+    const observer = typeof ResizeObserver !== 'undefined' && ref.current?.parentElement
+      ? new ResizeObserver(() => fit())
+      : null;
+    if (observer && ref.current?.parentElement) {
+      observer.observe(ref.current.parentElement);
+    }
+
+    return () => {
+      active = false;
+      observer?.disconnect();
+    };
   }, [children]);
+
   return <span className="tv-fitted-text" ref={ref}>{children}</span>;
 }
