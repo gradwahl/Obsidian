@@ -118,10 +118,90 @@ static void test_scaled_gradient(int width, int height, int alpha) {
     SDL_DestroyWindow(window);
 }
 
+static void test_tv_catalog_navigation(void) {
+    assert(TTF_Init() == 0);
+    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_WEBP);
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->running = true;
+    app->catalog_mutex = SDL_CreateMutex();
+    app->window = SDL_CreateWindow("TV catalog regression", 0, 0, 1280, 720, 0);
+    assert(app->catalog_mutex && app->window);
+    assert(ui_create_renderer(app));
+    sys_init(app);
+    assert(ui_init(app));
+    SDL_Event event = {0};
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_RIGHT;
+    ui_handle_input(app, &event);
+    assert(app->rows[0].selected_col == 1);
+    ui_update_animations(app, 1.0f);
+    assert(app->rows[0].scroll_x == CARD_WIDTH + CARD_GAP);
+    assert(card_target(app, 1).x == CONTENT_X);
+
+    /* Mouse selection and activation use the visible, scrolled card geometry. */
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = CONTENT_X + CARD_WIDTH + CARD_GAP + 10;
+    event.button.y = CARDS_Y + 20;
+    app->toast_message[0] = '\0';
+    ui_handle_input(app, &event);
+    assert(app->rows[0].selected_col == 2 && !app->toast_message[0]);
+    ui_update_animations(app, 1.0f);
+    event.button.x = CONTENT_X + 20;
+    event.button.y = CARDS_Y + CARD_HEIGHT + 20;
+    ui_handle_input(app, &event);
+    assert(strcmp(app->toast_message, TR(app, TXT_ACTION_UNAVAILABLE)) == 0);
+    assert(get_focused_item(app)->state == STATE_AVAILABLE);
+
+    /* All four categories remain reachable, even with no installed games. */
+    event.type = SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    for (int r = 1; r < TOTAL_ROWS; r++) {
+        ui_handle_input(app, &event);
+        assert(app->active_row == r);
+    }
+    assert(!get_focused_item(app));
+    app->toast_expire_tick = 0;
+    ui_render(app); /* Empty category must clear the previous game's artwork. */
+    SDL_Surface *pixel = SDL_CreateRGBSurfaceWithFormat(0, 1, 1, 32, SDL_PIXELFORMAT_RGBA32);
+    SDL_Rect sample = {900, 200, 1, 1};
+    assert(pixel);
+    assert(SDL_RenderReadPixels(app->renderer, &sample, pixel->format->format,
+                                pixel->pixels, pixel->pitch) == 0);
+    Uint8 red, green, blue, alpha;
+    SDL_GetRGBA(*(Uint32 *)pixel->pixels, pixel->format, &red, &green, &blue, &alpha);
+    assert(red == 0 && green == 0 && blue == 0);
+    SDL_FreeSurface(pixel);
+
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 50;
+    event.button.y = sidebar_target(0).y + 40;
+    ui_handle_input(app, &event);
+    assert(app->active_row == 0 && app->rows[0].selected_col == 2);
+    ui_render(app);
+    /* Description's moved Original button still responds to mouse input. */
+    get_focused_item(app)->description_id = TEXT_COUNT;
+    event.button.x = DESCRIPTION_BUTTON.x + 20;
+    event.button.y = DESCRIPTION_BUTTON.y + 20;
+    ui_handle_input(app, &event);
+    assert(app->show_original_description);
+    ui_cleanup(app);
+    SDL_DestroyRenderer(app->renderer);
+    SDL_DestroyWindow(app->window);
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    IMG_Quit();
+    TTF_Quit();
+    puts("TV sidebar, keyboard/controller navigation, scrolled mouse selection, action footer and empty category passed.");
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
     test_truthful_catalog_state();
+    test_tv_catalog_navigation();
     const int sizes[][2] = {{1280, 720}, {1365, 767}, {1920, 1080}, {800, 600}};
     for (int fallback = 0; fallback < 2; fallback++) {
 #if SDL_VERSION_ATLEAST(2, 0, 18)

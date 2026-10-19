@@ -2,6 +2,25 @@
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
+## TV catalog interface
+
+The interface follows the supplied Netflix TV reference: a dark left navigation
+rail, selected-game artwork across the background, a readable title and description,
+and one horizontal row of landscape covers. The selected cover has a white border
+and action footer. WoloDrive uses its own branding and the catalog's game artwork;
+portrait covers are cropped to fill the landscape backdrop and cards, so their
+composition depends on the available source image.
+
+Use **Left/Right** or the controller **D-pad** to select a game. **Up/Down**
+switch between Recently added, PS5, PS4, and Downloads, including empty categories.
+Click a sidebar icon to switch categories, or click a cover to select it. Click
+the selected card's white action footer, press **Enter/Space**, or press controller
+**Cross** to request its action. Download and installation availability is described
+below. Each category remembers its selection; the row scrolls to bring that game
+to the left edge. **Backspace / Circle** returns to the start or cancels an active
+download. **R / F5 / Triangle** refreshes the catalog. Catalog sync and storage
+information are shown along the bottom. Language controls remain at the top right.
+
 ## Languages
 
 Click the **language button at the top right** to choose Polish, English, French,
