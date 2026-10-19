@@ -171,7 +171,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       <CoverArt className="tv-package-cover" game={pkg} />
                       <span className="tv-package-name">{activeTab === 'dlc' ? pkg.title : pkg.source_name}</span>
                       <span className="tv-package-meta">{pkg.id_code} | {pkg.format.toUpperCase()} | {pkg.version}</span>
-                      <span className="tv-package-action">{t(language, activeTab === 'dlc' ? 'TXT_GAME_DETAILS' : pkg.format === 'exfat' ? 'TXT_MOUNT' : 'TXT_DOWNLOAD')}</span>
+                      <span className="tv-package-action">{pkg.format === 'catalog' ? 'WEBSITE ONLY' : t(language, activeTab === 'dlc' ? 'TXT_GAME_DETAILS' : pkg.format === 'exfat' ? 'TXT_MOUNT' : 'TXT_DOWNLOAD')}</span>
                     </button>
                   ))}
                 </div>}
@@ -252,7 +252,13 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 </div>
                 <div className="p-3 rounded bg-[#18181f] border border-[#22222c]">
                   <div className="text-[#7c7c88] text-[10px] uppercase font-bold">TARGET PATH</div>
-                  <div className="text-white font-mono text-[11px] mt-0.5 truncate">{game.install_path}</div>
+                  {game.format === 'catalog' ? (
+                    <div className="text-white text-[11px] mt-0.5">
+                      No installer — public catalog listing only
+                      {game.source_url && <a href={game.source_url} target="_blank" rel="noopener noreferrer"
+                        className="block mt-1 text-[#aaaaff] underline">Open source page ↗</a>}
+                    </div>
+                  ) : <div className="text-white font-mono text-[11px] mt-0.5 truncate">{game.install_path}</div>}
                 </div>
               </div>
             </div>

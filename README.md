@@ -2,6 +2,48 @@
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
+### Additional public website catalogs (metadata only)
+
+The curated `config/additional_sources.json` file registers 17 website feeds and
+indexes: the 15 requested external sites, plus the existing NoPayStation and
+PSN-Content sources. Their public **game titles, platforms, artwork URLs and
+source page links** are imported into `assets/catalogs/additional.json`.
+No game archives, packages, license keys or direct download-host URLs are
+downloaded or copied into that snapshot.
+
+Update the snapshot from the repository root:
+
+```bash
+python scripts/import_sources.py --limit 64
+python -m unittest discover -s tests -p test_import_sources.py
+```
+
+The importer fetches a bounded index per site (up to 400 entries per source);
+it is not a full-site crawler or a live search backend. Certain dynamically
+rendered sites or user archives may have no public machine-readable listings:
+those sources remain registered in Settings, but show zero titles until a
+compatible public listing becomes available. A failed refresh retains the last
+bounded snapshot and marks it stale instead of silently clearing entries.
+Review the per-source `status` and `note` fields to see those conditions.
+
+The **React preview** bundles the snapshot at build time. Rebuild with
+`npm run build:static` after importing to update its offline catalog. Entries
+are searchable and selectable by source; known platform metadata also populates
+the corresponding console's Games/Roms view. Select the **Catalog metadata
+(website only)** format filter to control these separately from installable
+exFAT/FFPKG/PKG entries. Game details link to the source site's public listing
+page where available. The Install tab never treats these listings as package
+downloads, and the web preview does not implement package installation.
+
+The **native Linux app** loads the local snapshot alongside Pegasus sources
+when catalog synchronization runs; keep the repository-relative
+`assets/catalogs/additional.json` in place. On a **PS5**, the optional snapshot
+must be copied to
+`/data/homebrew/wolodrive/catalogs/additional.json` before synchronization.
+This source-loader code has been compiled on Linux, but PS5 SDK build and
+device runtime behavior have not been verified. Website adapters are bounded
+and may need maintenance as sites change; empty indexes are not fabricated.
+
 ## React web preview
 
 Catalog sources: DLPS Catalog, Pippo .exFAT, PFS Catalog, and ZER0GAME Catalog.

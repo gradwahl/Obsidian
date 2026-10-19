@@ -73,7 +73,8 @@ typedef enum {
 typedef enum {
     FMT_EXFAT = 0,
     FMT_FFPKG = 1,
-    FMT_PKG   = 2
+    FMT_PKG   = 2,
+    FMT_CATALOG = 3  /* Website metadata only; not an installable package. */
 } PackageFormat;
 
 typedef enum {
@@ -84,6 +85,7 @@ typedef enum {
 
 typedef struct {
     char id_code[32];           /* np. PPSA08338 lub CUSA30410 */
+    char platform[48];          /* Optional metadata-only platform identifier. */
     char title[128];            /* Tytuł gry */
     char version[32];           /* Wersja np. 01.00 */
     char source_name[64];       /* Nazwa katalogu źródłowego Pegasus-DL */
@@ -183,6 +185,8 @@ typedef struct {
     SDL_mutex *catalog_mutex;
     GameItem catalog[MAX_CATALOG_ITEMS];
     int catalog_count;
+    char catalog_source_names[40][64]; /* Include sources with empty/offline indexes. */
+    int catalog_source_count;
     bool catalog_dirty;         /* Sygnał od wątku tła do przebudowania karuzel */
     bool sync_in_progress;      /* Czy trwa synchronizacja z Pegasus-DL */
     TextId sync_status_id;

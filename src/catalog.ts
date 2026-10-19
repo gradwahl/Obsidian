@@ -1,7 +1,55 @@
 import { GameItem, CatalogFilters } from './types';
 import rawCatalog from './catalogData.json';
+import sourceDefinitions from '../config/additional_sources.json';
+import extraSnapshot from '../assets/catalogs/additional.json';
 
-export const INITIAL_CATALOG: GameItem[] = (rawCatalog as GameItem[]) || [];
+// Website-only sources are displayed even when an index is offline or empty.
+// No download URLs are imported: these entries link to public source pages.
+export const SOURCE_WEBSITES: Record<string, string> = Object.fromEntries(
+  sourceDefinitions.map(source => [source.name, source.url])
+);
+
+interface SnapshotEntry {
+  id?: string;
+  title?: string;
+  platform?: string;
+  version?: string;
+  description?: string;
+  coverUrl?: string;
+  sourceUrl?: string;
+  sizeBytes?: number;
+}
+interface SnapshotSource {
+  name?: string;
+  packages?: SnapshotEntry[];
+}
+
+const metadataCatalog: GameItem[] = (extraSnapshot.sources as SnapshotSource[]).flatMap(source => {
+  if (!source.name || !SOURCE_WEBSITES[source.name] || !Array.isArray(source.packages)) return [];
+  return source.packages.filter(item => item.title && item.id).map(item => ({
+    id_code: item.id!,
+    title: item.title!,
+    version: item.version || '',
+    source_name: source.name!,
+    is_game: true,
+    is_dlc: false,
+    screenshot_urls: [],
+    description: item.description || 'Catalog metadata only; no installer is provided.',
+    source_url: item.sourceUrl?.startsWith('https://') ? item.sourceUrl : SOURCE_WEBSITES[source.name!],
+    platform: item.platform || '',
+    install_path: '',
+    cover_url: item.coverUrl?.startsWith('https://') ? item.coverUrl : '',
+    size_gb: typeof item.sizeBytes === 'number' && item.sizeBytes > 0 ? item.sizeBytes / (1024 ** 3) : 0,
+    format: 'catalog' as const,
+    state: 'available' as const,
+    progress: 0,
+    cover_r: 46,
+    cover_g: 63,
+    cover_b: 110
+  }));
+});
+
+export const INITIAL_CATALOG: GameItem[] = [...(rawCatalog as GameItem[]), ...metadataCatalog];
 
 export function isAvailableCatalogSource(source: { id?: string; name?: string; url?: string; catalogUrl?: string; sourceUrl?: string }): boolean {
   return source.id?.toLowerCase() !== 'evox-coreos' && source.name?.toLowerCase() !== 'evox-coreos' &&
@@ -26,7 +74,8 @@ export function normalizeTitleKey(title: string): string {
   return s;
 }
 
-export function searchPlatform(item: GameItem): number {
+export function searchPlatform(item: GameItem): number | string {
+  if (item.platform) return item.platform;
   if (item.id_code.toUpperCase().startsWith('CUSA')) return 4;
   if (item.id_code.toUpperCase().startsWith('PPSA')) return 5;
   return 0;
@@ -80,7 +129,7 @@ export function getLatestGames(catalog: GameItem[], filters: CatalogFilters, lim
 }
 
 export function getDistinctSources(catalog: GameItem[]): string[] {
-  const set = new Set<string>();
+  const set = new Set<string>(Object.keys(SOURCE_WEBSITES));
   for (const it of catalog) {
     if (it.source_name) set.add(it.source_name);
   }

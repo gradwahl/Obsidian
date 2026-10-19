@@ -35,6 +35,7 @@ const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt) {
         case FMT_EXFAT: return ".exfat (ShadowMountPlus)";
         case FMT_FFPKG: return TR(app, TXT_FORMAT_FOLDER);
         case FMT_PKG:   return ".pkg (PS4 FPKG)";
+        case FMT_CATALOG: return "Catalog metadata (website only)";
         default:        return ".bin";
     }
 }
@@ -44,6 +45,7 @@ const char *sys_format_short_badge(PackageFormat fmt) {
         case FMT_EXFAT: return "EXFAT";
         case FMT_FFPKG: return "FFPKG";
         case FMT_PKG:   return "FPKG";
+        case FMT_CATALOG: return "WEB";
         default:        return "PKG";
     }
 }

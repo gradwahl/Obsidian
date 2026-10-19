@@ -1,5 +1,6 @@
 #include "library.h"
 #include <stddef.h>
+#include <string.h>
 
 #define COUNT(items) ((int)(sizeof(items) / sizeof((items)[0])))
 
@@ -114,4 +115,36 @@ bool library_console_matches_id(const LibraryConsole *console, const char *title
         if (c != console->title_id_prefix[i]) return false;
     }
     return true;
+}
+
+bool library_console_matches_platform(const LibraryConsole *console, const char *platform) {
+    if (!console || !platform || !platform[0]) return false;
+    static const struct { const char *name, *platform; } mappings[] = {
+        {"PlayStation 1", "sony-ps1"},
+        {"PlayStation 2", "sony-ps2"},
+        {"PlayStation 3 (experimental)", "sony-ps3"},
+        {"PlayStation 4", "sony-ps4"},
+        {"PlayStation 5", "sony-ps5"},
+        {"PlayStation Portable (PSP)", "sony-psp"},
+        {"Original Xbox", "microsoft-xbox"},
+        {"Xbox 360 (experimental)", "microsoft-xbox360"},
+        {"Sega Saturn", "sega-saturn"},
+        {"Dreamcast", "sega-dreamcast"},
+        {"NES / Famicom", "nintendo-nes"},
+        {"SNES / Super Famicom", "nintendo-snes"},
+        {"Nintendo 64", "nintendo-n64"},
+        {"GameCube", "nintendo-gc"},
+        {"Wii", "nintendo-wii"},
+        {"Wii U", "nintendo-wiiu"},
+        {"Nintendo Switch", "nintendo-switch"},
+        {"Game Boy", "nintendo-gb"},
+        {"Game Boy Color", "nintendo-gbc"},
+        {"Game Boy Advance", "nintendo-gba"},
+        {"Nintendo DS", "nintendo-ds"},
+        {"Nintendo 3DS", "nintendo-3ds"}
+    };
+    for (size_t i = 0; i < sizeof(mappings)/sizeof(mappings[0]); i++)
+        if (strcmp(console->name, mappings[i].name) == 0 &&
+            strcmp(platform, mappings[i].platform) == 0) return true;
+    return false;
 }

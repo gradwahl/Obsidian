@@ -195,6 +195,7 @@ static void generate_color_from_id(const char *id, uint8_t *r, uint8_t *g, uint8
 
 static PackageFormat detect_package_format(const char *id_code, const char *dl_url, const char *fmt_str) {
     if (fmt_str && fmt_str[0]) {
+        if (strcasecmp(fmt_str, "catalog") == 0) return FMT_CATALOG;
         if (strcasestr(fmt_str, "exfat")) return FMT_EXFAT;
         if (strcasestr(fmt_str, "ffpkg")) return FMT_FFPKG;
         if (strcasestr(fmt_str, "pkg"))   return FMT_PKG;
@@ -347,6 +348,8 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     }
 
     snprintf(target->id_code, sizeof(target->id_code), "%s", (id_code && id_code[0]) ? id_code : "PPSA00001");
+    target->platform[0] = '\0';
+    json_extract_string(object_start, object_end, "platform", target->platform, sizeof(target->platform));
     snprintf(target->title, sizeof(target->title), "%s", title);
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
@@ -398,9 +401,13 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     SDL_strlcpy(target->cover_url, cover_url ? cover_url : "", sizeof(target->cover_url));
 
     target->format  = fmt;
-    target->size_gb = (size_gb > 0.05f) ? size_gb : 42.5f;
+    target->size_gb = fmt == FMT_CATALOG ? (size_gb > 0 ? size_gb : 0) :
+                      (size_gb > 0.05f ? size_gb : 42.5f);
 
-    if (fmt == FMT_PKG) {
+    if (fmt == FMT_CATALOG) {
+        target->download_url[0] = '\0';
+        target->install_path[0] = '\0';
+    } else if (fmt == FMT_PKG) {
         snprintf(target->install_path, sizeof(target->install_path), "/data/pkg/%s.pkg", target->id_code);
     } else if (fmt == FMT_FFPKG) {
         snprintf(target->install_path, sizeof(target->install_path), "/data/homebrew/%s", target->id_code);
@@ -546,6 +553,68 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
     return games_added;
 }
 
+/* Load the optional, curated metadata snapshot. Never crawl external websites on
+   the PS5: this offline snapshot carries public title/page information only. */
+static int load_additional_catalog(WolodriveApp *app, int *source_count) {
+#ifdef __PS5__
+    const char *path = "/data/homebrew/wolodrive/catalogs/additional.json";
+#else
+    const char *path = "assets/catalogs/additional.json";
+#endif
+    FILE *file = fopen(path, "rb");
+    if (!file) return 0;
+    if (fseek(file, 0, SEEK_END) != 0) { fclose(file); return 0; }
+    long size = ftell(file);
+    if (size < 0 || size > 16 * 1024 * 1024 || fseek(file, 0, SEEK_SET) != 0) {
+        fclose(file);
+        return 0;
+    }
+    char *json = malloc((size_t)size + 1);
+    if (!json) { fclose(file); return 0; }
+    size_t count = fread(json, 1, (size_t)size, file);
+    fclose(file);
+    if (count != (size_t)size) { free(json); return 0; }
+    json[count] = '\0';
+
+    const char *end = json + count;
+    const char *sources = json_object_value(json, end, "sources");
+    if (!sources || *sources != '[') { free(json); return 0; }
+    const char *last = find_matching_bracket(sources, end, '[', ']');
+    if (!last) { free(json); return 0; }
+    int added = 0;
+    for (const char *p = sources + 1; p < last; ) {
+        p = skip_ws(p, last);
+        if (p >= last) break;
+        if (*p != '{') { p++; continue; }
+        const char *last_object = find_matching_bracket(p, last, '{', '}');
+        if (!last_object) break;
+        char name[64] = {0};
+        if (json_extract_string(p, last_object, "name", name, sizeof(name)) && name[0]) {
+            SDL_LockMutex(app->catalog_mutex);
+            if (app->catalog_source_count < 40) {
+                bool duplicate = false;
+                for (int i = 0; i < app->catalog_source_count; i++)
+                    if (strcasecmp(name, app->catalog_source_names[i]) == 0) duplicate = true;
+                if (!duplicate)
+                    SDL_strlcpy(app->catalog_source_names[app->catalog_source_count++], name, 64);
+            }
+            SDL_UnlockMutex(app->catalog_mutex);
+            size_t length = (size_t)(last_object - p + 1);
+            char *source_json = malloc(length + 1);
+            if (source_json) {
+                memcpy(source_json, p, length);
+                source_json[length] = '\0';
+                added += parse_catalog_json(app, source_json, name, NULL, NULL, 0);
+                free(source_json);
+            }
+            (*source_count)++;
+        }
+        p = last_object + 1;
+    }
+    free(json);
+    return added;
+}
+
 static int catalog_sync_worker(void *userdata) {
     WolodriveApp *app = (WolodriveApp *)userdata;
 
@@ -556,7 +625,8 @@ static int catalog_sync_worker(void *userdata) {
 
     char subcatalogs[24][512];
     int subcatalog_count = 0;
-    int remote_games_total = 0;
+    int snapshot_sources = 0;
+    int remote_games_total = load_additional_catalog(app, &snapshot_sources);
 
     char *manifest_json = http_get_string(PEGASUS_DEFAULT_SOURCES_URL);
     if (manifest_json) {
@@ -585,7 +655,7 @@ static int catalog_sync_worker(void *userdata) {
     app->sync_status_id = TXT_SYNC_DONE;
     app->sync_current = 0;
     app->sync_total = 0;
-    app->sync_sources = subcatalog_count;
+    app->sync_sources = subcatalog_count + snapshot_sources;
     app->catalog_dirty = true;
     SDL_UnlockMutex(app->catalog_mutex);
 

@@ -453,7 +453,7 @@ static void test_settings(WolodriveApp *app) {
     settings_toggle(app); /* Partial -> all. */
     assert(!app->filters.disabled_formats);
     settings_toggle(app); /* All -> none, never silently reset to All. */
-    assert(app->filters.disabled_formats == 7 && !app->search_count);
+    assert(app->filters.disabled_formats == 15 && !app->search_count);
     SDL_Event event;
     SDL_zero(event);
     event.type = SDL_KEYDOWN;
@@ -462,18 +462,18 @@ static void test_settings(WolodriveApp *app) {
     assert(app->settings_selection == 1);
     event.key.keysym.sym = SDLK_SPACE;
     ui_handle_input(app, &event);
-    assert(app->filters.disabled_formats == 6 && settings_accepts_item(app, alpha));
+    assert(app->filters.disabled_formats == 14 && settings_accepts_item(app, alpha));
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
     ui_handle_input(app, &event);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
     ui_handle_input(app, &event);
-    assert(app->filters.disabled_formats == 4 && settings_accepts_item(app, beta));
+    assert(app->filters.disabled_formats == 12 && settings_accepts_item(app, beta));
     /* Multiple source names and mixed formats round-trip, including Unicode. */
     SDL_strlcpy(app->filters.sources[1], "A source\n中文", 64);
     assert(settings_save(app));
     memset(&app->filters, 0, sizeof(app->filters));
-    assert(settings_load(app) && app->filters.disabled_formats == 4 && app->filters.source_count == 2);
+    assert(settings_load(app) && app->filters.disabled_formats == 12 && app->filters.source_count == 2);
     assert(strcmp(app->filters.sources[1], "A source\n中文") == 0);
     /* Existing single-select preferences migrate without changing their meaning. */
     FILE *legacy = fopen(app->settings_path, "wb");
@@ -509,8 +509,8 @@ static void test_settings(WolodriveApp *app) {
     char clicked_source[64]; SDL_strlcpy(clicked_source, names[8], 64);
     ui_handle_input(app, &event);
     assert(settings_source_enabled(app, clicked_source));
-    event.button.x = settings_target(1, 4).x+25;
-    event.button.y = settings_target(1, 4).y+25;
+    event.button.x = settings_target(1, 5).x+25;
+    event.button.y = settings_target(1, 5).y+25;
     ui_handle_input(app, &event);
     assert(!settings_filters_active(app) && app->search_count == 1);
     ui_render(app);
@@ -1178,10 +1178,36 @@ static void test_removed_catalog_source(void) {
     puts("Removed evoX-CoreOS references are excluded; all four remaining sources are retained.");
 }
 
+static void test_additional_source_snapshot(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    int sources = 0;
+    int added = load_additional_catalog(app, &sources);
+    assert(sources == 17);
+    assert(added >= 100);
+    assert(app->catalog_source_count == sources);
+    assert(app->catalog_count > 100);
+    bool psp_present = false, named_source = false;
+    for (int i = 0; i < app->catalog_count; i++) {
+        GameItem *item = &app->catalog[i];
+        assert(item->format == FMT_CATALOG);
+        assert(!item->download_url[0] && !item->install_path[0]);
+        if (strcmp(item->platform, "sony-psp") == 0) psp_present = true;
+        if (strcmp(item->source_name, "Vimm's Lair") == 0) named_source = true;
+    }
+    assert(psp_present && named_source);
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Additional public metadata snapshot: source labels, imported games, console match and non-installable state passed.");
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
     test_removed_catalog_source();
+    test_additional_source_snapshot();
     test_artwork_metadata();
     test_truthful_catalog_state();
     test_native_artwork_bounds();

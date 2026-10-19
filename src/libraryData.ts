@@ -8,12 +8,12 @@ export const COMPANIES: LibraryCompany[] = [
     b: 204,
     artwork_path: '/assets/library/companies/sony.png',
     consoles: [
-      { name: 'PlayStation 1', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-ps1.png', logo_path: '/assets/library/logos/sony-ps1.png' },
-      { name: 'PlayStation 2', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-ps2.png', logo_path: '/assets/library/logos/sony-ps2.png' },
-      { name: 'PlayStation 3 (experimental)', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-ps3.png', logo_path: '/assets/library/logos/sony-ps3.png' },
-      { name: 'PlayStation 4', title_id_prefix: 'CUSA', artwork_path: '/assets/library/consoles/sony-ps4.png', logo_path: '/assets/library/logos/sony-ps4.png' },
-      { name: 'PlayStation 5', title_id_prefix: 'PPSA', artwork_path: '/assets/library/consoles/sony-ps5.png', logo_path: '/assets/library/logos/sony-ps5.png' },
-      { name: 'PlayStation Portable (PSP)', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-psp.png', logo_path: '/assets/library/logos/sony-psp.png' }
+      { name: 'PlayStation 1', platform_id: 'sony-ps1', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-ps1.png', logo_path: '/assets/library/logos/sony-ps1.png' },
+      { name: 'PlayStation 2', platform_id: 'sony-ps2', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-ps2.png', logo_path: '/assets/library/logos/sony-ps2.png' },
+      { name: 'PlayStation 3 (experimental)', platform_id: 'sony-ps3', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-ps3.png', logo_path: '/assets/library/logos/sony-ps3.png' },
+      { name: 'PlayStation 4', platform_id: 'sony-ps4', title_id_prefix: 'CUSA', artwork_path: '/assets/library/consoles/sony-ps4.png', logo_path: '/assets/library/logos/sony-ps4.png' },
+      { name: 'PlayStation 5', platform_id: 'sony-ps5', title_id_prefix: 'PPSA', artwork_path: '/assets/library/consoles/sony-ps5.png', logo_path: '/assets/library/logos/sony-ps5.png' },
+      { name: 'PlayStation Portable (PSP)', platform_id: 'sony-psp', title_id_prefix: null, artwork_path: '/assets/library/consoles/sony-psp.png', logo_path: '/assets/library/logos/sony-psp.png' }
     ]
   },
   {
@@ -23,8 +23,8 @@ export const COMPANIES: LibraryCompany[] = [
     b: 16,
     artwork_path: '/assets/library/companies/microsoft.png',
     consoles: [
-      { name: 'Original Xbox', title_id_prefix: null, artwork_path: '/assets/library/consoles/microsoft-xbox.png', logo_path: '/assets/library/logos/microsoft-xbox.png' },
-      { name: 'Xbox 360 (experimental)', title_id_prefix: null, artwork_path: '/assets/library/consoles/microsoft-xbox360.png', logo_path: '/assets/library/logos/microsoft-xbox360.png' }
+      { name: 'Original Xbox', platform_id: 'microsoft-xbox', title_id_prefix: null, artwork_path: '/assets/library/consoles/microsoft-xbox.png', logo_path: '/assets/library/logos/microsoft-xbox.png' },
+      { name: 'Xbox 360 (experimental)', platform_id: 'microsoft-xbox360', title_id_prefix: null, artwork_path: '/assets/library/consoles/microsoft-xbox360.png', logo_path: '/assets/library/logos/microsoft-xbox360.png' }
     ]
   },
   {
@@ -40,8 +40,8 @@ export const COMPANIES: LibraryCompany[] = [
       { name: 'Game Gear', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-gamegear.png', logo_path: '/assets/library/logos/sega-gamegear.png' },
       { name: 'Mega-CD / Sega CD', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-cd.png', logo_path: '/assets/library/logos/sega-cd.png' },
       { name: 'Sega 32X', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-32x.png', logo_path: '/assets/library/logos/sega-32x.png' },
-      { name: 'Sega Saturn', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-saturn.png', logo_path: '/assets/library/logos/sega-saturn.png' },
-      { name: 'Dreamcast', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-dreamcast.png', logo_path: '/assets/library/logos/sega-dreamcast.png' }
+      { name: 'Sega Saturn', platform_id: 'sega-saturn', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-saturn.png', logo_path: '/assets/library/logos/sega-saturn.png' },
+      { name: 'Dreamcast', platform_id: 'sega-dreamcast', title_id_prefix: null, artwork_path: '/assets/library/consoles/sega-dreamcast.png', logo_path: '/assets/library/logos/sega-dreamcast.png' }
     ]
   },
   {
@@ -51,18 +51,18 @@ export const COMPANIES: LibraryCompany[] = [
     b: 35,
     artwork_path: '/assets/library/companies/nintendo.png',
     consoles: [
-      { name: 'NES / Famicom', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-nes.png', logo_path: '/assets/library/logos/nintendo-nes.png' },
-      { name: 'SNES / Super Famicom', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-snes.png', logo_path: '/assets/library/logos/nintendo-snes.png' },
-      { name: 'Nintendo 64', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-n64.png', logo_path: '/assets/library/logos/nintendo-n64.png' },
-      { name: 'GameCube', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gamecube.png', logo_path: '/assets/library/logos/nintendo-gamecube.png' },
-      { name: 'Wii', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-wii.png', logo_path: '/assets/library/logos/nintendo-wii.png' },
-      { name: 'Wii U', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-wiiu.png', logo_path: '/assets/library/logos/nintendo-wiiu.png' },
-      { name: 'Nintendo Switch', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-switch.png', logo_path: '/assets/library/logos/nintendo-switch.png' },
-      { name: 'Game Boy', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gameboy.png', logo_path: '/assets/library/logos/nintendo-gameboy.png' },
-      { name: 'Game Boy Color', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gbc.png', logo_path: '/assets/library/logos/nintendo-gbc.png' },
-      { name: 'Game Boy Advance', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gba.png', logo_path: '/assets/library/logos/nintendo-gba.png' },
-      { name: 'Nintendo DS', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-ds.png', logo_path: '/assets/library/logos/nintendo-ds.png' },
-      { name: 'Nintendo 3DS', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-3ds.png', logo_path: '/assets/library/logos/nintendo-3ds.png' },
+      { name: 'NES / Famicom', platform_id: 'nintendo-nes', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-nes.png', logo_path: '/assets/library/logos/nintendo-nes.png' },
+      { name: 'SNES / Super Famicom', platform_id: 'nintendo-snes', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-snes.png', logo_path: '/assets/library/logos/nintendo-snes.png' },
+      { name: 'Nintendo 64', platform_id: 'nintendo-n64', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-n64.png', logo_path: '/assets/library/logos/nintendo-n64.png' },
+      { name: 'GameCube', platform_id: 'nintendo-gc', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gamecube.png', logo_path: '/assets/library/logos/nintendo-gamecube.png' },
+      { name: 'Wii', platform_id: 'nintendo-wii', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-wii.png', logo_path: '/assets/library/logos/nintendo-wii.png' },
+      { name: 'Wii U', platform_id: 'nintendo-wiiu', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-wiiu.png', logo_path: '/assets/library/logos/nintendo-wiiu.png' },
+      { name: 'Nintendo Switch', platform_id: 'nintendo-switch', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-switch.png', logo_path: '/assets/library/logos/nintendo-switch.png' },
+      { name: 'Game Boy', platform_id: 'nintendo-gb', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gameboy.png', logo_path: '/assets/library/logos/nintendo-gameboy.png' },
+      { name: 'Game Boy Color', platform_id: 'nintendo-gbc', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gbc.png', logo_path: '/assets/library/logos/nintendo-gbc.png' },
+      { name: 'Game Boy Advance', platform_id: 'nintendo-gba', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-gba.png', logo_path: '/assets/library/logos/nintendo-gba.png' },
+      { name: 'Nintendo DS', platform_id: 'nintendo-ds', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-ds.png', logo_path: '/assets/library/logos/nintendo-ds.png' },
+      { name: 'Nintendo 3DS', platform_id: 'nintendo-3ds', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-3ds.png', logo_path: '/assets/library/logos/nintendo-3ds.png' },
       { name: 'Virtual Boy', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-virtualboy.png', logo_path: '/assets/library/logos/nintendo-virtualboy.png' },
       { name: 'Pokémon Mini', title_id_prefix: null, artwork_path: '/assets/library/consoles/nintendo-pokemini.png', logo_path: '/assets/library/logos/nintendo-pokemini.png' }
     ]

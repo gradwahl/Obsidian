@@ -1,0 +1,140 @@
+[
+  {
+    "id": "nopaystation",
+    "name": "NoPayStation",
+    "url": "https://nopaystation.com/",
+    "adapter": "tsv",
+    "feeds": [
+      [
+        "sony-ps3",
+        "https://nopaystation.com/tsv/PS3_GAMES.tsv"
+      ],
+      [
+        "sony-psp",
+        "https://nopaystation.com/tsv/PSP_GAMES.tsv"
+      ],
+      [
+        "sony-psvita",
+        "https://nopaystation.com/tsv/PSV_GAMES.tsv"
+      ],
+      [
+        "sony-ps1",
+        "https://nopaystation.com/tsv/PSX_GAMES.tsv"
+      ]
+    ]
+  },
+  {
+    "id": "psn-content",
+    "name": "PSN-Content",
+    "url": "https://ps3-pro.github.io/PSN-Content/files/website/modern.html",
+    "adapter": "tsv",
+    "feeds": [
+      [
+        "sony-ps3",
+        "https://raw.githubusercontent.com/PS3-Pro/PSN-Content/master/resources/database/content/official/games.tsv"
+      ]
+    ]
+  },
+  {
+    "id": "alvro",
+    "name": "Archive.org / AlvRo",
+    "url": "https://archive.org/search?query=creator%3A%22AlvRo%22",
+    "adapter": "archive",
+    "query": "creator:\"AlvRo\""
+  },
+  {
+    "id": "superpsx",
+    "name": "SuperPSX",
+    "url": "https://www.superpsx.com/",
+    "adapter": "html"
+  },
+  {
+    "id": "gfs",
+    "name": "GFS Catalog",
+    "url": "https://catalog.gfs-dlps.workers.dev/",
+    "adapter": "gfs",
+    "packs": [
+      "fpkg",
+      "pfs",
+      "lz4",
+      "packizard"
+    ]
+  },
+  {
+    "id": "downloadgamepsp",
+    "name": "DownloadGamePSP",
+    "url": "https://downloadgamepsp.org/",
+    "adapter": "html",
+    "platform": "sony-psp"
+  },
+  {
+    "id": "maelly-pooh",
+    "name": "Archive.org / maelly_pooh",
+    "url": "https://archive.org/details/@maelly_pooh",
+    "adapter": "archive",
+    "query": "uploader:maelly_pooh"
+  },
+  {
+    "id": "pkgps4",
+    "name": "PKGPS4",
+    "url": "https://www.pkgps4.click/",
+    "adapter": "html",
+    "platform": "sony-ps4"
+  },
+  {
+    "id": "axekin",
+    "name": "Axekin",
+    "url": "https://www.axekin.com/",
+    "adapter": "html"
+  },
+  {
+    "id": "vimm",
+    "name": "Vimm's Lair",
+    "url": "https://vimm.net/",
+    "adapter": "vimm"
+  },
+  {
+    "id": "romheaven",
+    "name": "RomHeaven",
+    "url": "https://romheaven.com/",
+    "adapter": "html",
+    "platform": "nintendo-switch",
+    "index_url": "https://romheaven.com/switch"
+  },
+  {
+    "id": "ziperto",
+    "name": "Ziperto",
+    "url": "https://www.ziperto.com/",
+    "adapter": "html"
+  },
+  {
+    "id": "wowroms",
+    "name": "WowRoms",
+    "url": "https://wowroms.com/en",
+    "adapter": "html"
+  },
+  {
+    "id": "romstime",
+    "name": "RomsTime",
+    "url": "https://romstime.com/",
+    "adapter": "html"
+  },
+  {
+    "id": "retrogamechampion",
+    "name": "Retro Game Champion",
+    "url": "https://www.retrogamechampion.com/",
+    "adapter": "html"
+  },
+  {
+    "id": "romshq",
+    "name": "ROMsHQ",
+    "url": "https://romshq.com/",
+    "adapter": "html"
+  },
+  {
+    "id": "cdromance",
+    "name": "CDRomance",
+    "url": "https://cdromance.org/",
+    "adapter": "html"
+  }
+]

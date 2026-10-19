@@ -14,7 +14,7 @@ bool settings_filters_active(const WolodriveApp *app) {
 }
 bool settings_accepts_item(const WolodriveApp *app, const GameItem *item) {
     return settings_source_enabled(app, item->source_name) &&
-        item->format >= FMT_EXFAT && item->format <= FMT_PKG &&
+        item->format >= FMT_EXFAT && item->format <= FMT_CATALOG &&
         !(app->filters.disabled_formats & (1u << item->format));
 }
 static bool read_integer(FILE *file, int *value) {
@@ -45,7 +45,7 @@ bool settings_load(WolodriveApp *app) {
             loaded->source_count = loaded->sources_limited ? 1 : 0;
         }
     } else if (valid && strcmp(header, "WOLODRIVE_FILTERS_2\n") == 0) {
-        valid = format >= 0 && format <= 7 && read_integer(file, &count) && count >= -1 && count <= MAX_CATALOG_ITEMS;
+        valid = format >= 0 && format <= 15 && read_integer(file, &count) && count >= -1 && count <= MAX_CATALOG_ITEMS;
         loaded->disabled_formats = (unsigned)format;
         loaded->sources_limited = count >= 0;
         for (int i = 0; valid && i < count; i++) {

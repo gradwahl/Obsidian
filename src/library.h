@@ -26,5 +26,6 @@ int library_company_count(void);
 const LibraryCompany *library_company_at(int index);
 const LibraryConsole *library_console_at(int company, int index);
 bool library_console_matches_id(const LibraryConsole *console, const char *title_id);
+bool library_console_matches_platform(const LibraryConsole *console, const char *platform);
 
 #endif

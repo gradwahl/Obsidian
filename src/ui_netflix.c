@@ -77,7 +77,8 @@ static SDL_Rect library_tile_target(int index) {
 
 static bool library_matches_console(WolodriveApp *app, const GameItem *item) {
     const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
-    return item->is_game && library_console_matches_id(console, item->id_code);
+    return item->is_game && (library_console_matches_id(console, item->id_code) ||
+        (item->format == FMT_CATALOG && library_console_matches_platform(console, item->platform)));
 }
 
 static bool is_library_view(int view) {
@@ -872,6 +873,7 @@ static const char *action_label(WolodriveApp *app, GameItem *item) {
     if (item->state == STATE_DOWNLOADING) return TR(app, TXT_DOWNLOADING);
     if (item->state == STATE_INSTALLED)
         return TR(app, item->format == FMT_PKG ? TXT_INSTALLED : TXT_MOUNT);
+    if (item->format == FMT_CATALOG) return "WEBSITE";
     return TR(app, TXT_DOWNLOAD);
 }
 
@@ -1214,12 +1216,13 @@ static void render_toast_notification(WolodriveApp *app) {
 }
 
 static int library_console_game_count(WolodriveApp *app, const LibraryConsole *console) {
-    if (!console || !console->title_id_prefix) return 0;
+    if (!console) return 0;
     int count = 0;
     SDL_LockMutex(app->catalog_mutex);
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
-        if (item->is_game && settings_accepts_item(app, item) && library_console_matches_id(console, item->id_code)) count++;
+        if (item->is_game && settings_accepts_item(app, item) && (library_console_matches_id(console, item->id_code) ||
+            (item->format == FMT_CATALOG && library_console_matches_platform(console, item->platform)))) count++;
     }
     SDL_UnlockMutex(app->catalog_mutex);
     return count;
