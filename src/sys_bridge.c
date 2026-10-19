@@ -119,7 +119,7 @@ void sys_update_stats(SystemStats *stats) {
 }
 
 static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
-                           const char *desc, const char *path, const char *cover_url,
+                           TextId description_id, const char *path, const char *cover_url,
                            float size_gb, PackageFormat fmt, PackageState state, float progress,
                            uint8_t r, uint8_t g, uint8_t b) {
     if (app->catalog_count >= MAX_CATALOG_ITEMS) return;
@@ -130,7 +130,7 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
     snprintf(it->title, sizeof(it->title), "%s", title);
     snprintf(it->version, sizeof(it->version), "01.00");
     snprintf(it->source_name, sizeof(it->source_name), "Pegasus-DL / Wolodrive");
-    snprintf(it->description, sizeof(it->description), "%s", desc);
+    it->description_id = description_id;
     snprintf(it->install_path, sizeof(it->install_path), "%s", path);
     snprintf(it->cover_url, sizeof(it->cover_url), "%s", cover_url ? cover_url : "");
     snprintf(it->cover_local_path, sizeof(it->cover_local_path), "%s/%s.cover", COVERS_CACHE_DIR, id);
@@ -151,70 +151,82 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
 
 void sys_init(WolodriveApp *app) {
     app->catalog_count = 0;
+#ifdef __PS5__
+    mkdir(WOLODRIVE_DATA_PATH, 0755);
+    snprintf(app->language_path, sizeof(app->language_path), "%s/language", WOLODRIVE_DATA_PATH);
+#else
+    char *pref_path = SDL_GetPrefPath("Wolodrive", "Wolodrive");
+    if (pref_path) {
+        snprintf(app->language_path, sizeof(app->language_path), "%slanguage", pref_path);
+        SDL_free(pref_path);
+    }
+#endif
+    SDL_AtomicSet(&app->language, i18n_load_language(app->language_path, i18n_detect_language()));
+    app->sync_status_id = TXT_READY;
 
     /* Bazowe pozycje z prawdziwymi okładkami CDN (automatycznie pobierane do assets/covers/ i łączone z default-sources.json) */
     add_seed_entry(app, "PPSA08338", "Marvel's Spider-Man 2",
-        "Obraz exFAT zoptymalizowany pod ShadowMountPlus. Natywna obsługa PS5 (FW 13.60), błyskawiczne montowanie bez kopiowania FFPKG.",
+        TXT_DESC_SPIDER_MAN_2,
         "/data/homebrew/PPSA08338/PPSA08338.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202306/1219/1c7b75d8ed9271516546560d219ad0b22ee0a263b4537bd8.png",
         86.4f, FMT_EXFAT, STATE_AVAILABLE, 0.0f, 185, 20, 32);
 
     add_seed_entry(app, "PPSA04610", "God of War Ragnarok",
-        "Pełny pakiet .exfat gotowy do natychmiastowego podpięcia w /data/homebrew/ przez demona ShadowMountPlus na PS5 13.60.",
+        TXT_DESC_GOD_OF_WAR,
         "/data/homebrew/PPSA04610/PPSA04610.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202207/1210/4xJ8XB3bi888QTLZYdl7Oi0s.png",
         104.2f, FMT_EXFAT, STATE_DOWNLOADING, 42.5f, 26, 82, 148);
 
     add_seed_entry(app, "PPSA01341", "Demon's Souls Remake",
-        "Wydanie PS5 w formacie .ffpkg. Zawiera komplet zasobów 4K/60FPS oraz łatkę kompatybilności pod Kernel 13.60.",
+        TXT_DESC_DEMONS_SOULS,
         "/data/homebrew/PPSA01341",
         "https://image.api.playstation.com/vulcan/img/rnd/202011/1717/GemRaOZaCMhGxQ9dRhnQQyT5.png",
         53.8f, FMT_FFPKG, STATE_AVAILABLE, 0.0f, 110, 78, 38);
 
     add_seed_entry(app, "PPSA07950", "Stellar Blade",
-        "Obraz .exfat (ShadowMountPlus Ready) z wyodrębnionymi modułami wykonywalnymi i pełnym wsparciem haptyki DualSense.",
+        TXT_DESC_STELLAR_BLADE,
         "/data/homebrew/PPSA07950/PPSA07950.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202401/2211/40e7cfd126a11fe5118310ebce6d9b3a23e7cab2717217c8.png",
         34.7f, FMT_EXFAT, STATE_AVAILABLE, 0.0f, 22, 118, 132);
 
     add_seed_entry(app, "PPSA01552", "Ratchet & Clank: Rift Apart",
-        "Paczka .ffpkg zoptymalizowana pod bezpośredni odczyt z wewnętrznego dysku NVMe (/data/homebrew) lub /mnt/ext0.",
+        TXT_DESC_RATCHET_AND_CLANK,
         "/data/homebrew/PPSA01552",
         "https://image.api.playstation.com/vulcan/ap/rnd/202101/2921/DwVjpbKOsFOyPdNzmSTSWuxG.png",
         33.6f, FMT_FFPKG, STATE_INSTALLED, 100.0f, 136, 42, 165);
 
     add_seed_entry(app, "PPSA10665", "Astro Bot",
-        "Natywny obraz .exfat dla PS5 13.60. Błyskawiczny zapis bezpośrednio na partycję zewnętrzną /mnt/ext0/homebrew.",
+        TXT_DESC_ASTRO_BOT,
         "/mnt/ext0/homebrew/PPSA10665.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202405/2409/dc90a668a7effb6fb9b2cf55fb9cd6f7c26856c504ef1e54.png",
         37.9f, FMT_EXFAT, STATE_AVAILABLE, 0.0f, 32, 96, 205);
 
     add_seed_entry(app, "CUSA30410", "Bloodborne GOTY (60 FPS Patch)",
-        "Pakiet PS4 FPKG (.pkg) ze zintegrowaną łatką 60 FPS oraz odblokowaną rozdzielczością 1080p/1440p dla PS5.",
+        TXT_DESC_BLOODBORNE,
         "/data/pkg/CUSA30410_bloodborne_60fps.pkg",
         "https://image.api.playstation.com/cdn/UP9000/CUSA00900_00/b5Qrdv032c226K9f0n37P4v2s0F17H4E.png",
         36.2f, FMT_PKG, STATE_DOWNLOADING, 78.0f, 82, 28, 46);
 
     add_seed_entry(app, "CUSA03041", "Red Dead Redemption 2",
-        "Kompletny instalator .pkg (PS4 FPKG) z odblokowanym frameratem na konsoli PlayStation 5.",
+        TXT_DESC_RED_DEAD_REDEMPTION,
         "/mnt/ext0/pkg/CUSA03041_rdr2.pkg",
         "https://image.api.playstation.com/cdn/UP1004/CUSA03041_00/Hpl5MtwQgOVF9vJqlfui6SDB5Jl4oBSq.png",
         105.0f, FMT_PKG, STATE_AVAILABLE, 0.0f, 168, 62, 24);
 
     add_seed_entry(app, "CUSA18017", "Ghost of Tsushima Director's Cut",
-        "Wersja .pkg gotowa do bezpośredniej instalacji przez Package Installer lub strumieniowego pobrania Wolodrive.",
+        TXT_DESC_GHOST_OF_TSUSHIMA,
         "/data/pkg/CUSA18017_got.pkg",
         "https://image.api.playstation.com/vulcan/ap/rnd/202106/2322/c16gs6a7lbAYzPf7ZTikbH1c.png",
         59.1f, FMT_PKG, STATE_AVAILABLE, 0.0f, 112, 108, 42);
 
     add_seed_entry(app, "CUSA00900", "Driveclub Complete Edition",
-        "Klasyczna edycja PS4 FPKG (.pkg) zawierająca wszystkie przepustki sezonowe oraz odblokowany klatkaż.",
+        TXT_DESC_DRIVECLUB,
         "/data/pkg/CUSA00900_driveclub.pkg",
         "https://image.api.playstation.com/cdn/EP9000/CUSA00003_00/4b3c01e6b1d4525a1fb42ef213b6dcac867527f32bc8cf43.png",
         31.4f, FMT_PKG, STATE_INSTALLED, 100.0f, 152, 28, 78);
 
     sys_update_stats(&app->stats);
-    sys_send_notification(app, "Uruchomiono %s (%s)", WOLODRIVE_NAME, WOLODRIVE_VERSION);
+    sys_send_notification(app, TR(app, TXT_STARTED), WOLODRIVE_NAME, WOLODRIVE_VERSION);
 }
 
 void sys_trigger_action(WolodriveApp *app, GameItem *item) {
@@ -226,18 +238,18 @@ void sys_trigger_action(WolodriveApp *app, GameItem *item) {
         item->progress = 2.0f;
         app->catalog_dirty = true;
         SDL_UnlockMutex(app->catalog_mutex);
-        sys_send_notification(app, "Rozpoczęto pobieranie: %s [%s]", item->title, item->id_code);
+        sys_send_notification(app, TR(app, TXT_DOWNLOAD_STARTED), item->title, item->id_code);
     } else if (item->state == STATE_DOWNLOADING) {
         float p = item->progress;
         SDL_UnlockMutex(app->catalog_mutex);
-        sys_send_notification(app, "Pobieranie w toku: %s (%.1f%%)", item->title, p);
+        sys_send_notification(app, TR(app, TXT_DOWNLOAD_ACTIVE), item->title, p);
     } else {
         PackageFormat fmt = item->format;
         SDL_UnlockMutex(app->catalog_mutex);
         if (fmt == FMT_EXFAT || fmt == FMT_FFPKG) {
-            sys_send_notification(app, "ShadowMountPlus: Zamontowano %s (%s)", item->id_code, item->install_path);
+            sys_send_notification(app, TR(app, TXT_MOUNTED), item->id_code, item->install_path);
         } else {
-            sys_send_notification(app, "Pakiet FPKG %s jest gotowy do uruchomienia", item->id_code);
+            sys_send_notification(app, TR(app, TXT_PACKAGE_READY), item->id_code);
         }
     }
 }
@@ -251,12 +263,12 @@ void sys_cancel_action(WolodriveApp *app, GameItem *item) {
         item->progress = 0.0f;
         app->catalog_dirty = true;
         SDL_UnlockMutex(app->catalog_mutex);
-        sys_send_notification(app, "Wstrzymano i anulowano pobieranie: %s", item->title);
+        sys_send_notification(app, TR(app, TXT_CANCELLED), item->title);
     } else {
         SDL_UnlockMutex(app->catalog_mutex);
         app->active_row = 0;
         app->rows[0].selected_col = 0;
-        sys_send_notification(app, "Powrót na początek siatki katalogu");
+        sys_send_notification(app, TR(app, TXT_RETURNED));
     }
 }
 
@@ -283,6 +295,15 @@ void sys_update_downloads(WolodriveApp *app, float dt) {
     SDL_UnlockMutex(app->catalog_mutex);
 
     if (finished_any) {
-        sys_send_notification(app, "Ukończono pobieranie: %s [%s]", finished_title, finished_id);
+        sys_send_notification(app, TR(app, TXT_COMPLETE), finished_title, finished_id);
     }
+}
+
+void sys_cycle_language(WolodriveApp *app) {
+    Language language = (Language)((SDL_AtomicGet(&app->language) + 1) % LANG_COUNT);
+    SDL_AtomicSet(&app->language, language);
+    bool saved = i18n_save_language(app->language_path, language);
+    ui_rebuild_carousels(app);
+    sys_send_notification(app, TR(app, saved ? TXT_LANGUAGE_CHANGED : TXT_LANGUAGE_UNSAVED),
+                          i18n_language_name(language));
 }

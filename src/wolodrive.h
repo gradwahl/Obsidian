@@ -6,6 +6,9 @@
 #include <SDL2/SDL_image.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "i18n.h"
+
+#define TR(app, id) i18n_text((Language)SDL_AtomicGet(&(app)->language), (id))
 
 #define WOLODRIVE_NAME          "WOLODRIVE"
 #define WOLODRIVE_VERSION       "2.0.0-PRO (PS5 13.60)"
@@ -69,6 +72,7 @@ typedef struct {
     char title[128];            /* Tytuł gry */
     char version[32];           /* Wersja np. 01.00 */
     char source_name[64];       /* Nazwa katalogu źródłowego Pegasus-DL */
+    TextId description_id;      /* TEXT_COUNT means source-provided description. */
     char description[384];      /* Opis w Hero Bannerze */
     char install_path[256];     /* Docelowa ścieżka na PS5 */
     char download_url[512];     /* Bezpośredni link do pakietu z katalogu JSON */
@@ -112,6 +116,8 @@ typedef struct {
 } SystemStats;
 
 typedef struct {
+    SDL_atomic_t language;
+    char language_path[512];
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font_logo;
@@ -126,7 +132,9 @@ typedef struct {
     int catalog_count;
     bool catalog_dirty;         /* Sygnał od wątku tła do przebudowania karuzel */
     bool sync_in_progress;      /* Czy trwa synchronizacja z Pegasus-DL */
-    char sync_status_text[128]; /* Tekst statusu synchronizacji w Top Barze */
+    TextId sync_status_id;
+    int sync_current, sync_total, sync_sources;
+    char sync_title[128];
     int covers_cached_count;
 
     CarouselRow rows[TOTAL_ROWS];
@@ -145,6 +153,7 @@ typedef struct {
 
 /* Warstwa systemowa (src/sys_bridge.c) */
 void sys_init(WolodriveApp *app);
+void sys_cycle_language(WolodriveApp *app);
 void sys_send_notification(WolodriveApp *app, const char *fmt, ...);
 void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);

@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
                 app.running = false;
             } else if (ev.type == SDL_CONTROLLERDEVICEADDED) {
                 SDL_GameControllerOpen(ev.cdevice.which);
-                sys_send_notification(&app, "Podłączono kontroler DualSense");
+                sys_send_notification(&app, TR(&app, TXT_CONTROLLER));
             } else {
                 ui_handle_input(&app, &ev);
             }

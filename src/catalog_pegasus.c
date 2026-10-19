@@ -311,13 +311,8 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
 
-    if (desc && desc[0]) {
-        snprintf(target->description, sizeof(target->description), "%s", desc);
-    } else {
-        snprintf(target->description, sizeof(target->description),
-                 "Pakiet z katalogu %s (Wersja %s). Gotowy do bezpośredniego pobrania i instalacji na PS5 (13.60).",
-                 target->source_name, target->version);
-    }
+    target->description_id = (desc && desc[0]) ? TEXT_COUNT : TXT_DESCRIPTION_FALLBACK;
+    snprintf(target->description, sizeof(target->description), "%s", desc ? desc : "");
 
     if (dl_url && dl_url[0]) {
         snprintf(target->download_url, sizeof(target->download_url), "%s", dl_url);
@@ -471,7 +466,7 @@ static void *catalog_sync_worker(void *userdata) {
 
     SDL_LockMutex(app->catalog_mutex);
     app->sync_in_progress = true;
-    snprintf(app->sync_status_text, sizeof(app->sync_status_text), "Pegasus-DL: Pobieranie default-sources.json...");
+    app->sync_status_id = TXT_SYNC_MANIFEST;
     SDL_UnlockMutex(app->catalog_mutex);
 
     char subcatalogs[24][512];
@@ -487,8 +482,9 @@ static void *catalog_sync_worker(void *userdata) {
         /* Pobierz i sparsuj wszystkie pod-katalogi znalezione w default-sources.json */
         for (int i = 0; i < subcatalog_count && app->running; i++) {
             SDL_LockMutex(app->catalog_mutex);
-            snprintf(app->sync_status_text, sizeof(app->sync_status_text),
-                     "Pegasus-DL: Wczytywanie sub-katalogu (%d/%d)...", i + 1, subcatalog_count);
+            app->sync_status_id = TXT_SYNC_SUBCATALOG;
+            app->sync_current = i + 1;
+            app->sync_total = subcatalog_count;
             SDL_UnlockMutex(app->catalog_mutex);
 
             char *sub_json = http_get_string(subcatalogs[i]);
@@ -521,8 +517,10 @@ static void *catalog_sync_worker(void *userdata) {
         if (url[0] != '\0') {
             if (!file_exists_and_valid(local_path)) {
                 SDL_LockMutex(app->catalog_mutex);
-                snprintf(app->sync_status_text, sizeof(app->sync_status_text),
-                         "Cache okładek: %s (%d/%d)...", title, i + 1, total_items);
+                app->sync_status_id = TXT_SYNC_COVER;
+                app->sync_current = i + 1;
+                app->sync_total = total_items;
+                snprintf(app->sync_title, sizeof(app->sync_title), "%s", title);
                 SDL_UnlockMutex(app->catalog_mutex);
 
                 http_download_file(url, local_path);
@@ -540,16 +538,17 @@ static void *catalog_sync_worker(void *userdata) {
 
     SDL_LockMutex(app->catalog_mutex);
     app->sync_in_progress = false;
-    snprintf(app->sync_status_text, sizeof(app->sync_status_text),
-             "Pegasus-DL: %d gier (%d sub-źródeł)  •  Okładki: %d/%d",
-             app->catalog_count, subcatalog_count, cached_ok, app->catalog_count);
+    app->sync_status_id = TXT_SYNC_DONE;
+    app->sync_current = cached_ok;
+    app->sync_total = app->catalog_count;
+    app->sync_sources = subcatalog_count;
     app->catalog_dirty = true;
     SDL_UnlockMutex(app->catalog_mutex);
 
     if (remote_games_total > 0) {
-        sys_send_notification(app, "Pegasus-DL: Załadowano %d pakietów z katalogu zdalnego", remote_games_total);
+        sys_send_notification(app, TR(app, TXT_SYNC_LOADED), remote_games_total);
     } else {
-        sys_send_notification(app, "Pegasus-DL: Zsynchronizowano manifest (%d źródeł) i cache okładek (%d)",
+        sys_send_notification(app, TR(app, TXT_SYNC_CACHED),
                               subcatalog_count, cached_ok);
     }
 
@@ -560,7 +559,7 @@ void catalog_start_async_sync(WolodriveApp *app) {
     SDL_LockMutex(app->catalog_mutex);
     if (app->sync_in_progress) {
         SDL_UnlockMutex(app->catalog_mutex);
-        sys_send_notification(app, "Synchronizacja katalogu Pegasus-DL już trwa w tle...");
+        sys_send_notification(app, TR(app, TXT_SYNC_BUSY));
         return;
     }
     app->sync_in_progress = true;

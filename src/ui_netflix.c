@@ -6,6 +6,7 @@
 static const char *FONT_CANDIDATES_BOLD[] = {
     "/data/homebrew/wolodrive/assets/font_bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
@@ -15,6 +16,7 @@ static const char *FONT_CANDIDATES_BOLD[] = {
 static const char *FONT_CANDIDATES_REGULAR[] = {
     "/data/homebrew/wolodrive/assets/font.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/TTF/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
     "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
@@ -225,7 +227,7 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
                   "WOLODRIVE", x + 18, y + h / 2 - (is_hero ? 28 : 22), watermark_col, 0);
 
         if (it->cover_url[0] != '\0' && !it->cover_ready_on_disk) {
-            draw_text(r, app->font_micro, "POBIERANIE OKŁADKI...", x + 18, y + h / 2 + 4, sub_col, 0);
+            draw_text(r, app->font_micro, TR(app, TXT_COVER_LOADING), x + 18, y + h / 2 + 4, sub_col, 0);
         } else {
             draw_text(r, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
         }
@@ -261,10 +263,10 @@ void ui_cleanup(WolodriveApp *app) {
 
 void ui_rebuild_carousels(WolodriveApp *app) {
     const char *titles[TOTAL_ROWS] = {
-        "Ostatnio dodane (Katalog Pegasus-DL)",
-        "Gry PS5 (.exfat / .ffpkg)",
-        "Gry PS4 (.pkg)",
-        "W trakcie pobierania i zainstalowane"
+        TR(app, TXT_ROW_RECENT),
+        TR(app, TXT_ROW_PS5),
+        TR(app, TXT_ROW_PS4),
+        TR(app, TXT_ROW_DOWNLOADS)
     };
 
     SDL_LockMutex(app->catalog_mutex);
@@ -344,6 +346,9 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             case SDLK_F5:
                 catalog_start_async_sync(app);
                 break;
+            case SDLK_l:
+                if (!ev->key.repeat) sys_cycle_language(app);
+                break;
             case SDLK_ESCAPE:
                 app->running = false;
                 break;
@@ -371,6 +376,9 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                 break;
             case SDL_CONTROLLER_BUTTON_B: /* [O] Circle na DualSense */
                 sys_cancel_action(app, get_focused_item(app));
+                break;
+            case SDL_CONTROLLER_BUTTON_X: /* Square on DualSense */
+                sys_cycle_language(app);
                 break;
             case SDL_CONTROLLER_BUTTON_Y: /* [Trójkąt] Triangle na DualSense */
                 catalog_start_async_sync(app);
@@ -483,7 +491,7 @@ static void render_hero_banner(WolodriveApp *app) {
     fill_rect(r, left_x, 96, 5, 24, COLOR_ACCENT_R, COLOR_ACCENT_G, COLOR_ACCENT_B, 255);
 
     char series_hdr[160];
-    snprintf(series_hdr, sizeof(series_hdr), "WOLODRIVE STORE   •   ŹRÓDŁO: %s", hero->source_name);
+    snprintf(series_hdr, sizeof(series_hdr), TR(app, TXT_SOURCE), hero->source_name);
     draw_text(r, app->font_small, series_hdr, left_x + 15, 99, muted, 0);
 
     /* Duży tytuł gry z delikatnym cieniem pod literami */
@@ -498,7 +506,7 @@ static void render_hero_banner(WolodriveApp *app) {
                            24, 24, 30, 220, COLOR_ACCENT_R, COLOR_ACCENT_G, COLOR_ACCENT_B, true) + 12;
 
     char size_lbl[48];
-    snprintf(size_lbl, sizeof(size_lbl), "ROZMIAR: %.1f GB", hero->size_gb);
+    snprintf(size_lbl, sizeof(size_lbl), TR(app, TXT_SIZE), hero->size_gb);
     bx += draw_glass_badge(r, app->font_small, size_lbl, bx, by, 12, 5,
                            24, 24, 30, 220, 180, 180, 190, false) + 12;
 
@@ -510,11 +518,19 @@ static void render_hero_banner(WolodriveApp *app) {
     fill_rect(r, left_x + 90, 240, 1080, 1, 255, 255, 255, 30);
 
     /* Opis gry (#94949C) */
-    draw_text(r, app->font_body, hero->description, left_x, 254, muted, 1180);
+    char description[512];
+    if (hero->description_id == TXT_DESCRIPTION_FALLBACK) {
+        snprintf(description, sizeof(description), TR(app, TXT_DESCRIPTION_FALLBACK),
+                 hero->source_name, hero->version);
+    } else {
+        snprintf(description, sizeof(description), "%s", hero->description_id == TEXT_COUNT
+                 ? hero->description : TR(app, hero->description_id));
+    }
+    draw_text(r, app->font_body, description, left_x, 254, muted, 1180);
 
     /* Docelowa ścieżka montażu / instalacji */
     char path_line[320];
-    snprintf(path_line, sizeof(path_line), "Cel instalacji: %s", hero->install_path);
+    snprintf(path_line, sizeof(path_line), TR(app, TXT_INSTALL_PATH), hero->install_path);
     draw_text(r, app->font_small, path_line, left_x, 314, muted, 0);
 
     /* Główny przycisk akcji (#E50914) z cieniem */
@@ -525,11 +541,11 @@ static void render_hero_banner(WolodriveApp *app) {
     fill_rect(r, left_x, btn_y, btn_w, btn_h, COLOR_ACCENT_R, COLOR_ACCENT_G, COLOR_ACCENT_B, 255);
     draw_border(r, left_x, btn_y, btn_w, btn_h, 1, 255, 255, 255, 95);
 
-    const char *btn_label = "POBIERZ / ZAINSTALUJ";
+    const char *btn_label = TR(app, TXT_DOWNLOAD);
     if (hero->state == STATE_DOWNLOADING) {
-        btn_label = "POBIERANIE W TOKU...";
+        btn_label = TR(app, TXT_DOWNLOADING);
     } else if (hero->state == STATE_INSTALLED) {
-        btn_label = (hero->format == FMT_PKG) ? "ZAINSTALOWANO (FPKG)" : "ZAMONTUJ SHADOWMOUNT";
+        btn_label = (hero->format == FMT_PKG) ? TR(app, TXT_INSTALLED) : TR(app, TXT_MOUNT);
     }
     draw_text(r, app->font_small, btn_label, left_x + 26, btn_y + 16, white, 0);
 
@@ -551,11 +567,11 @@ static void render_hero_banner(WolodriveApp *app) {
     int ds_x = left_x;
     int ds_y = 428;
     ds_x += draw_dualsense_prompt(r, app->font_small, app->font_small,
-                                  "X", "Pobierz / Zamontuj", ds_x, ds_y, 85, 165, 255);
+                                  "X", TR(app, TXT_ACTION_HINT), ds_x, ds_y, 85, 165, 255);
     ds_x += draw_dualsense_prompt(r, app->font_small, app->font_small,
-                                  "O", "Wstecz / Anuluj", ds_x, ds_y, 255, 95, 95);
+                                  "O", TR(app, TXT_BACK_HINT), ds_x, ds_y, 255, 95, 95);
     ds_x += draw_dualsense_prompt(r, app->font_small, app->font_small,
-                                  "Δ", "Odśwież katalog Pegasus-DL [R]", ds_x, ds_y, 65, 220, 135);
+                                  "Δ", TR(app, TXT_REFRESH_HINT), ds_x, ds_y, 65, 220, 135);
 
     /* Dolny separator Hero Bannera */
     fill_rect(r, 0, HERO_HEIGHT - 2, SCREEN_WIDTH, 2, 255, 255, 255, 22);
@@ -655,9 +671,9 @@ static void render_carousels(WolodriveApp *app) {
 
                 char sub_info[64];
                 if (it->state == STATE_DOWNLOADING) {
-                    snprintf(sub_info, sizeof(sub_info), "POBIERANIE: %.0f%%  •  %.1f GB", it->progress, it->size_gb);
+                    snprintf(sub_info, sizeof(sub_info), TR(app, TXT_PROGRESS), it->progress, it->size_gb);
                 } else if (it->state == STATE_INSTALLED) {
-                    snprintf(sub_info, sizeof(sub_info), "GOTOWE DO GRY  •  %.1f GB", it->size_gb);
+                    snprintf(sub_info, sizeof(sub_info), TR(app, TXT_READY_PLAY), it->size_gb);
                 } else {
                     snprintf(sub_info, sizeof(sub_info), "%s  •  %.1f GB", it->source_name, it->size_gb);
                 }
@@ -705,11 +721,30 @@ static void render_top_bar(WolodriveApp *app) {
 
     char sync_info[160];
     SDL_LockMutex(app->catalog_mutex);
-    snprintf(sync_info, sizeof(sync_info), "%s",
-             app->sync_status_text[0] ? app->sync_status_text : "Pegasus-DL Ready");
+    switch (app->sync_status_id) {
+        case TXT_SYNC_SUBCATALOG:
+            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_SUBCATALOG),
+                     app->sync_current, app->sync_total);
+            break;
+        case TXT_SYNC_COVER:
+            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_COVER),
+                     app->sync_title, app->sync_current, app->sync_total);
+            break;
+        case TXT_SYNC_DONE:
+            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_DONE),
+                     app->catalog_count, app->sync_sources, app->sync_current, app->sync_total);
+            break;
+        default:
+            snprintf(sync_info, sizeof(sync_info), "%s", TR(app, app->sync_status_id));
+            break;
+    }
     SDL_UnlockMutex(app->catalog_mutex);
 
-    draw_text(r, app->font_small, sync_info, 305, 27, muted, 0);
+    draw_text(r, app->font_small, sync_info, 305, 27, muted, 650);
+    char language_hint[96];
+    snprintf(language_hint, sizeof(language_hint), TR(app, TXT_LANGUAGE),
+             i18n_language_name((Language)SDL_AtomicGet(&app->language)));
+    draw_text(r, app->font_small, language_hint, 1490, 49, white, 390);
 
     /* Prawa strona: /data, /mnt/ext0, status sieci i temperatura CPU/GPU */
     char telemetry[256];
