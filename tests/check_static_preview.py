@@ -21,6 +21,7 @@ def main():
     artwork = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "assets"], cwd=ROOT
     ).decode().strip("\0").split("\0")
+    artwork = [name for name in artwork if not name.replace("\\", "/").startswith("assets/catalogs/")]
     for name in artwork:
         assert (PREVIEW / name).read_bytes() == (ROOT / name).read_bytes(), name
     assert not list(PREVIEW.rglob("*.tsx")), "Preview must contain compiled code"
@@ -38,6 +39,10 @@ def main():
             links = re.findall(r'(?:src|href)="(/[^\"]+)"', html)
             assert any(link.endswith(".js") for link in links)
             assert any(link.endswith(".css") for link in links)
+            axekin_chunks = list((PREVIEW / "assets").glob("axekin-*.js"))
+            assert len(axekin_chunks) == 1, "Full Axekin data must be a single deferred JS chunk"
+            assert not (PREVIEW / "assets/catalogs").exists(), "No duplicate raw catalog JSON in preview"
+            links.extend("/assets/" + chunk.name for chunk in axekin_chunks)
             for name in sorted(set(links + ["/" + path for path in artwork])):
                 with urllib.request.urlopen(base + name) as response:
                     assert response.read() == (PREVIEW / name.lstrip("/")).read_bytes(), name

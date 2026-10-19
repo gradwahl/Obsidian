@@ -1190,17 +1190,75 @@ static void test_additional_source_snapshot(void) {
     assert(app->catalog_source_count == sources);
     assert(app->catalog_count > 100);
     bool psp_present = false, named_source = false;
+    int axekin_count = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
         assert(item->format == FMT_CATALOG);
         assert(!item->download_url[0] && !item->install_path[0]);
         if (strcmp(item->platform, "sony-psp") == 0) psp_present = true;
         if (strcmp(item->source_name, "Vimm's Lair") == 0) named_source = true;
+        if (strcmp(item->source_name, "Axekin") == 0) {
+            axekin_count++;
+            assert(strcmp(item->platform, "sony-psvita") != 0);
+            bool library_match = false;
+            for (int co = 0; co < library_company_count(); co++) {
+                const LibraryCompany *company = library_company_at(co);
+                for (int ci = 0; ci < company->console_count; ci++)
+                    if (library_console_matches_platform(&company->consoles[ci], item->platform))
+                        library_match = true;
+            }
+            assert(library_match);
+        }
     }
     assert(psp_present && named_source);
+    assert(axekin_count > 18000);
+    int previous_count = app->catalog_count;
+    assert(load_additional_catalog(app, &sources) == 0);
+    assert(app->catalog_count == previous_count && sources == 17);
     SDL_DestroyMutex(app->catalog_mutex);
     free(app);
     puts("Additional public metadata snapshot: source labels, imported games, console match and non-installable state passed.");
+}
+
+static void test_library_game_paging(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    SDL_AtomicSet(&app->language, LANG_EN);
+    app->active_row = VIEW_GAMES;
+    app->library_depth = LIBRARY_GAMES;
+    app->library_company = 0; /* Sony */
+    app->library_console_selection = 3; /* PlayStation 4 */
+    for (int i = 0; i < 260; i++) {
+        GameItem *item = &app->catalog[i];
+        snprintf(item->id_code, sizeof(item->id_code), "CUSA%05d", i);
+        snprintf(item->title, sizeof(item->title), "Paged game %d", i);
+        item->is_game = true;
+    }
+    app->catalog_count = 260;
+    ui_rebuild_carousels(app);
+    CarouselRow *row = &app->rows[VIEW_GAMES];
+    assert(row->item_count == MAX_ITEMS_PER_ROW);
+    assert(strcmp(row->items[0]->title, "Paged game 0") == 0);
+    SDL_Event event; SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_RIGHT;
+    row->selected_col = MAX_ITEMS_PER_ROW - 1;
+    assert(handle_library_input(app, &event));
+    assert(app->library_game_offset == 128 && row->item_count == 128);
+    assert(strcmp(row->items[0]->title, "Paged game 128") == 0);
+    row->selected_col = MAX_ITEMS_PER_ROW - 1;
+    assert(handle_library_input(app, &event));
+    assert(app->library_game_offset == 256 && row->item_count == 4);
+    assert(strcmp(row->items[0]->title, "Paged game 256") == 0);
+    row->selected_col = 0;
+    event.key.keysym.sym = SDLK_LEFT;
+    assert(handle_library_input(app, &event));
+    assert(app->library_game_offset == 128 && row->selected_col == 127);
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Native Games/Roms pagination reaches past the 128-item carousel limit.");
 }
 
 int main(void) {
@@ -1208,6 +1266,7 @@ int main(void) {
     test_description_text();
     test_removed_catalog_source();
     test_additional_source_snapshot();
+    test_library_game_paging();
     test_artwork_metadata();
     test_truthful_catalog_state();
     test_native_artwork_bounds();

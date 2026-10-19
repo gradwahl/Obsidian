@@ -97,6 +97,15 @@ assert.match(home, /2026-10-19/);
 assert.equal((home.match(/class="tv-card tv-card-selected"/g) || []).length, 1);
 assert.ok(!render(React.createElement(HomeView, { ...homeProps, sidebarFocused: true })).includes('tv-card-selected'));
 assert.match(render(React.createElement(HomeView, { ...homeProps, selected: 99 })), /<h1>Game 4<\/h1>/);
+const largeGames = Array.from({ length: 5000 }, (_, index) => ({
+  ...game, id_code: `EXT${index}`, title: `Large game ${index}`
+}));
+const largeMarkup = render(React.createElement(HomeView, { ...homeProps, games: largeGames, selected: 3500 }));
+assert.match(largeMarkup, /<h1>Large game 3500<\/h1>/);
+assert.equal((largeMarkup.match(/class="tv-card /g) || []).length, 25,
+  'Large Games/Roms lists must only mount nearby cards');
+assert.match(largeMarkup, /3501 \/ 5000/);
+
 for (const language of ['en', 'pl', 'fr', 'nl', 'de', 'es', 'it', 'zh', 'ru']) {
   assert.ok(render(React.createElement(GameCard, { ...cardProps, language })).includes(t(language, 'TXT_GAME_DETAILS')));
 }

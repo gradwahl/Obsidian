@@ -4,7 +4,7 @@ No package files, account data, license keys, or download-link payloads are stor
 Only allowlisted display metadata and public source-page links enter the snapshots.
 """
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 from datetime import datetime, timezone
 import hashlib
@@ -14,11 +14,15 @@ import io
 import json
 from pathlib import Path
 import re
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_RESPONSE = 24 * 1024 * 1024
+AXEKIN_MAX_PAGES = 2000
+AXEKIN_MAX_GAMES = 30000
 
 
 def fetch(url):
@@ -268,6 +272,123 @@ def axekin(source, limit):
     return rows, bool(total is None or total > len(rows))
 
 
+def axekin_supported_platforms():
+    """Allow exactly the consoles that the Games/Roms view can resolve."""
+    mappings = json.loads((ROOT / "config/axekin_platforms.json").read_text(encoding="utf8"))
+    library = (ROOT / "src/libraryData.ts").read_text(encoding="utf8")
+    native = (ROOT / "src/library.c").read_text(encoding="utf8")
+    for slug, entry in mappings.items():
+        if not re.fullmatch(r"[a-z0-9-]+", slug) or not re.fullmatch(r"[a-z0-9-]+", entry["platform"]):
+            raise ValueError("Invalid Axekin platform mapping")
+        name = entry["console"]
+        if (f"name: '{name}', platform_id: '{entry['platform']}'" not in library or
+                f'{{"{name}", "{entry["platform"]}"}}' not in native):
+            raise ValueError(f"Axekin platform {slug} has no matching Games/Roms console: {name}")
+    return {slug: entry["platform"] for slug, entry in mappings.items()}
+
+
+def axekin_page(source, page, attempts=3):
+    index = source.get("index_url", source["url"])
+    endpoint = index + ("&" if "?" in index else "?") + urllib.parse.urlencode({"page": page})
+    for attempt in range(attempts):
+        try:
+            parser = InertiaPage()
+            parser.feed(fetch(endpoint))
+            if not parser.page or parser.page.get("component") != "games/index":
+                raise ValueError(f"Axekin index missing from page {page}")
+            listing = parser.page.get("props", {}).get("games", {})
+            if not isinstance(listing.get("data"), list):
+                raise ValueError(f"Axekin game data invalid at page {page}")
+            meta = listing.get("meta", {})
+            if int(meta.get("currentPage", page)) != page:
+                raise ValueError(f"Axekin page mismatch at {page}")
+            return listing
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            if attempt == attempts - 1:
+                raise RuntimeError(f"Axekin page {page} failed after {attempts} tries") from exc
+            time.sleep(min(5, 1.25 * (attempt + 1)))
+
+
+def axekin_full(source, workers=5, progress=None):
+    """Crawl every page, keeping only Games/Roms-supported platforms.
+
+    Fail atomically on missing pages: a partial crawl must never be marked full.
+    """
+    mappings = axekin_supported_platforms()
+    first = axekin_page(source, 1)
+    total_pages = int(first.get("meta", {}).get("lastPage", 0))
+    total_games = int(first.get("meta", {}).get("total", 0))
+    if not 1 <= total_pages <= AXEKIN_MAX_PAGES or not 1 <= total_games <= AXEKIN_MAX_GAMES:
+        raise ValueError(f"Axekin declared unsafe page/game count: {total_pages}/{total_games}")
+    results = {1: first}
+    completed = 1
+    if progress:
+        progress(completed, total_pages)
+    # Each page is checked for correct pagination metadata before entering the index.
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(axekin_page, source, page): page
+                   for page in range(2, total_pages + 1)}
+        for task in as_completed(futures):
+            page = futures[task]
+            results[page] = task.result()
+            completed += 1
+            if progress and (completed % 50 == 0 or completed == total_pages):
+                progress(completed, total_pages)
+
+    rows, seen, skipped, visited = [], set(), 0, 0
+    for page in range(1, total_pages + 1):
+        games = results[page]["data"]
+        if not games:
+            raise ValueError(f"Axekin returned an empty page at {page}")
+        visited += len(games)
+        for game in games:
+            title, slug = game.get("title", ""), game.get("slug", "")
+            if not title or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug):
+                skipped += 1
+                continue
+            platforms = game.get("platforms") or []
+            if not isinstance(platforms, list):
+                skipped += 1
+                continue
+            compatible = {mappings[p["slug"]] for p in platforms
+                          if isinstance(p, dict) and isinstance(p.get("slug"), str)
+                          and p["slug"] in mappings}
+            if not compatible:
+                skipped += 1
+                continue
+            game_page = urllib.parse.urljoin(source["url"], "/games/" + slug)
+            cover = game.get("coverImage") or ""
+            if cover and not str(cover).startswith(("https://", "http://")):
+                cover = urllib.parse.urljoin(source["url"], str(cover))
+            # One entry per supported console, including multi-platform games.
+            for system in sorted(compatible):
+                identity = "EXT-" + hashlib.sha256((source["id"] + str(game.get("id", slug)) + system).encode()).hexdigest()[:20]
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                entry = record(source, title, game_page, identity=identity, system=system,
+                               cover=cover, description="", size=file_size_bytes(game.get("fileSize")))
+                # The bulk snapshot keeps only display fields to limit native and web memory.
+                entry.pop("category", None)
+                entry.pop("sizeBytes", None) if entry["sizeBytes"] == 0 else None
+                entry.pop("description", None)
+                entry.pop("version", None)
+                rows.append(entry)
+    if visited < total_games * 0.90:
+        raise ValueError(f"Axekin crawl yielded only {visited}/{total_games} advertised games")
+    return rows, {"pages": total_pages, "advertisedGames": total_games,
+                  "visitedGames": visited, "excludedGames": skipped,
+                  "indexedEntries": len(rows), "supportedConsoles": len(mappings)}
+
+
+def write_snapshot(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n",
+                         encoding="utf8", newline="\n")
+    temporary.replace(path)
+
+
 def romheaven(source, limit):
     # Use the same public title CSV the website's Svelte application reads.
     endpoint = source["feed_url"]
@@ -458,6 +579,8 @@ def import_source(source, limit, previous=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=256, help="Maximum metadata entries per source (1-400)")
+    parser.add_argument("--full-axekin", action="store_true",
+                        help="Index every Axekin page into a separate, console-filtered snapshot")
     args = parser.parse_args(argv)
     if not 1 <= args.limit <= 400:
         parser.error("--limit must be between 1 and 400 to preserve native catalog capacity")
@@ -467,6 +590,36 @@ def main(argv=None):
     old = {item["id"]: item for item in previous["sources"]}
     with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(lambda source: import_source(source, args.limit, old.get(source["id"])), sources))
+    if args.full_axekin:
+        axekin_source = next(source for source in sources if source["id"] == "axekin")
+        print("Axekin: crawling full catalogue (only Games/Roms consoles)...", flush=True)
+        def report(completed, total):
+            print(f"Axekin: verified {completed}/{total} pages", flush=True)
+        games, coverage = axekin_full(axekin_source, progress=report)
+        output_full = ROOT / "assets/catalogs/axekin.json"
+        capacity_match = re.search(r"#define MAX_CATALOG_ITEMS\s+(\d+)",
+                                   (ROOT / "src/wolodrive.h").read_text(encoding="utf8"))
+        capacity = int(capacity_match.group(1)) if capacity_match else 0
+        other_entries = sum(len(s["packages"]) for s in results if s["id"] != "axekin")
+        if len(games) + other_entries + 512 > capacity:
+            raise ValueError(f"Full Axekin catalog exceeds native app capacity: "
+                             f"{len(games)}+{other_entries}+512 > {capacity}")
+        write_snapshot(output_full, {"schemaVersion": 1, "sources": [{
+            "id": "axekin", "name": axekin_source["name"], "website": axekin_source["url"],
+            "status": "ready", "coverage": coverage, "packages": games
+        }]})
+        print(f"Axekin: saved {len(games)} supported-console entries; excluded "
+              f"{coverage['excludedGames']} unsupported games", flush=True)
+    # Do not reintroduce the first 64 Axekin games when refreshing other sources.
+    axekin_file = ROOT / "assets/catalogs/axekin.json"
+    if axekin_file.exists():
+        metadata = json.loads(axekin_file.read_text(encoding="utf8"))["sources"][0]
+        full_count = len(metadata["packages"])
+        for result in results:
+            if result["id"] == "axekin":
+                result.update(packages=[], status=metadata.get("status", "ready"),
+                              note=f"Full Games/Roms-filtered index: {full_count} entries in axekin.json")
+                break
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".json.tmp")
     temporary.write_text(json.dumps({"schemaVersion": 1, "sources": results}, ensure_ascii=False, indent=2) + "\n", encoding="utf8", newline="\n")

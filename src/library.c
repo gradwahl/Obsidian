@@ -141,7 +141,16 @@ bool library_console_matches_platform(const LibraryConsole *console, const char 
         {"Game Boy Color", "nintendo-gbc"},
         {"Game Boy Advance", "nintendo-gba"},
         {"Nintendo DS", "nintendo-ds"},
-        {"Nintendo 3DS", "nintendo-3ds"}
+        {"Nintendo 3DS", "nintendo-3ds"},
+        {"Sega 32X", "sega-32x"},
+        {"Master System", "sega-master"},
+        {"Mega-CD / Sega CD", "sega-cd"},
+        {"Game Gear", "sega-gamegear"},
+        {"Mega Drive / Genesis", "sega-megadrive"},
+        {"Atari 7800", "atari-7800"},
+        {"Atari 5200", "atari-5200"},
+        {"Atari 2600", "atari-2600"},
+        {"Pokémon Mini", "nintendo-pokemini"}
     };
     for (size_t i = 0; i < sizeof(mappings)/sizeof(mappings[0]); i++)
         if (strcmp(console->name, mappings[i].name) == 0 &&

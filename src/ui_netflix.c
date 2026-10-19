@@ -75,6 +75,8 @@ static SDL_Rect library_tile_target(int index) {
                       LIBRARY_TILE, LIBRARY_TILE};
 }
 
+static int library_console_game_count(WolodriveApp *app, const LibraryConsole *console);
+
 static bool library_matches_console(WolodriveApp *app, const GameItem *item) {
     const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
     return item->is_game && (library_console_matches_id(console, item->id_code) ||
@@ -492,15 +494,17 @@ void ui_rebuild_carousels(WolodriveApp *app) {
         }
     }
 
+    bool console_games = app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_GAMES;
+    int console_seen = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *it = &app->catalog[i];
         if (!settings_accepts_item(app, it)) continue;
 
-        /* The existing catalog has no reliable emulator/file/payload/ROM type.
-           Keep those views explicit rather than guessing from package titles. */
-        if ((app->active_row != VIEW_GAMES || app->library_depth != LIBRARY_GAMES || library_matches_console(app, it)) &&
-            app->rows[VIEW_GAMES].item_count < MAX_ITEMS_PER_ROW) {
-            app->rows[VIEW_GAMES].items[app->rows[VIEW_GAMES].item_count++] = it;
+        if (!console_games || library_matches_console(app, it)) {
+            int index = console_games ? console_seen++ : 0;
+            if ((!console_games || index >= app->library_game_offset) &&
+                app->rows[VIEW_GAMES].item_count < MAX_ITEMS_PER_ROW)
+                app->rows[VIEW_GAMES].items[app->rows[VIEW_GAMES].item_count++] = it;
         }
         if ((it->state == STATE_DOWNLOADING || it->state == STATE_INSTALLED) &&
             app->rows[VIEW_DOWNLOADS].item_count < MAX_ITEMS_PER_ROW) {
@@ -577,6 +581,7 @@ static void library_open_selected(WolodriveApp *app) {
         app->library_depth = LIBRARY_CONSOLES;
     } else if (app->library_depth == LIBRARY_CONSOLES) {
         app->library_depth = LIBRARY_GAMES;
+        app->library_game_offset = 0;
         CarouselRow *row = &app->rows[app->active_row];
         row->selected_col = 0;
         row->scroll_x = row->target_scroll_x = 0;
@@ -642,9 +647,27 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
         return false; /* Up/down still navigate the sidebar. */
     }
     if (app->library_depth == LIBRARY_GAMES) {
-        if (action == 1 && app->rows[app->active_row].selected_col == 0) {
+        CarouselRow *row = &app->rows[app->active_row];
+        if (action == 1 && row->selected_col == 0) {
+            if (app->library_game_offset > 0) {
+                app->library_game_offset -= MAX_ITEMS_PER_ROW;
+                ui_rebuild_carousels(app);
+                row->selected_col = SDL_max(0, row->item_count - 1);
+                return true;
+            }
             app->sidebar_focus = true;
             return true;
+        }
+        if (action == 2 && row->item_count == MAX_ITEMS_PER_ROW &&
+            row->selected_col == row->item_count - 1) {
+            const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+            if (library_console_game_count(app, console) > app->library_game_offset + row->item_count) {
+                app->library_game_offset += MAX_ITEMS_PER_ROW;
+                row->selected_col = 0;
+                row->scroll_x = row->target_scroll_x = row->scroll_velocity = 0;
+                ui_rebuild_carousels(app);
+                return true;
+            }
         }
         return action == 3 || action == 4; /* Console games use a horizontal row. */
     }

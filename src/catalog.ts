@@ -24,7 +24,8 @@ interface SnapshotSource {
   packages?: SnapshotEntry[];
 }
 
-const metadataCatalog: GameItem[] = (extraSnapshot.sources as SnapshotSource[]).flatMap(source => {
+export function metadataFromSources(sources: SnapshotSource[]): GameItem[] {
+  return sources.flatMap(source => {
   if (!source.name || !SOURCE_WEBSITES[source.name] || !Array.isArray(source.packages)) return [];
   return source.packages.filter(item => item.title && item.id).map(item => ({
     id_code: item.id!,
@@ -47,7 +48,10 @@ const metadataCatalog: GameItem[] = (extraSnapshot.sources as SnapshotSource[]).
     cover_g: 63,
     cover_b: 110
   }));
-});
+  });
+}
+
+const metadataCatalog: GameItem[] = metadataFromSources(extraSnapshot.sources as SnapshotSource[]);
 
 export const INITIAL_CATALOG: GameItem[] = [...(rawCatalog as GameItem[]), ...metadataCatalog];
 

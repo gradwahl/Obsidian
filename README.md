@@ -11,16 +11,31 @@ source page links** are imported into `assets/catalogs/additional.json`.
 No game archives, packages, license keys or direct download-host URLs are
 downloaded or copied into that snapshot.
 
-Update the snapshot from the repository root:
+Update the snapshots from the repository root:
 
 ```bash
+# Normal refresh: the 16 other sources are still capped per source.
 python scripts/import_sources.py --limit 64
+# Full Axekin rebuild: visit every /games page and filter to Games/Roms consoles.
+python scripts/import_sources.py --limit 64 --full-axekin
 python -m unittest discover -s tests -p test_import_sources.py
 ```
 
-The importer fetches a bounded index per site (up to 400 entries per source);
-it is not a full-site crawler or a live search backend. The four previously
-empty sites now use specialized public metadata adapters:
+The normal importer fetches a bounded index per source (up to 400 entries each);
+Axekin is the exception. With `--full-axekin`, all 840 pages are verified and
+only titles explicitly tagged with a console in `src/libraryData.ts` and
+`src/library.c` are kept. `config/axekin_platforms.json` maps Axekin's
+platform slugs to the existing Games/Roms consoles; unsupported platforms
+(including PlayStation Vita, which isn't in Games/Roms) are excluded. Games
+with multiple supported consoles get one entry in each appropriate console.
+As of the October 2026 crawl, 20,073 entries matched out of 20,993 games
+across 840 pages; 920 had no supported console. The full catalogue is stored
+in `assets/catalogs/axekin.json` (about 5.7 MB) rather than in the smaller
+`additional.json` source snapshot. A failed or incomplete full crawl does not
+overwrite the last successful full snapshot. A normal refresh preserves the
+separate Axekin index and never reintroduces its first 64 titles as duplicates.
+
+Other previously empty sites use specialized public metadata adapters:
 
 - **Axekin** reads the paginated `/games` Inertia page-data attribute. Its
   publicly displayed titles, console associations and cover URLs are imported,
@@ -40,23 +55,27 @@ of silently clearing entries; inaccessible or unsupported indexes may remain
 empty. Review each source's `status` and `note` fields. Importing metadata does
 not validate that a package is available, safe or legally redistributable.
 
-The **React preview** bundles the snapshot at build time. Rebuild with
-`npm run build:static` after importing to update its offline catalog. Entries
-are searchable and selectable by source; known platform metadata also populates
-the corresponding console's Games/Roms view. Select the **Catalog metadata
+The **React preview** bundles the small snapshot and loads the full Axekin
+index as a **separate deferred chunk**. Rebuild with `npm run build:static`
+after importing to update both. Only nearby cards are rendered in large console
+carousels, and Search uses indexed title keys instead of pairwise comparisons.
+Entries are searchable and selectable by source; platform metadata places each
+matched entry under its Games/Roms console. Select the **Catalog metadata
 (website only)** format filter to control these separately from installable
 exFAT/FFPKG/PKG entries. Game details link to the source site's public listing
-page where available. The Install tab never treats these listings as package
-downloads, and the web preview does not implement package installation.
+page; none of these metadata entries contain downloadable packages.
 
-The **native Linux app** loads the local snapshot alongside Pegasus sources
-when catalog synchronization runs; keep the repository-relative
-`assets/catalogs/additional.json` in place. On a **PS5**, the optional snapshot
-must be copied to
-`/data/homebrew/wolodrive/catalogs/additional.json` before synchronization.
-This source-loader code has been compiled on Linux, but PS5 SDK build and
-device runtime behavior have not been verified. Website adapters are bounded
-and may need maintenance as sites change; empty indexes are not fabricated.
+The **native Linux app** loads both local snapshots alongside Pegasus sources
+when catalog synchronization runs. With a full Axekin index, its catalogue
+capacity is 26,000 entries (including other sources), and console carousels can
+navigate beyond 128 titles with Left/Right keyboard or D-pad navigation. The larger fixed
+catalogue increases native memory usage; PS5 runtime behaviour is not verified.
+Keep `assets/catalogs/additional.json` and `assets/catalogs/axekin.json`
+in the repository. On **PS5**, copy *both* snapshots to:
+`/data/homebrew/wolodrive/catalogs/additional.json` and
+`/data/homebrew/wolodrive/catalogs/axekin.json` before synchronization.
+This native source loader has been compiled and regression-tested on Linux;
+PS5 SDK builds and on-device memory/performance remain unverified.
 
 ## React web preview
 

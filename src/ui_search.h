@@ -33,7 +33,10 @@ static int search_platform(const GameItem *item) {
 
 static bool search_same_game(const GameItem *a, const GameItem *b) {
     char first[128], second[128];
-    if (a->is_game != b->is_game || a->is_dlc != b->is_dlc || search_platform(a) != search_platform(b)) return false;
+    if (a->is_game != b->is_game || a->is_dlc != b->is_dlc) return false;
+    if (a->platform[0] || b->platform[0]) {
+        if (strcmp(a->platform, b->platform) != 0) return false;
+    } else if (search_platform(a) != search_platform(b)) return false;
     search_title_key(a->title, first);
     search_title_key(b->title, second);
     return first[0] && strcmp(first, second) == 0;
@@ -47,6 +50,16 @@ static uint64_t search_title_hash(const GameItem *item) {
         hash ^= *s;
         hash *= 1099511628211ULL;
     }
+    if (item->platform[0]) {
+        for (const unsigned char *s = (const unsigned char *)item->platform; *s; s++) {
+            hash ^= *s;
+            hash *= 1099511628211ULL;
+        }
+    } else {
+        hash ^= (unsigned)search_platform(item);
+        hash *= 1099511628211ULL;
+    }
+    hash ^= (unsigned)item->is_game | ((unsigned)item->is_dlc << 1);
     return hash;
 }
 
@@ -59,6 +72,10 @@ static bool search_contains(const char *text, const char *query) {
 
 static void search_rebuild_locked(WolodriveApp *app) {
     GameItem *previous = app->search_count ? app->search_results[app->search_selected] : NULL;
+    /* Open-addressing prevents quadratic grouping when a full 20k-title
+       console catalogue is loaded. Fall back to linear comparisons if OOM. */
+    enum { SEARCH_HASH_SLOTS = 65536 };
+    uint32_t *slots = calloc(SEARCH_HASH_SLOTS, sizeof(*slots));
     uint64_t hashes[MAX_CATALOG_ITEMS];
     app->search_count = 0;
     for (int i = 0; i < app->catalog_count; i++) {
@@ -67,14 +84,30 @@ static void search_rebuild_locked(WolodriveApp *app) {
         if (!search_contains(item->title, app->search_query) && !search_contains(item->id_code, app->search_query)) continue;
         bool duplicate = false;
         uint64_t hash = search_title_hash(item);
-        for (int j = 0; j < app->search_count; j++) {
-            if (hashes[j] == hash && search_same_game(app->search_results[j], item)) { duplicate = true; break; }
+        uint32_t slot = (uint32_t)hash & (SEARCH_HASH_SLOTS - 1);
+        if (slots) {
+            while (slots[slot]) {
+                int existing = (int)slots[slot] - 1;
+                if (hashes[existing] == hash && search_same_game(app->search_results[existing], item)) {
+                    duplicate = true;
+                    break;
+                }
+                slot = (slot + 1) & (SEARCH_HASH_SLOTS - 1);
+            }
+        } else {
+            for (int j = 0; j < app->search_count; j++)
+                if (hashes[j] == hash && search_same_game(app->search_results[j], item)) {
+                    duplicate = true;
+                    break;
+                }
         }
         if (!duplicate) {
             hashes[app->search_count] = hash;
             app->search_results[app->search_count++] = item;
+            if (slots) slots[slot] = (uint32_t)app->search_count;
         }
     }
+    free(slots);
     app->search_selected = 0;
     for (int i = 0; i < app->search_count; i++)
         if (previous && settings_accepts_item(app, previous) && search_same_game(app->search_results[i], previous)) {

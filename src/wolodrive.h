@@ -53,7 +53,7 @@
 #define COLOR_MUTED_G           148
 #define COLOR_MUTED_B           156
 
-#define MAX_CATALOG_ITEMS       4096
+#define MAX_CATALOG_ITEMS       26000 /* Full filtered Axekin index plus other sources. */
 #define MAX_ITEMS_PER_ROW       128
 typedef enum {
     VIEW_HOME,
@@ -187,6 +187,8 @@ typedef struct {
     int catalog_count;
     char catalog_source_names[40][64]; /* Include sources with empty/offline indexes. */
     int catalog_source_count;
+    bool additional_catalog_loaded; /* Avoid re-reading immutable local snapshots. */
+    bool axekin_catalog_loaded; /* Prevent duplicate bulk imports on refresh. */
     bool catalog_dirty;         /* Sygnał od wątku tła do przebudowania karuzel */
     bool sync_in_progress;      /* Czy trwa synchronizacja z Pegasus-DL */
     TextId sync_status_id;
@@ -199,6 +201,7 @@ typedef struct {
     int library_company_selection;
     int library_company;
     int library_console_selection;
+    int library_game_offset; /* 128-title pages within a Games/Roms console. */
     bool sidebar_focus;
     char search_query[128];
     GameItem *search_results[MAX_CATALOG_ITEMS];

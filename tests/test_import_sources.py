@@ -158,5 +158,59 @@ class SourceImportTests(unittest.TestCase):
         self.assertNotIn("uploader@example.org", json.dumps(source))
 
 
+    def test_axekin_full_snapshot_only_uses_games_roms_platforms(self):
+        full = json.loads((ROOT / "assets/catalogs/axekin.json").read_text(encoding="utf8"))
+        self.assertEqual(full["schemaVersion"], 1)
+        source = full["sources"][0]
+        self.assertEqual(source["id"], "axekin")
+        self.assertEqual(source["status"], "ready")
+        coverage = source["coverage"]
+        self.assertEqual(coverage["pages"], 840)
+        self.assertEqual(coverage["visitedGames"], coverage["advertisedGames"])
+        self.assertEqual(coverage["indexedEntries"], len(source["packages"]))
+        self.assertGreater(len(source["packages"]), 18000)
+        mapping = importer.axekin_supported_platforms()
+        self.assertNotIn("ps-vita", mapping)
+        self.assertEqual(set(mapping), set(json.loads(
+            (ROOT / "config/axekin_platforms.json").read_text(encoding="utf8"))))
+        ids = set()
+        for item in source["packages"]:
+            self.assertIn(item["platform"], set(mapping.values()))
+            self.assertNotIn("downloadUrl", item)
+            self.assertNotIn("downloadLinks", item)
+            self.assertNotIn("description", item)
+            self.assertTrue(item["sourceUrl"].startswith("https://www.axekin.com/games/"))
+            self.assertNotIn(item["id"], ids)
+            ids.add(item["id"])
+
+    def test_full_crawl_visits_all_pages_and_filters_out_unmatched_consoles(self):
+        from unittest.mock import patch
+        base = {"id": "axekin", "name": "Axekin", "url": "https://www.axekin.com/",
+                "index_url": "https://www.axekin.com/games"}
+        def game(n, platforms):
+            return {"id": n, "title": f"Game {n}", "slug": f"game-{n}",
+                    "platforms": [{"slug": slug} for slug in platforms],
+                    "downloadLinks": [{"url": "https://bad.example/rom.zip"}]}
+        pages = {
+            1: {"meta": {"lastPage": 3, "total": 4},
+                "data": [game(1, ["switch"]), game(2, ["ps-vita"])]},
+            2: {"meta": {"lastPage": 3, "total": 4},
+                "data": [game(3, ["ps5", "ps-vita"])]},
+            3: {"meta": {"lastPage": 3, "total": 4},
+                "data": [game(4, ["atari-2600", "switch"])]},
+        }
+        with patch.object(importer, "axekin_page", side_effect=lambda source, page: pages[page]) as mocked:
+            rows, stats = importer.axekin_full(base, workers=2)
+        self.assertEqual(mocked.call_count, 3)
+        self.assertEqual(stats["pages"], 3)
+        self.assertEqual(stats["visitedGames"], 4)
+        self.assertEqual(stats["excludedGames"], 1)
+        self.assertEqual({(x["title"], x["platform"]) for x in rows},
+                         {("Game 1", "nintendo-switch"),
+                          ("Game 3", "sony-ps5"),
+                          ("Game 4", "atari-2600"),
+                          ("Game 4", "nintendo-switch")})
+        self.assertTrue(all("bad.example" not in json.dumps(x) for x in rows))
+
 if __name__ == "__main__":
     unittest.main()

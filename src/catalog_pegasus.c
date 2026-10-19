@@ -85,6 +85,20 @@ static const char *find_matching_bracket(const char *start, const char *end, cha
     return NULL;
 }
 
+/* Bounded substring search: absent keys must never scan later game records.
+   The old unbounded strstr() was quadratic for full-source metadata indexes. */
+static const char *find_limited(const char *start, const char *end, const char *needle) {
+    size_t size = strlen(needle);
+    if (!size) return start;
+    while (start < end && (size_t)(end - start) >= size) {
+        const char *hit = memchr(start, needle[0], (size_t)(end - start) - size + 1);
+        if (!hit) break;
+        if (memcmp(hit, needle, size) == 0) return hit;
+        start = hit + 1;
+    }
+    return NULL;
+}
+
 /* Wyciąga wartość tekstową dla podanego klucza w obrębie [obj_start, obj_end] */
 static bool json_extract_string(const char *obj_start, const char *obj_end, const char *key, char *out, size_t out_sz) {
     char pattern[128];
@@ -93,7 +107,7 @@ static bool json_extract_string(const char *obj_start, const char *obj_end, cons
 
     const char *p = obj_start;
     while (p + pat_len < obj_end) {
-        const char *hit = strstr(p, pattern);
+        const char *hit = find_limited(p, obj_end, pattern);
         if (!hit || hit >= obj_end) return false;
 
         const char *colon = skip_ws(hit + pat_len, obj_end);
@@ -141,7 +155,7 @@ static double json_extract_number(const char *obj_start, const char *obj_end, co
 
     const char *p = obj_start;
     while (p + pat_len < obj_end) {
-        const char *hit = strstr(p, pattern);
+        const char *hit = find_limited(p, obj_end, pattern);
         if (!hit || hit >= obj_end) return 0.0;
 
         const char *colon = skip_ws(hit + pat_len, obj_end);
@@ -159,7 +173,7 @@ static double json_extract_number(const char *obj_start, const char *obj_end, co
 
 /* Wyciąga pierwszy link z tablicy downloadLinks: [ { "url": "..." } ] */
 static bool json_extract_download_link(const char *obj_start, const char *obj_end, char *out, size_t out_sz) {
-    const char *dl = strstr(obj_start, "\"downloadLinks\"");
+    const char *dl = find_limited(obj_start, obj_end, "\"downloadLinks\"");
     if (dl && dl < obj_end) {
         const char *arr_start = strchr(dl, '[');
         if (arr_start && arr_start < obj_end) {
@@ -326,7 +340,9 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
 
     /* Sprawdź czy gra o tym samym ID lub tytule już istnieje – jeśli tak, zaktualizuj dane */
     GameItem *target = NULL;
-    for (int i = 0; i < app->catalog_count; i++) {
+    /* Unique offline Axekin records can append without quadratic scanning. */
+    bool bulk_axekin = fmt == FMT_CATALOG && catalog_name && strcmp(catalog_name, "Axekin") == 0;
+    for (int i = 0; !bulk_axekin && i < app->catalog_count; i++) {
         if (strcasecmp(app->catalog[i].title, title) == 0 &&
             strcasecmp(app->catalog[i].source_name, catalog_name && catalog_name[0] ? catalog_name : "Pegasus-DL") == 0 &&
             strcasecmp(app->catalog[i].id_code, id_code && id_code[0] ? id_code : "PPSA00001") == 0 &&
@@ -444,10 +460,10 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
         if (!obj_end) break;
 
         /* Sprawdź, czy obiekt jest elementem płaskim (nie zawiera kolejnej tablicy packages/sources/catalogs) */
-        bool has_nested_packages = (strstr(obj_start + 1, "\"packages\"") != NULL && strstr(obj_start + 1, "\"packages\"") < obj_end) ||
-                                   (strstr(obj_start + 1, "\"sources\"") != NULL && strstr(obj_start + 1, "\"sources\"") < obj_end) ||
-                                   (strstr(obj_start + 1, "\"catalogs\"") != NULL && strstr(obj_start + 1, "\"catalogs\"") < obj_end) ||
-                                   (strstr(obj_start + 1, "\"games\"") != NULL && strstr(obj_start + 1, "\"games\"") < obj_end);
+        bool has_nested_packages = find_limited(obj_start + 1, obj_end, "\"packages\"") ||
+                                   find_limited(obj_start + 1, obj_end, "\"sources\"") ||
+                                   find_limited(obj_start + 1, obj_end, "\"catalogs\"") ||
+                                   find_limited(obj_start + 1, obj_end, "\"games\"");
 
         if (has_nested_packages) {
             /* Wchodzimy głębiej do środka głównego obiektu JSON */
@@ -555,17 +571,12 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
 
 /* Load the optional, curated metadata snapshot. Never crawl external websites on
    the PS5: this offline snapshot carries public title/page information only. */
-static int load_additional_catalog(WolodriveApp *app, int *source_count) {
-#ifdef __PS5__
-    const char *path = "/data/homebrew/wolodrive/catalogs/additional.json";
-#else
-    const char *path = "assets/catalogs/additional.json";
-#endif
+static int load_local_catalog_file(WolodriveApp *app, int *source_count, const char *path) {
     FILE *file = fopen(path, "rb");
     if (!file) return 0;
     if (fseek(file, 0, SEEK_END) != 0) { fclose(file); return 0; }
     long size = ftell(file);
-    if (size < 0 || size > 16 * 1024 * 1024 || fseek(file, 0, SEEK_SET) != 0) {
+    if (size < 0 || size > 64 * 1024 * 1024 || fseek(file, 0, SEEK_SET) != 0) {
         fclose(file);
         return 0;
     }
@@ -590,13 +601,16 @@ static int load_additional_catalog(WolodriveApp *app, int *source_count) {
         if (!last_object) break;
         char name[64] = {0};
         if (json_extract_string(p, last_object, "name", name, sizeof(name)) && name[0]) {
+            bool new_source = false;
             SDL_LockMutex(app->catalog_mutex);
             if (app->catalog_source_count < 40) {
                 bool duplicate = false;
                 for (int i = 0; i < app->catalog_source_count; i++)
                     if (strcasecmp(name, app->catalog_source_names[i]) == 0) duplicate = true;
-                if (!duplicate)
+                if (!duplicate) {
                     SDL_strlcpy(app->catalog_source_names[app->catalog_source_count++], name, 64);
+                    new_source = true;
+                }
             }
             SDL_UnlockMutex(app->catalog_mutex);
             size_t length = (size_t)(last_object - p + 1);
@@ -607,11 +621,32 @@ static int load_additional_catalog(WolodriveApp *app, int *source_count) {
                 added += parse_catalog_json(app, source_json, name, NULL, NULL, 0);
                 free(source_json);
             }
-            (*source_count)++;
+            if (new_source) (*source_count)++;
         }
         p = last_object + 1;
     }
     free(json);
+    return added;
+}
+
+static int load_additional_catalog(WolodriveApp *app, int *source_count) {
+#ifdef __PS5__
+    const char *additional = "/data/homebrew/wolodrive/catalogs/additional.json";
+    const char *axekin = "/data/homebrew/wolodrive/catalogs/axekin.json";
+#else
+    const char *additional = "assets/catalogs/additional.json";
+    const char *axekin = "assets/catalogs/axekin.json";
+#endif
+    int added = 0, before = *source_count;
+    if (!app->additional_catalog_loaded) {
+        added += load_local_catalog_file(app, source_count, additional);
+        app->additional_catalog_loaded = *source_count > before;
+    }
+    if (!app->axekin_catalog_loaded) {
+        int count_before = app->catalog_count;
+        added += load_local_catalog_file(app, source_count, axekin);
+        app->axekin_catalog_loaded = app->catalog_count > count_before;
+    }
     return added;
 }
 

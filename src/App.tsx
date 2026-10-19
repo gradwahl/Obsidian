@@ -9,7 +9,7 @@ import { LibraryBrowser } from './components/LibraryBrowser';
 import { SettingsView } from './components/SettingsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
-import { INITIAL_CATALOG, getLatestGames, getDistinctSources, matchesFilters, isAvailableCatalogSource } from './catalog';
+import { INITIAL_CATALOG, getLatestGames, getDistinctSources, metadataFromSources, matchesFilters, isAvailableCatalogSource } from './catalog';
 import { t } from './translations';
 
 export function App() {
@@ -34,6 +34,22 @@ export function App() {
 
   // 3. Catalog state
   const [catalog, setCatalog] = useState<GameItem[]>(INITIAL_CATALOG);
+  // Keep the full Axekin index in its own lazy-loaded chunk. This avoids
+  // blocking initial UI load with 20,000+ catalogue entries.
+  useEffect(() => {
+    let active = true;
+    import('../assets/catalogs/axekin.json')
+      .then(({ default: snapshot }) => {
+        if (!active) return;
+        const entries = metadataFromSources(snapshot.sources);
+        setCatalog(existing => [
+          ...existing.filter(item => item.source_name !== 'Axekin'),
+          ...entries
+        ]);
+      })
+      .catch(error => console.warn('Axekin metadata unavailable:', error));
+    return () => { active = false; };
+  }, []);
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string>(() =>
     t(language, 'TXT_READY')
