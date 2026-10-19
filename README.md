@@ -100,9 +100,15 @@ The output
 credentials. Repeat `--max-queries 500` batches or use
 `--platforms nintendo-switch,sony-ps4,sony-ps5` to prioritise consoles.
 Rerun `enrich_artwork.py --offline` after each batch; that merges IGDB into
-the existing React and native manifests. Review uncertain titles rather
-than automatically attaching unrelated artwork. The live API connection is
-not verified until you configure fresh local credentials.
+the existing React and native manifests. Successful IGDB matches are
+**cumulative across batches**, even after those titles have been merged into
+the main artwork manifest and disappear from the missing-title queue.
+If you need to regenerate the IGDB export from its locally saved results,
+use `python3 scripts/igdb_artwork.py --max-queries 0`; this performs
+**no network requests and requires no credentials**. Then rerun enrichment and
+`npm run build:static`. Review uncertain titles rather than automatically
+attaching unrelated artwork. The live API connection is not verified until
+you configure fresh local credentials.
 
 The native Linux/Windows/PS5 catalogue reads
 `assets/artwork/cover-matches.tsv` alongside the snapshots. On PS5 copy it

@@ -160,6 +160,48 @@ class IGDBTests(unittest.TestCase):
             self.assertEqual(json.loads(out.read_text())["matches"]["sony-ps4|matched"]["confidence"], 95)
             self.assertNotIn("sony-ps4|missing", json.loads(out.read_text())["matches"])
 
+    def test_offline_export_preserves_matches_after_enrichment(self):
+        """An enriched cover must not vanish after the next IGDB batch."""
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            directory = root / "assets/artwork"
+            directory.mkdir(parents=True)
+            result_cache = root / "cache.json"
+            portable = directory / "igdb-covers.json"
+            def matched(image):
+                return {
+                    "status": "matched",
+                    "provider": "igdb-exact-platform-title",
+                    "confidence": 95,
+                    "url": igdb.cover_url(image),
+                }
+            result_cache.write_text(json.dumps({
+                "schemaVersion": 1,
+                "results": {
+                    "sony-ps4|firstgame": matched("coabcde"),
+                    "sony-ps4|secondgame": matched("co12345"),
+                },
+            }), encoding="utf-8")
+            # After the first batch and enrich_artwork, First Game appears
+            # in the main manifest and is no longer eligible for API lookup.
+            (directory / "cover-matches.json").write_text(json.dumps({
+                "schemaVersion": 1,
+                "matches": {"Axekin|1": {"url": igdb.cover_url("coabcde")}},
+            }), encoding="utf-8")
+            games = [
+                ("Axekin", {"id": "1", "title": "First Game", "platform": "sony-ps4"}),
+                ("Ziperto", {"id": "2", "title": "Second Game", "platform": "sony-ps4"}),
+            ]
+            with (patch.object(igdb, "ROOT", root),
+                  patch.object(igdb, "CACHE", result_cache),
+                  patch.object(igdb, "EXPORT", portable),
+                  patch.object(igdb, "load_records", return_value=games),
+                  patch.dict("os.environ", {}, clear=True)):
+                self.assertEqual(igdb.main(["--max-queries", "0", "--platforms", "sony-ps4"]), 0)
+            exported = json.loads(portable.read_text(encoding="utf-8"))["matches"]
+            self.assertEqual(set(exported), {"sony-ps4|firstgame", "sony-ps4|secondgame"})
+            self.assertEqual(exported["sony-ps4|firstgame"]["url"], igdb.cover_url("coabcde"))
+
     def test_igdb_overrides_only_last_resort_and_reported(self):
         records = [
             ("Other", {"id": "1", "platform": "sony-ps4", "title": "Example"}),

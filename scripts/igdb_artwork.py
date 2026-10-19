@@ -284,7 +284,8 @@ def scan(client, names, cache, max_queries=50, console_ids=None, progress=None):
         atomic_json(CACHE, cache)
     return examined
 
-def export_cache(cache, keys=None, path=EXPORT):
+def export_cache(cache, keys=None, path=None):
+    path = path if path is not None else EXPORT
     allowed = keys if keys is not None else cache.get("results", {}).keys()
     selected = {key: {"url": row["url"], "provider": "igdb-exact-platform-title",
                       "confidence": 95}
@@ -343,6 +344,14 @@ def main(argv=None):
     print("Pending by console:", dict(Counter(key.split("|", 1)[0] for key in pending).most_common(12)))
     if args.dry_run:
         return 0
+    if args.max_queries == 0:
+        # Rebuild an export from local successful lookups without credentials.
+        # Do not filter to the currently uncovered catalogue: successful
+        # results become "covered" after enrich_artwork.py merges them.
+        count = export_cache(cache)
+        print(f"IGDB cached matches exported: {count}. No API requests made.")
+        print("Run python scripts/enrich_artwork.py --offline to merge covers into Wolodrive.")
+        return 0
     cid, secret = os.getenv("IGDB_CLIENT_ID"), os.getenv("IGDB_CLIENT_SECRET")
     if not cid or not secret:
         parser.error("Set IGDB_CLIENT_ID and IGDB_CLIENT_SECRET in your local shell (never in Git)")
@@ -354,7 +363,11 @@ def main(argv=None):
     requested_count = scan(client, candidates, cache, args.max_queries, ids,
                            lambda count, key, status: print(f"IGDB {count}/{args.max_queries}: {status} ({key[:85]})",
                                                            flush=True) if count % 10 == 0 else None)
-    matches = export_cache(cache, set(candidates))
+    # Never restrict the export to current missing titles: each enrichment
+    # makes earlier successful titles disappear from eligible_titles().
+    # Exporting only eligible_titles() would silently erase those covers on
+    # the next batch, even though they remain in the IGDB result cache.
+    matches = export_cache(cache)
     print(f"Queried: {requested_count}; IGDB cached matches exported: {matches}.", flush=True)
     print("Run python scripts/enrich_artwork.py --offline to merge covers into Wolodrive.")
     return 0
