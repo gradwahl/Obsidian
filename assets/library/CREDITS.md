@@ -5,7 +5,7 @@ Original authors and brand owners retain their respective rights. Individual ass
 
 Hardware images are displayed using their supplied alpha channels. WoloDrive does not remove white pixels or alter hardware colors at runtime.
 The 32X and Switch 2 photos have background-extracted variants prepared with OpenAI imagegen from the credited source photos. Other replacement cutouts are sourced as transparent PNGs; upstream preparation is recorded in SOURCES.json.
-Logos are rendered in white while preserving their original alpha. Transparent padding is ignored for consistent visual sizing.
+Company logos retain their original colors. Sony's black wordmark and console logos are rendered in white for contrast while preserving their original alpha. Transparent padding is ignored for consistent visual sizing.
 
 Console logo collection: [HVR88 / Monochrome Gaming Logos](https://github.com/HVR88/Monochrome-Gaming-Logos). See its [usage disclaimer](https://github.com/HVR88/Monochrome-Gaming-Logos#usage-disclaimer); these marks identify their respective brands and platforms.
 

@@ -389,11 +389,33 @@ static void test_native_artwork_bounds(void) {
     Uint8 *black_body = (Uint8 *)image->pixels + image->pitch + 4;
     assert(white_panel[0] == 255 && white_panel[3] == 255);
     assert(black_body[0] == 0 && black_body[3] == 255);
-    prepare_library_logo(image);
+    prepare_library_logo(image, "assets/library/logos/test.png");
     assert(black_body[0] == 245 && black_body[3] == 255);
     assert(((Uint8 *)image->pixels)[3] == 0);
+    /* Company colors and opaque internal spaces must survive preparation. */
+    const char *companies[] = {"microsoft", "sega", "nintendo", "atari", "snk"};
+    for (size_t i = 0; i < sizeof(companies) / sizeof(companies[0]); i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "assets/library/companies/%s.png", companies[i]);
+        SDL_Surface *source = IMG_Load(path);
+        assert(source);
+        SDL_Surface *rgba = SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_RGBA32, 0);
+        assert(rgba);
+        size_t bytes = (size_t)rgba->pitch * rgba->h;
+        void *original = malloc(bytes);
+        assert(original);
+        memcpy(original, rgba->pixels, bytes);
+        prepare_library_logo(rgba, path);
+        assert(memcmp(original, rgba->pixels, bytes) == 0);
+        free(original);
+        SDL_FreeSurface(rgba);
+        SDL_FreeSurface(source);
+    }
+    SDL_FillRect(image, NULL, SDL_MapRGBA(image->format, 0, 0, 0, 255));
+    prepare_library_logo(image, "assets/library/companies/sony.png");
+    assert(((Uint8 *)image->pixels)[0] == 245);
     SDL_FreeSurface(image);
-    puts("Native-alpha fitting preserves white and black hardware; monochrome logos retain their alpha.");
+    puts("Native-alpha hardware, original company colors and readable monochrome marks passed.");
 }
 
 static void test_latest_catalog_games(void) {

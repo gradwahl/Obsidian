@@ -46,7 +46,9 @@ and work offline. Cards use charcoal `#181818`; only the focused card has a whit
 selection border. Hardware images retain their source alpha and colors, with no
 runtime background removal. Transparent padding is excluded from sizing so the
 products fill a consistent image area without stretching or cutting off hardware.
-Logos are displayed in white with their original alpha for consistent contrast.
+Company logos retain their original brand colors, including blue SEGA and SNK,
+red Nintendo and Atari, and Microsoft's four-color symbol. Sony's black wordmark
+and the console logos are displayed in white for contrast, preserving their alpha.
 Missing assets fall back to a readable name. The 32X and Switch 2 use cutouts
 prepared with imagegen from the attributed photos; other cutouts are sourced PNGs.
 Sources, authors, individual image licenses,

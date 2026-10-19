@@ -1184,8 +1184,10 @@ static SDL_Rect library_alpha_bounds(SDL_Surface *surface) {
                          (SDL_Rect){left, top, right - left + 1, bottom - top + 1};
 }
 
-/* White marks have consistent contrast on charcoal; preserve the logo's alpha. */
-static void prepare_library_logo(SDL_Surface *surface) {
+/* Console marks and Sony's black wordmark need white for contrast on charcoal.
+   Other company artwork retains its original brand colors and internal detail. */
+static void prepare_library_logo(SDL_Surface *surface, const char *path) {
+    if (!strstr(path, "/logos/") && !strstr(path, "/companies/sony.png")) return;
     if (SDL_LockSurface(surface) != 0) return;
     for (int y = 0; y < surface->h; y++) {
         for (int x = 0; x < surface->w; x++) {
@@ -1235,7 +1237,7 @@ static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path)
     if (display) {
         SDL_FreeSurface(surface);
         surface = display;
-        if (strstr(path, "/companies/") || strstr(path, "/logos/")) prepare_library_logo(surface);
+        prepare_library_logo(surface, path);
         art->source_bounds = library_alpha_bounds(surface);
     }
     if (!display) art->source_bounds = (SDL_Rect){0, 0, surface->w, surface->h};
