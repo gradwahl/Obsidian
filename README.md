@@ -72,6 +72,29 @@ secret is saved or embedded in the web preview. It uses the IGDB API for
 non-commercial projects under the provider's terms. Image URLs are saved, but
 no image bytes are distributed.
 
+To download all cover links currently known to this checkout, including supplied
+source art, approved matches, independent fallbacks and native catalogue covers:
+
+```bash
+python3 scripts/download_artwork.py --local --workers 8
+```
+
+Use `python` on native Windows. The default destination is this repository's
+`assets/covers` folder; `--output` can select another path. URLs are deduplicated
+and valid existing images are reused. Files use the native app's URL-hashed
+`.art` cache names but contain ordinary PNG, JPEG or WebP bytes. Failed requests
+and HTML/error responses are recorded instead of saved as covers. Uncached
+Axekin `/uploads/games/` links are recorded as blocked because that route
+returned bot-check HTML; independent alternatives are downloaded separately.
+
+`assets/covers/artwork-progress.jsonl` records completed URLs during the run;
+`assets/covers/artwork-index.json` records final results and source/game mappings.
+Rerun the same command after an interruption to reuse downloaded files and retry
+ordinary failures. Run one downloader per destination at a time. Downloaded files
+and these local indexes are ignored by Git. This bulk step fills the native
+cache; it does not yet make the web preview use that cache or publish the files
+to GitHub. No application build is required just to fill the cache.
+
 **Security:** If a Twitch Client Secret was pasted into a chat, regenerate
 it in the Twitch Developer Console before proceeding. Never add the new
 secret to Git, a tracked configuration, a screenshot, or a command-line

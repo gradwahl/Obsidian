@@ -72,6 +72,37 @@ class DownloadArtworkTests(unittest.TestCase):
         for blocked in ("/broken-id.json", "/broken-name.json", "/evoX-CoreOS/catalog.json"):
             self.assertEqual(self.requests[blocked], 0)
 
+    def test_local_collection_includes_primary_fallback_and_native_covers(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "assets/artwork").mkdir(parents=True)
+            (root / "src").mkdir()
+            (root / "assets/artwork/cover-matches.json").write_text(json.dumps({
+                "schemaVersion": 1, "matches": {"Source|1": {
+                    "url": self.root + "/box", "fallback": {"url": self.root + "/cover"}}}}))
+            (root / "src/catalogData.json").write_text(json.dumps([
+                {"title": "Native", "id_code": "NATIVE", "cover_url": self.root + "/cover"},
+                {"title": "Local", "cover_url": "/assets/local.png"}]))
+            records = [("Source", {"id": "1", "title": "Example", "coverUrl": self.root + "/box"})]
+            with patch("enrich_artwork.load_records", return_value=records):
+                images, errors = artwork.collect_local(root)
+            self.assertEqual(errors, [])
+            self.assertEqual(set(images), {self.root + "/box", self.root + "/cover"})
+            self.assertEqual(len(images[self.root + "/box"]), 1)
+            self.assertEqual(len(images[self.root + "/cover"]), 2)
+
+    def test_known_challenge_route_preserves_cached_images_without_downloading_html(self):
+        from unittest.mock import patch
+        url = "https://www.axekin.com/uploads/games/example_cover.webp"
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            with patch.object(artwork, "fetch") as fetch:
+                self.assertEqual(artwork.download(url, output)["status"], "failed")
+                fetch.assert_not_called()
+            (output / artwork.cache_name(url)).write_bytes(PNG)
+            self.assertEqual(artwork.download(url, output)["status"], "cached")
+
     def test_hash_and_file_types(self):
         self.assertEqual(artwork.cache_name("hello"), "a430d84680aabd0b.art")
         self.assertEqual(artwork.image_type(PNG), "png")
@@ -96,6 +127,10 @@ class DownloadArtworkTests(unittest.TestCase):
             self.assertEqual(len(manifest["artwork"]), 2)
             self.assertEqual(len(manifest["artwork"][self.root + "/cover"]["games"]), 2)
             self.assertEqual(len(list(output.glob("*.art"))), 2)
+            progress = [json.loads(line) for line in (output / "artwork-progress.jsonl").read_text(
+                encoding="utf-8").splitlines()]
+            self.assertEqual({row["url"] for row in progress}, set(manifest["artwork"]))
+            self.assertTrue(all(row["status"] == "downloaded" for row in progress))
             before = self.requests["/box"] + self.requests["/cover"]
             self.assertEqual(artwork.main(argv), 0)
             self.assertEqual(before, self.requests["/box"] + self.requests["/cover"])

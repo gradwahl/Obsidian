@@ -16,6 +16,37 @@ CARD_FIELDS = ("boxArtUrl", "boxartUrl", "boxCoverUrl", "posterUrl", "coverUrl",
                "iconUrl", "image", "cover", "icon", "landscapeUrl", "cardUrl", "bannerUrl")
 
 
+def collect_local(root):
+    """Use approved artwork and supplied local metadata, without crawling sites."""
+    from enrich_artwork import load_records
+    images = {}
+
+    def add(url, game):
+        if isinstance(url, str) and urllib.parse.urlsplit(url).scheme in ("http", "https"):
+            if game not in images.setdefault(url, []):
+                images[url].append(game)
+
+    manifest = json.loads((root / "assets/artwork/cover-matches.json").read_text(encoding="utf-8"))
+    if manifest.get("schemaVersion") != 1 or not isinstance(manifest.get("matches"), dict):
+        raise ValueError("Unexpected local artwork manifest")
+    records = load_records(root)
+    for source, row in records:
+        game = {"title": row["title"], "title_id": row["id"], "source": source}
+        for key in CARD_FIELDS:
+            add(row.get(key), game)
+        match = manifest["matches"].get(source + "|" + row["id"], {})
+        add(match.get("url"), game)
+        add(match.get("fallback", {}).get("url"), game)
+    # Native catalogue rows use snake_case fields and may not occur in the
+    # metadata-only snapshots consumed by load_records.
+    for row in json.loads((root / "src/catalogData.json").read_text(encoding="utf-8")):
+        game = {"title": row.get("title", ""), "title_id": row.get("id_code", ""),
+                "source": row.get("source_name", "")}
+        for key in ("cover_url", "boxart_url", "icon_url"):
+            add(row.get(key), game)
+    return images, []
+
+
 def cache_name(url):
     """Match artwork_hash in src/artwork.c (FNV-1a over UTF-8 bytes)."""
     value = 14695981039346656037
@@ -109,6 +140,10 @@ def download(url, output):
             return {"file": destination.name, "type": kind, "status": "cached"}
     except (OSError, ValueError):
         pass
+    parts = urllib.parse.urlsplit(url)
+    if parts.hostname in ("axekin.com", "www.axekin.com") and parts.path.startswith("/uploads/games/"):
+        return {"file": destination.name, "status": "failed",
+                "error": "Source image route returned a bot-check HTML page; use an independent fallback"}
     temporary = destination.with_suffix(".bulk.tmp")
     for attempt in range(2):
         try:
@@ -127,20 +162,30 @@ def download(url, output):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", action="append", help="Catalog/source-list URL (repeatable)")
+    parser.add_argument("--local", action="store_true",
+                        help="Download current repository artwork, fallbacks and supplied cover links")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Cache folder (default: repository assets/covers)")
     parser.add_argument("--workers", type=int, choices=range(1, 9), default=4)
     args = parser.parse_args(argv)
+    if args.local and args.catalog:
+        parser.error("Use --local or --catalog, not both")
     args.output.mkdir(parents=True, exist_ok=True)
-    images, errors = collect(args.catalog or [DEFAULT_CATALOG])
+    images, errors = (collect_local(Path(__file__).resolve().parents[1]) if args.local
+                      else collect(args.catalog or [DEFAULT_CATALOG]))
     print(f"Found {len(images)} unique artwork URLs. Destination: {args.output.resolve()}", flush=True)
     results = {}
     counts = {"cached": 0, "downloaded": 0, "failed": 0}
-    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+    # Append completed results immediately so a long run is inspectable even
+    # before the final index is written. Valid cached files survive interruption.
+    progress_path = args.output / "artwork-progress.jsonl"
+    with progress_path.open("w", encoding="utf-8") as progress_file, ThreadPoolExecutor(max_workers=args.workers) as pool:
         jobs = {pool.submit(download, url, args.output): url for url in images}
         for job in as_completed(jobs):
             url = jobs[job]
             result = job.result()
             results[url] = {**result, "games": images[url]}
+            progress_file.write(json.dumps({"url": url, **result}, ensure_ascii=False) + "\n")
+            progress_file.flush()
             counts[result["status"]] += 1
             completed = sum(counts.values())
             if completed <= 5 or completed % 25 == 0 or completed == len(images):
