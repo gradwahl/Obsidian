@@ -3,30 +3,30 @@
 These counts describe metadata matches, not downloaded or verified images.
 Ambiguous edition/region covers are withheld for manual review.
 
-**Entries:** 85,608 | **direct art:** 20,393 | **matched:** 40,923 | **review:** 1,170 | **missing:** 23,122
+**Entries:** 85,602 | **direct art:** 20,393 | **matched:** 44,225 | **review:** 1,170 | **missing:** 19,814
 
-Native artwork overrides: 270
+Native artwork overrides: 304
 
 ## Sources
 
 | Source | Direct | Matched | Review | Missing | Coverage |
 |---|---:|---:|---:|---:|---:|
-| Archive.org / AlvRo | 0 | 39 | 0 | 24 | 61.9% |
-| Archive.org / maelly_pooh | 0 | 90 | 0 | 41 | 68.7% |
-| Axekin | 19,564 | 171 | 23 | 315 | 98.3% |
-| CDRomance | 0 | 1 | 0 | 24 | 4.0% |
-| DownloadGamePSP | 0 | 1,331 | 10 | 631 | 67.5% |
+| Archive.org / AlvRo | 0 | 42 | 0 | 21 | 66.7% |
+| Archive.org / maelly_pooh | 0 | 91 | 0 | 40 | 69.5% |
+| Axekin | 19,564 | 199 | 23 | 287 | 98.5% |
+| CDRomance | 0 | 1 | 0 | 18 | 5.3% |
+| DownloadGamePSP | 0 | 1,426 | 10 | 536 | 72.3% |
 | GFS Catalog | 685 | 0 | 0 | 0 | 100.0% |
-| NoPayStation | 0 | 5,088 | 159 | 6,685 | 42.6% |
-| PKGPS4 | 0 | 51 | 0 | 13 | 79.7% |
-| PSN-Content | 0 | 2,274 | 0 | 3,185 | 41.7% |
+| NoPayStation | 0 | 6,314 | 159 | 5,459 | 52.9% |
+| PKGPS4 | 0 | 53 | 0 | 11 | 82.8% |
+| PSN-Content | 0 | 2,405 | 0 | 3,054 | 44.1% |
 | ROMsHQ | 0 | 0 | 0 | 5 | 0.0% |
 | RomHeaven | 141 | 0 | 0 | 0 | 100.0% |
-| RomsTime | 0 | 16,813 | 975 | 6,309 | 69.8% |
-| SuperPSX | 0 | 3,255 | 0 | 637 | 83.6% |
-| Vimm's Lair | 0 | 47 | 3 | 12 | 75.8% |
+| RomsTime | 0 | 17,403 | 975 | 5,719 | 72.2% |
+| SuperPSX | 0 | 3,385 | 0 | 507 | 87.0% |
+| Vimm's Lair | 0 | 51 | 3 | 8 | 82.3% |
 | WowRoms | 3 | 0 | 0 | 0 | 100.0% |
-| Ziperto | 0 | 11,763 | 0 | 5,241 | 69.2% |
+| Ziperto | 0 | 12,855 | 0 | 4,149 | 75.6% |
 
 ## Consoles
 
@@ -36,39 +36,40 @@ Native artwork overrides: 270
 | atari-5200 | 97 | 0 | 0 | 0 | 100.0% |
 | atari-7800 | 44 | 0 | 0 | 1 | 97.8% |
 | microsoft-xbox | 934 | 5 | 1 | 2 | 99.7% |
-| microsoft-xbox360 | 1,133 | 23 | 0 | 47 | 96.1% |
-| nintendo-3ds | 493 | 2,454 | 31 | 1,788 | 61.8% |
-| nintendo-ds | 2,008 | 2,872 | 129 | 1,080 | 80.1% |
-| nintendo-gb | 529 | 890 | 25 | 183 | 87.2% |
-| nintendo-gba | 888 | 1,537 | 73 | 858 | 72.3% |
-| nintendo-gbc | 316 | 787 | 19 | 273 | 79.1% |
-| nintendo-gc | 537 | 642 | 34 | 135 | 87.5% |
-| nintendo-n64 | 245 | 529 | 21 | 284 | 71.7% |
-| nintendo-nes | 1,012 | 1,627 | 108 | 1,059 | 69.3% |
+| microsoft-xbox360 | 1,133 | 25 | 0 | 45 | 96.3% |
+| nintendo-3ds | 493 | 2,878 | 31 | 1,364 | 70.7% |
+| nintendo-ds | 2,008 | 2,955 | 129 | 997 | 81.5% |
+| nintendo-gb | 529 | 916 | 25 | 157 | 88.8% |
+| nintendo-gba | 888 | 1,581 | 73 | 814 | 73.6% |
+| nintendo-gbc | 316 | 827 | 19 | 233 | 81.9% |
+| nintendo-gc | 537 | 651 | 34 | 124 | 88.3% |
+| nintendo-n64 | 245 | 570 | 21 | 243 | 75.5% |
+| nintendo-nes | 1,012 | 1,667 | 108 | 1,019 | 70.4% |
 | nintendo-pokemini | 11 | 0 | 0 | 0 | 100.0% |
-| nintendo-snes | 574 | 1,564 | 235 | 544 | 73.3% |
-| nintendo-switch | 1,328 | 10,283 | 0 | 3,686 | 75.9% |
-| nintendo-wii | 1,227 | 1,791 | 52 | 502 | 84.5% |
-| nintendo-wiiu | 650 | 285 | 0 | 102 | 90.2% |
+| nintendo-snes | 574 | 1,591 | 235 | 517 | 74.2% |
+| nintendo-switch | 1,328 | 10,978 | 0 | 2,991 | 80.4% |
+| nintendo-wii | 1,227 | 1,840 | 52 | 453 | 85.9% |
+| nintendo-wiiu | 650 | 295 | 0 | 92 | 91.1% |
 | sega-32x | 4 | 0 | 0 | 0 | 100.0% |
 | sega-cd | 122 | 0 | 0 | 1 | 99.2% |
-| sega-dreamcast | 163 | 366 | 77 | 56 | 79.9% |
+| sega-dreamcast | 163 | 373 | 77 | 49 | 81.0% |
 | sega-gamegear | 87 | 0 | 0 | 0 | 100.0% |
-| sega-megadrive | 438 | 988 | 67 | 226 | 83.0% |
-| sega-saturn | 225 | 4 | 0 | 22 | 91.2% |
-| sony-ps1 | 1,371 | 1,322 | 259 | 607 | 75.7% |
-| sony-ps2 | 1,907 | 62 | 8 | 48 | 97.2% |
-| sony-ps3 | 1,103 | 5,714 | 3 | 8,030 | 45.9% |
-| sony-ps4 | 233 | 2,275 | 0 | 491 | 83.6% |
-| sony-ps5 | 1,654 | 771 | 0 | 93 | 96.3% |
-| sony-psp | 494 | 3,929 | 28 | 3,004 | 59.3% |
+| sega-megadrive | 438 | 1,003 | 67 | 211 | 83.8% |
+| sega-saturn | 225 | 7 | 0 | 19 | 92.4% |
+| sony-ps1 | 1,371 | 1,420 | 259 | 509 | 78.4% |
+| sony-ps2 | 1,907 | 69 | 8 | 41 | 97.6% |
+| sony-ps3 | 1,103 | 6,614 | 3 | 7,130 | 52.0% |
+| sony-ps4 | 233 | 2,358 | 0 | 408 | 86.4% |
+| sony-ps5 | 1,654 | 797 | 0 | 67 | 97.3% |
+| sony-psp | 494 | 4,602 | 28 | 2,327 | 68.4% |
 
 ## Providers
 
-- igdb-exact-platform-title: 21,649
+- igdb-exact-platform-alias: 1,794
+- igdb-exact-platform-title: 23,156
 - libretro-exact: 40
 - libretro-unique: 5,584
-- same-console-title: 13,650
+- same-console-title: 13,651
 
 ## Ambiguous samples (not automatically assigned)
 

@@ -155,6 +155,37 @@ class IGDBTests(unittest.TestCase):
                 self.assertNotEqual(igdb.search_title(platform, raw), "Example")
                 self.assertEqual(igdb.select_match(platform, raw, [base], 48)["status"], "not-found")
 
+    def test_additional_distribution_labels_do_not_change_game_identity(self):
+        samples = [
+            ("nintendo-switch", "World to the West Switch NSP [Update] (eShop) [US/JP]", "World to the West"),
+            ("nintendo-switch", "Example Switch (XCI) (UPDATE) (JPN)", "Example"),
+            ("nintendo-switch", "Example Switch NSP (ASIA/JAPAN)", "Example"),
+            ("nintendo-switch", "Example SWITCH NSP (RF) [eShop]", "Example"),
+            ("nintendo-switch", "Example Switch NSP [UPDATE] eShop", "Example"),
+            ("nintendo-3ds", "Pokemon X 3DS ROM (EUR) (Gateway/Sky3DS+)", "Pokemon X"),
+            ("nintendo-3ds", "Rodea the Sky Soldier ROM & 3DS (USA) CIA (Region Free)", "Rodea the Sky Soldier"),
+            ("sony-ps3", "BioShock 2 full game", "BioShock 2"),
+            ("sony-ps3", "flOw Downloadable Game", "flOw"),
+            ("sony-ps3", "Dead Space 2 ( EN - DE - FR )", "Dead Space 2"),
+            ("sony-psp", "Digi-Tiles (Minis)", "Digi-Tiles"),
+        ]
+        for platform, raw, expected in samples:
+            with self.subTest(title=raw):
+                self.assertEqual(igdb.search_title(platform, raw), expected)
+        for platform, raw in [
+            ("nintendo-switch", "Example Switch NSP [DLC/Update] (eShop) [US/JP]"),
+            ("nintendo-switch", "Example Deluxe Edition Switch (XCI) (JPN)"),
+            ("nintendo-3ds", "Example 3DS ROM (ENGLISH PATCHED) (Gateway/Sky3DS+)"),
+            ("nintendo-3ds", "Example Randomizer 3DS ROM (USA) (Gateway/Sky3DS+)"),
+            ("sony-ps3", "Example Demo full game"),
+            ("sony-psp", "Example (Minis) (Trial Ver.)"),
+            ("sony-ps4", "Example Downloadable Game"),
+            ("sony-ps4", "Example (Minis)"),
+            ("nintendo-switch", "Example eShop"),
+        ]:
+            with self.subTest(preserved=raw):
+                self.assertNotEqual(igdb.search_title(platform, raw), "Example")
+
     def test_trailing_article_keeps_subtitles_and_ambiguity(self):
         self.assertEqual(igdb.match_name("Addams Family, The"), igdb.match_name("The Addams Family"))
         self.assertEqual(igdb.match_name("Addams Family, The: Pugsley's Scavenger Hunt"),

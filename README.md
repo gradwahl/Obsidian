@@ -202,6 +202,15 @@ official alternative name can also qualify under the collision rules above.
 
 The [remaining-artwork audit](docs/artwork_matching_audit.md) records the latest
 offline matching improvements, coverage gains and unresolved source/provider gaps.
+The [source-title cleanup report](docs/artwork_source_cleanup.md) records the
+subsequent pass. Recognised packaging metadata now also includes combined
+region/language lists, parenthesised Switch NSP/XCI formats, trailing eShop/RF
+labels, 3DS Gateway/Sky3DS+ packaging, PS3 `full game`/`Downloadable Game` labels
+and PSP `(Minis)` service labels. The importer selects one link title instead
+of joining title attributes, image labels and visible text, and excludes
+comment-navigation links. Reviewed concatenated-title fixes in
+`config/source_title_corrections.json` require the exact source, console, URL
+and old title, and preserve record IDs. Unknown variants still require review.
 
 **If you already completed a batch before this title-cleanup improvement**,
 rerun the *same* command. Previously cached `not-found` and `review` entries

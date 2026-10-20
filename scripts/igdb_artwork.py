@@ -73,13 +73,18 @@ REGION_LANGUAGE = re.compile(
     r"\s*\[(?:US|USA|EU|EUR|UK|JP|JPN|ASIA|WORLD|"
     r"EN|ENG|FR|FRE|DE|GER|ES|SPA|IT|ITA|PT|RU|RUS|JA|JPN|"
     r"MULTI\d*|ENGLISH|FRENCH|GERMAN|SPANISH)\]\s*$", re.I)
+REGION_TOKEN = r"(?:US|USA|EU|EUR|UK|JP|JPN|JAPAN|AS|ASIA|WORLD|AU|AUS|EN|ENG|FR|DE|ES|IT|PT|RU)"
+REGION_LIST = REGION_TOKEN + r"(?:\s*[/,-]\s*" + REGION_TOKEN + r")*"
+DISTRIBUTION_REGION = re.compile(
+    r"\s*(?:\[\s*" + REGION_LIST + r"\s*\]|\(\s*" + REGION_LIST + r"\s*\))\s*$", re.I)
 PATCH_VERSION = re.compile(r"\s*\[(?:v)?\d{1,3}(?:\.\d{1,3}){1,3}\]\s*$", re.I)
 CONSOLE_SUFFIX = {
     "sony-ps3": re.compile(r"\s+(?:PS3|PlayStation 3)$", re.I),
     "sony-ps4": re.compile(r"\s+(?:PS4|PlayStation 4)$", re.I),
     "sony-ps5": re.compile(r"\s+(?:PS5|PlayStation 5)$", re.I),
     "sony-psp": re.compile(r"\s+(?:PSP|PlayStation Portable)$", re.I),
-    "nintendo-switch": re.compile(r"\s+(?:Switch NSP(?:/XCI)?|Switch XCI|Nintendo Switch)$", re.I),
+    "nintendo-switch": re.compile(
+        r"\s+(?:Switch (?:NSP(?:/XCI)?|XCI(?:/NSP)?|\(NSP\)|\(XCI\))|Nintendo Switch)$", re.I),
     "nintendo-3ds": re.compile(r"\s+(?:3DS CIA|3DS)$", re.I),
 }
 
@@ -88,9 +93,9 @@ CONSOLE_SUFFIX = {
 REGION_GROUP = r"\((?:USA|EUR|EU|JPN|JP)(?:/(?:USA|EUR|EU|JPN|JP))*\)"
 PACKAGING_SUFFIX = {
     "nintendo-3ds": re.compile(
-        r"\s+(?:(?:\[Decrypted\]|Decrypted)\s+)?3DS\s+"
+        r"\s+(?:(?:\[Decrypted\]|Decrypted|ROM\s+&)\s+)?3DS\s+"
         r"(?:(?:CIA|ROM|Legit|Decrypted|\[Decrypted\]|&|eShop|\(eShop\)|"
-        r"Region Free|\(Region Free\)|\[RF\]|\(NEW3DS ONLY\)|\(Updated\)|" +
+        r"Region Free|\(Region Free\)|\[RF\]|\(NEW3DS ONLY\)|\(Updated\)|\(Gateway/Sky3DS\+\)|" +
         REGION_GROUP + r")\s*)+$", re.I),
     "nintendo-wiiu": re.compile(
         r"\s+(?:for\s+)?WII\s+U\s+ISO\s*"
@@ -126,10 +131,19 @@ def search_title(platform, title):
         product = PRODUCT_SUFFIX.get(platform)
         if product:
             value = product.sub("", value)
+        if platform == "nintendo-switch":
+            value = re.sub(r"\s*\(RF\)\s*$", "", value, flags=re.I)
+            if re.search(r"\bSwitch\s+(?:NSP|XCI|\(NSP\)|\(XCI\))", value, re.I):
+                value = re.sub(r"\s+eShop$", "", value, flags=re.I)
+        elif platform == "sony-ps3":
+            value = re.sub(r"\s+(?:full game|Downloadable Game)$", "", value, flags=re.I)
+        elif platform == "sony-psp":
+            value = re.sub(r"\s*\(Minis\)\s*$", "", value, flags=re.I)
         value = re.sub(r"\s*\((?:eShop|update)\)\s*$", "", value, flags=re.I)
         value = re.sub(r"\s*\[(?:Update|eShop)\]\s*$", "", value, flags=re.I)
         value = PATCH_VERSION.sub("", value)
         value = REGION_LANGUAGE.sub("", value)
+        value = DISTRIBUTION_REGION.sub("", value)
         suffix = CONSOLE_SUFFIX.get(platform)
         if suffix:
             value = suffix.sub("", value)

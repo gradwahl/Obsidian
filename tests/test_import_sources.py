@@ -55,6 +55,38 @@ class SourceImportTests(unittest.TestCase):
                     '<a href="https://other.example/vault/28766">Not Vimm</a>')
         self.assertEqual(parser.rows, [("Ace Combat X", "https://vimm.net/vault/27852")])
 
+    def test_public_game_links_choose_one_title_and_ignore_comment_navigation(self):
+        parser = importer.PublicGameLinks("https://cdromance.org/", "cdromance")
+        parser.feed(
+            '<a href="/psp/example-game/" title="Example Game">'
+            '<img alt="Example Game PSP">Example Game PSP</a>'
+            '<a href="/psp/other-game/"><img alt="Other Game PSP">Other Game</a>'
+            '<a href="/psp/image-only/"><img alt="Image Only Game"></a>'
+            '<a href="/psp/example-game/?xf-comments=1">comments 20</a>'
+            '<a href="/psp/example-game/#comments">comments 30</a>'
+            '<a href="/psp/bad-name/">Download Now</a>'
+            '<a href="/psp/more-comments/">comments 12</a>')
+        self.assertEqual(parser.rows, [
+            ("Example Game", "https://cdromance.org/psp/example-game/"),
+            ("Other Game", "https://cdromance.org/psp/other-game/"),
+            ("Image Only Game", "https://cdromance.org/psp/image-only/")])
+
+    def test_reviewed_title_corrections_are_exact_and_preserve_record_identity(self):
+        source = {"id": "axekin"}
+        page = "https://www.axekin.com/games/marble-saga-kororinpamarbles-balance-challengepal"
+        raw = "Marble Saga: KororinpaMarbles! Balance ChallengePAL"
+        expected_id = "EXT-" + importer.hashlib.sha256(("axekin" + page + raw).encode()).hexdigest()[:20]
+        row = importer.record(source, raw, page, system="nintendo-wii")
+        self.assertEqual(row["title"], "Marble Saga: Kororinpa")
+        self.assertEqual(row["id"], expected_id)
+        for wrong_source, system, url, title in [
+            ("ziperto", "nintendo-wii", page, raw),
+            ("axekin", "sony-ps3", page, raw),
+            ("axekin", "nintendo-wii", page + "-different", raw),
+            ("axekin", "nintendo-wii", page, raw + " Demo"),
+        ]:
+            self.assertEqual(importer.correct_source_title(wrong_source, system, url, title), title)
+
     def test_platform_classification(self):
         self.assertEqual(importer.platform("Mario Kart (Nintendo DS)"), "nintendo-ds")
         self.assertEqual(importer.platform("Super Mario 64 N64"), "nintendo-n64")

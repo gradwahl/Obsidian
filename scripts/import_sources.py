@@ -23,6 +23,15 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_RESPONSE = 24 * 1024 * 1024
 AXEKIN_MAX_PAGES = 2000
 AXEKIN_MAX_GAMES = 30000
+TITLE_CORRECTIONS = {
+    (row["source"], row["platform"], row["sourceUrl"], row["originalTitle"]): row["title"]
+    for row in json.loads((ROOT / "config/source_title_corrections.json").read_text(encoding="utf-8"))
+}
+
+
+def correct_source_title(source, system, page, title):
+    """Only reviewed exact source/page/console/title corrections may apply."""
+    return TITLE_CORRECTIONS.get((source, system, page, title), title)
 
 
 def fetch(url):
@@ -67,6 +76,7 @@ def platform(text, fallback=""):
 def record(source, title, page, identity="", system="", cover="", description="", size=0, original_format=""):
     title = clean(title)
     identity = identity or "EXT-" + hashlib.sha256((source["id"] + page + title).encode()).hexdigest()[:20]
+    title = correct_source_title(source["id"], system, page, title)
     return {"id": identity, "title": title, "platform": system, "category": "game",
             "format": "catalog", "version": "", "sizeBytes": max(0, int(size or 0)),
             "coverUrl": cover if str(cover).startswith(("http://", "https://")) else "",
@@ -131,10 +141,14 @@ class PublicGameLinks(HTMLParser):
         self.source_id = source_id
         self.link = None
         self.parts = []
+        self.full_title = ""
+        self.image_title = ""
         self.rows = []
 
     def valid(self, url):
         parts = urllib.parse.urlsplit(url)
+        if parts.query or parts.fragment:
+            return False
         if parts.netloc.lower() != urllib.parse.urlsplit(self.base).netloc.lower():
             return False
         path = parts.path.lower()
@@ -155,10 +169,10 @@ class PublicGameLinks(HTMLParser):
             if self.valid(link):
                 self.link = link
                 self.parts = []
-                if attrs.get("title"):
-                    self.parts.append(attrs["title"])
+                self.full_title = attrs.get("title", "")
+                self.image_title = ""
         elif tag == "img" and self.link and attrs.get("alt"):
-            self.parts.append(attrs["alt"])
+            self.image_title = attrs["alt"]
 
     def handle_data(self, data):
         if self.link:
@@ -166,10 +180,10 @@ class PublicGameLinks(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag == "a" and self.link:
-            title = clean(" ".join(self.parts))
+            title = clean(self.full_title or " ".join(self.parts).strip() or self.image_title)
             title = re.sub(r"\s+", " ", title)
             if 4 <= len(title) <= 160 and not re.search(
-                r"^(?:download|learn more|view|read more|open|new releases|see all)$", title, re.I
+                r"^(?:download|download now|learn more|view|read more|open|new releases|see all|comments?(?:\s+\d+)?)$", title, re.I
             ):
                 self.rows.append((title, self.link))
             self.link = None

@@ -16829,18 +16829,6 @@
           "description": "\nSource: https://cdromance.org/psp/gta-vice-city-psp/\nPlatform: sony-psp\nCatalog metadata only"
         },
         {
-          "id": "EXT-41a376f4bf4db0913872",
-          "title": "comments 20",
-          "platform": "sony-psp",
-          "category": "game",
-          "format": "catalog",
-          "version": "",
-          "sizeBytes": 0,
-          "coverUrl": "",
-          "sourceUrl": "https://cdromance.org/psp/gta-vice-city-psp/?xf-comments=1",
-          "description": "\nSource: https://cdromance.org/psp/gta-vice-city-psp/?xf-comments=1\nPlatform: sony-psp\nCatalog metadata only"
-        },
-        {
           "id": "EXT-5ab7de1640d80134667f",
           "title": "Gundam Assault Survive (English) PSP",
           "platform": "sony-psp",
@@ -16863,18 +16851,6 @@
           "coverUrl": "",
           "sourceUrl": "https://cdromance.org/psp/gundam-assault-survive-english/",
           "description": "\nSource: https://cdromance.org/psp/gundam-assault-survive-english/\nPlatform: sony-psp\nCatalog metadata only"
-        },
-        {
-          "id": "EXT-4fb160f041257bcfa6e1",
-          "title": "comments 20",
-          "platform": "sony-psp",
-          "category": "game",
-          "format": "catalog",
-          "version": "",
-          "sizeBytes": 0,
-          "coverUrl": "",
-          "sourceUrl": "https://cdromance.org/psp/gundam-assault-survive-english/?xf-comments=1",
-          "description": "\nSource: https://cdromance.org/psp/gundam-assault-survive-english/?xf-comments=1\nPlatform: sony-psp\nCatalog metadata only"
         },
         {
           "id": "EXT-d43ddc48291c3c7207ee",
@@ -16901,18 +16877,6 @@
           "description": "\nSource: https://cdromance.org/psp/animal-forest-psp-port-english-patched/\nPlatform: sony-psp\nCatalog metadata only"
         },
         {
-          "id": "EXT-2cfe2bbc0e66268d4475",
-          "title": "comments 28",
-          "platform": "sony-psp",
-          "category": "game",
-          "format": "catalog",
-          "version": "",
-          "sizeBytes": 0,
-          "coverUrl": "",
-          "sourceUrl": "https://cdromance.org/psp/animal-forest-psp-port-english-patched/?xf-comments=1",
-          "description": "\nSource: https://cdromance.org/psp/animal-forest-psp-port-english-patched/?xf-comments=1\nPlatform: sony-psp\nCatalog metadata only"
-        },
-        {
           "id": "EXT-db54d141d620ed9aa60d",
           "title": "Giftpia GCN",
           "platform": "nintendo-gc",
@@ -16935,18 +16899,6 @@
           "coverUrl": "",
           "sourceUrl": "https://cdromance.org/gamecube/giftpia-japan/",
           "description": "\nSource: https://cdromance.org/gamecube/giftpia-japan/\nPlatform: nintendo-gc\nCatalog metadata only"
-        },
-        {
-          "id": "EXT-f6c786e4e859169e5f88",
-          "title": "comments 73",
-          "platform": "nintendo-gc",
-          "category": "game",
-          "format": "catalog",
-          "version": "",
-          "sizeBytes": 0,
-          "coverUrl": "",
-          "sourceUrl": "https://cdromance.org/gamecube/giftpia-japan/?xf-comments=1",
-          "description": "\nSource: https://cdromance.org/gamecube/giftpia-japan/?xf-comments=1\nPlatform: nintendo-gc\nCatalog metadata only"
         },
         {
           "id": "EXT-230ea6ba7f1c961c9c57",
@@ -16973,18 +16925,6 @@
           "description": "\nSource: https://cdromance.org/gamecube/super-smash-bros-melee-3d-gb/\nPlatform: nintendo-gc\nCatalog metadata only"
         },
         {
-          "id": "EXT-59a3c659bca0126ec312",
-          "title": "comments 43",
-          "platform": "nintendo-gc",
-          "category": "game",
-          "format": "catalog",
-          "version": "",
-          "sizeBytes": 0,
-          "coverUrl": "",
-          "sourceUrl": "https://cdromance.org/gamecube/super-smash-bros-melee-3d-gb/?xf-comments=1",
-          "description": "\nSource: https://cdromance.org/gamecube/super-smash-bros-melee-3d-gb/?xf-comments=1\nPlatform: nintendo-gc\nCatalog metadata only"
-        },
-        {
           "id": "EXT-41d86facfa165588e383",
           "title": "Geometry Dash for PSP PSP",
           "platform": "sony-psp",
@@ -17007,18 +16947,6 @@
           "coverUrl": "",
           "sourceUrl": "https://cdromance.org/psp/geometry-dash-for-psp-homebrew-psp/",
           "description": "\nSource: https://cdromance.org/psp/geometry-dash-for-psp-homebrew-psp/\nPlatform: sony-psp\nCatalog metadata only"
-        },
-        {
-          "id": "EXT-fe9d64edb8f713f4c591",
-          "title": "comments 2",
-          "platform": "sony-psp",
-          "category": "game",
-          "format": "catalog",
-          "version": "",
-          "sizeBytes": 0,
-          "coverUrl": "",
-          "sourceUrl": "https://cdromance.org/psp/geometry-dash-for-psp-homebrew-psp/?xf-comments=1",
-          "description": "\nSource: https://cdromance.org/psp/geometry-dash-for-psp-homebrew-psp/?xf-comments=1\nPlatform: sony-psp\nCatalog metadata only"
         },
         {
           "id": "EXT-99c8d8529ee22368c4dd",

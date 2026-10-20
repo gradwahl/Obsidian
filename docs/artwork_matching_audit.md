@@ -4,6 +4,11 @@ This audit used the local source catalogues, the user's completed IGDB bulk
 catalogue caches, and cached Libretro indexes. No new API requests or image
 downloads were made. Counts describe metadata links, not visually verified images.
 
+These are the original packaging-pass figures. The subsequent
+[source-title cleanup report](artwork_source_cleanup.md) records the latest
+coverage: 75.5%, with 19,814 missing entries after the user's live alias run
+and the offline source cleanup.
+
 ## Applied improvements
 
 Recognised whole distribution suffixes on their actual console, preserving
@@ -84,11 +89,11 @@ exclusion rules:
 
 The next useful work identified by this audit was source-specific cleanup of
 concatenated/navigation titles and an IGDB alternative-name fetch with ambiguity
-checks. The latter is now implemented as `--bulk --aliases`, using a separate
-resumable cache and exact same-console comparisons. Live credentials are not
-available to the agent process, so the fetch has not run and the counts above
-remain unchanged. Increasing the title-search batch limit does not resolve
-these naming problems. No fuzzy matches were applied.
+checks. The latter is implemented as `--bulk --aliases`, using a separate
+resumable cache and exact same-console comparisons. The user completed the live
+alias fetch, adding artwork to 1,712 entries before the source cleanup linked
+above. Increasing the title-search batch limit does not resolve malformed
+source names. No fuzzy matches were applied.
 
 ## Validation
 
