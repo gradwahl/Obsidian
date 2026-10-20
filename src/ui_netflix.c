@@ -2178,43 +2178,27 @@ static void render_language_control(WolodriveApp *app) {
 static void render_top_bar(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     SDL_Color red = {229, 9, 20, 255};
-    SDL_Color muted = {155, 155, 155, 255};
-
-    /* Keep the Settings footer as quiet as the web preview. */
-    if (app->active_row == VIEW_SETTINGS) {
-        fill_rect(r,0,1020,SCREEN_WIDTH,60,0,0,0,255);
-        render_language_control(app);
-        SDL_LockMutex(app->catalog_mutex);
-        bool loading = app->sync_in_progress;
-        SDL_UnlockMutex(app->catalog_mutex);
-        draw_text(app,app->font_micro,loading ? TR(app,TXT_SYNC_MANIFEST) : "Pegasus-DL ready",
-                  312,1036,muted,0);
-#ifdef __PS5__
-        draw_text(app,app->font_micro,"Native PS5",1670,1036,muted,0);
-#else
-        draw_text(app,app->font_micro,"Native Linux",1670,1036,muted,0);
-#endif
-        return;
-    }
+    SDL_Color white = {245, 245, 245, 255};
+    SDL_Color muted = {165, 165, 175, 255};
 
     /* Smukła, elegancka stopka (60px wysokości od Y=1020 do 1080) */
-    fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 10, 10, 12, 245);
+    fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 10, 10, 14, 248);
     fill_rect(r, 0, 1020, SCREEN_WIDTH, 2, 229, 9, 20, 255);
 
-    /* Logo PolDrive w prawym rogu stopki */
-    {
-        int fp_w = draw_text(app, app->font_micro, "P", SCREEN_WIDTH - 120, 1036, red, 0);
-        draw_text(app, app->font_micro, "olDrive", SCREEN_WIDTH - 120 + (fp_w > 0 ? fp_w + 1 : 12), 1036, (SDL_Color){245, 245, 245, 255}, 0);
-    }
-
+    /* Keybindy z bezpiecznymi odstępami (brak nakładania się tekstów) */
+    int cur_x = CONTENT_X;
     if (app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS) {
-        draw_text(app, app->font_micro, "[←→↑↓] Nawigacja   [X] Wybierz", CONTENT_X, 1036, muted, 0);
-        draw_single_line(app, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 280, 1036, muted,
-                         (SDL_Rect){CONTENT_X + 280, 1036, 200, 24});
-        draw_single_line(app, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 480, 1036, muted,
-                         (SDL_Rect){CONTENT_X + 480, 1036, 300, 24});
+        int w1 = draw_text(app, app->font_micro, "[←→↑↓] Nawigacja   [X] Wybierz", cur_x, 1041, muted, 0);
+        cur_x += (w1 > 0 ? w1 + 28 : 310);
+
+        int w2 = draw_text(app, app->font_micro, TR(app, TXT_BACK_HINT), cur_x, 1041, muted, 0);
+        cur_x += (w2 > 0 ? w2 + 28 : 165);
+
+        int w3 = draw_text(app, app->font_micro, TR(app, TXT_REFRESH_HINT), cur_x, 1041, muted, 0);
+        cur_x += (w3 > 0 ? w3 + 32 : 210);
     }
 
+    /* Status katalogów pośrodku paska */
     char sync_info[256];
     SDL_LockMutex(app->catalog_mutex);
     switch (app->sync_status_id) {
@@ -2236,19 +2220,36 @@ static void render_top_bar(WolodriveApp *app) {
     }
     SDL_UnlockMutex(app->catalog_mutex);
 
+    /* Zamiana ewentualnego prefiksu Pegasus-DL na Katalogi w locie */
+    char clean_sync[256];
+    if (strncmp(sync_info, "Pegasus-DL", 10) == 0) {
+        snprintf(clean_sync, sizeof(clean_sync), "Katalogi%s", sync_info + 10);
+    } else {
+        snprintf(clean_sync, sizeof(clean_sync), "%s", sync_info);
+    }
+    draw_single_line(app, app->font_micro, clean_sync, cur_x, 1041, (SDL_Color){210, 210, 215, 255},
+                     (SDL_Rect){cur_x, 1036, 1280 - cur_x, 28});
+
     render_language_control(app);
 
+    /* Telemetria: pełne pole bez ucinania GPU: null */
     char telemetry[256];
 #ifdef __PS5__
-    snprintf(telemetry, sizeof(telemetry), "data: %.0fGB | ext0: %.0fGB | CPU: %.1f°C | GPU: %.1f°C",
+    snprintf(telemetry, sizeof(telemetry), "data: %.0fGB | ext0: %.0fGB | CPU: %.0f°C | GPU: %.0f°C",
              app->stats.data_free_gb, app->stats.ext0_free_gb,
              app->stats.cpu_temp_c, app->stats.gpu_temp_c);
 #else
     snprintf(telemetry, sizeof(telemetry), "data: null | ext0: null | CPU: null | GPU: null");
 #endif
 
-    draw_single_line(app, app->font_micro, telemetry, 1200, 1036, muted,
-                     (SDL_Rect){1200, 1036, 350, 24});
+    draw_single_line(app, app->font_micro, telemetry, 1300, 1041, muted,
+                     (SDL_Rect){1300, 1036, 470, 28});
+
+    /* Logo PolDrive w prawym rogu stopki */
+    {
+        int fp_w = draw_text(app, app->font_small, "P", SCREEN_WIDTH - 128, 1038, red, 0);
+        draw_text(app, app->font_small, "olDrive", SCREEN_WIDTH - 128 + (fp_w > 0 ? fp_w + 1 : 14), 1038, white, 0);
+    }
 }
 
 static void render_language_menu(WolodriveApp *app) {

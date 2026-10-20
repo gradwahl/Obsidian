@@ -11,6 +11,6 @@ export const SystemStatsBar: React.FC<SystemStatsBarProps> = ({
 }) => {
   return <footer className="tv-status">
     <span title={syncStatus}>{syncStatus}</span>
-    <span>Browser preview · System telemetry unavailable</span>
+    <span>data: null | ext0: null | CPU: null | GPU: null</span>
   </footer>;
 };

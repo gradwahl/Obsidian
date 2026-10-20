@@ -65,7 +65,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       <div className="tv-hero-shade" />
       <div className="tv-wordmark">
         <strong>W</strong>
-        <span>W O L O D R I V E</span>
+        <span>olDrive</span>
       </div>
       <h1>{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
       {game && (

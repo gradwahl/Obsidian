@@ -164,7 +164,7 @@ export function App() {
     showToast(t(language, 'TXT_ACTION_UNAVAILABLE'));
   };
 
-  // Pegasus-DL Sync action
+  // Katalogi Sync action
   const handleSyncPegasus = async () => {
     if (syncInProgress) {
       showToast(t(language, 'TXT_SYNC_BUSY'));
@@ -178,7 +178,7 @@ export function App() {
       // Fetch default sources
       const res = await fetch(
         'https://raw.githubusercontent.com/pegasus-ps5/pegasus-dl/refs/heads/main/catalogs/default-sources.json',
-        { headers: { 'User-Agent': 'PolDrive/2.0 (PS5-13.60; Pegasus-DL-Client)' } }
+        { headers: { 'User-Agent': 'PolDrive/2.0 (PS5-13.60; Katalogi-Client)' } }
       );
       if (res.ok) {
         const manifest = await res.json();

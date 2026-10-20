@@ -193,3 +193,28 @@
 .tv-settings .text-xs, .tv-settings .text-sm { font-size: 20px; }
 .tv-settings input, .tv-settings button[role="checkbox"] { width: 24px; height: 24px; }
 @media (prefers-reduced-motion: reduce) { .tv-stage *, .tv-stage *::before, .tv-stage *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+
+/* Ujednolicenie Web Preview z silnikiem C/SDL2 PolDrive */
+.tv-sidebar svg, .sidebar svg {
+    color: #e50914 !important;
+    stroke: #e50914 !important;
+    stroke-width: 2.4px !important;
+}
+.tv-brand-logo, .brand-logo-p {
+    background: transparent !important;
+    border: none !important;
+    color: #e50914 !important;
+    font-weight: 900 !important;
+    font-size: 28px !important;
+    text-shadow: 2px 2px 0px rgba(90, 0, 5, 0.85) !important;
+}
+.tv-footer, .bottom-bar, footer {
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+    background: rgba(10, 10, 14, 0.97) !important;
+    border-top: 2px solid #e50914 !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 24px 0 130px !important;
+}
