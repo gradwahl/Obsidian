@@ -75,7 +75,47 @@ npm run build:static
 unset IGDB_CLIENT_SECRET IGDB_CLIENT_ID
 ```
 
-The importer now uses **IGDB Multi-Query** to search up to 10 games per
+For thousands of missing covers, use **bulk catalogue matching** instead of
+searching each title. With the same credentials set above, run on Linux/WSL:
+
+```bash
+python3 scripts/igdb_artwork.py --bulk
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+On native Windows PowerShell, use `python` in place of `python3` for both
+scripts; the `npm` command is unchanged. Add
+`--platforms nintendo-switch,sony-ps4,sony-ps5` to the bulk command to limit
+the consoles, or omit it to process all supported consoles with uncovered titles.
+`--bulk --dry-run` lists uncovered titles without credentials or API requests.
+
+Bulk mode requests each console's game names, platform IDs and cover links
+in pages of **500 games**, then matches all uncovered titles locally using the
+same exact cleaned-title, matching-console and unambiguous-cover checks.
+It rechecks previously unsuccessful title searches as well. The normal
+`--max-queries`, `--batch-size` and `--workers` settings do not limit bulk
+matching; catalogue pages are fetched sequentially with the shared rate limiter.
+No individual title searches or image downloads run in bulk mode.
+
+Pages are checkpointed in ignored local files under
+`.cache/wolodrive-artwork/igdb-catalogues/`. An interrupted download resumes
+after its last saved game ID; matching waits until that console's catalogue
+is complete so a later duplicate cannot be missed. Completed catalogues are
+reused on later runs. To fetch changed names or covers, run
+`python3 scripts/igdb_artwork.py --bulk --refresh-catalogue` (Windows: `python`).
+This restarts catalogue downloads for selected consoles that still need matching;
+existing successful artwork results remain intact. Do not run bulk and search
+importers concurrently against the same cache.
+
+Successful matches are saved and exported after each console. Unresolved or
+ambiguous titles do not become new negative search-cache entries: the existing
+individual search mode remains available for the remainder. Previously cached
+unsuccessful searches retain their normal retry policy below. Bulk mode reduces
+request counts, but cannot guarantee a cover for every catalogue entry. Its
+live API speed and coverage must be checked with local credentials.
+
+The individual search mode uses **IGDB Multi-Query** to search up to 10 games per
 HTTP request. By default, 3 concurrent workers share a thread-safe global
 request limiter of approximately **3 HTTP requests/second** (below IGDB's
 4-request/second and 8 concurrent-request limits). This gives a theoretical

@@ -303,12 +303,98 @@ class IGDBClient:
                     self.fallback_searches += 1
         return [results[f"game{i}"] for i in range(len(requests))]
 
+    def catalogue_page(self, platform_id, after_id):
+        return self.query("games", (
+            'fields id,name,platforms,cover.image_id; '
+            f'where platforms = ({int(platform_id)}) & id > {int(after_id)}; '
+            'sort id asc; limit 500;'))
+
 
 def batches(values, size):
     """Yield bounded chunks; no repeated or unbounded in-flight queries."""
     iterator = iter(values)
     while chunk := list(islice(iterator, size)):
         yield chunk
+
+
+def load_catalogue(client, platform_id, *, refresh=False, progress=None):
+    """Checkpoint pages by ascending ID; never match an incomplete catalogue."""
+    path = CACHE.parent / "igdb-catalogues" / f"{platform_id}.json"
+    empty = {"schemaVersion": 1, "platformId": platform_id,
+             "complete": False, "games": []}
+    catalogue = empty if refresh else load_json(path, empty)
+    if (catalogue.get("schemaVersion") != 1 or
+            catalogue.get("platformId") != platform_id or
+            type(catalogue.get("complete")) is not bool or
+            not isinstance(catalogue.get("games"), list)):
+        raise ValueError("Invalid IGDB catalogue cache; use --refresh-catalogue")
+    games = catalogue["games"]
+
+    def validate(rows, after_id):
+        for row in rows:
+            if (not isinstance(row, dict) or type(row.get("id")) is not int or
+                    row["id"] <= after_id or not isinstance(row.get("name"), str) or
+                    not isinstance(row.get("platforms"), list) or
+                    platform_id not in row["platforms"] or
+                    (row.get("cover") is not None and not isinstance(row["cover"], dict))):
+                raise ValueError("Invalid or unordered IGDB catalogue rows")
+            after_id = row["id"]
+        return after_id
+
+    cursor = validate(games, 0)
+    while not catalogue["complete"]:
+        page = client.catalogue_page(platform_id, cursor)
+        if not isinstance(page, list) or len(page) > 500:
+            raise ValueError("Invalid IGDB catalogue page")
+        cursor = validate(page, cursor)
+        games.extend(page)
+        catalogue["complete"] = len(page) < 500
+        atomic_json(path, catalogue)
+        if progress:
+            progress(len(games), catalogue["complete"])
+    return games
+
+
+def scan_bulk(client, names, cache, console_ids, *, refresh=False, progress=None):
+    """Match all uncovered titles locally, including prior unsuccessful searches.
+
+    Only successes enter the shared search cache. Catalogue misses/reviews
+    remain eligible for individual searches; no search is made automatically.
+    """
+    entries = cache.setdefault("results", {})
+    totals = Counter()
+    for platform in sorted({platform for platform, _ in names.values()}):
+        pid = console_ids.get(platform)
+        if not pid:
+            continue
+        targets = [(key, title) for key, (console, title) in names.items()
+                   if console == platform and entries.get(key, {}).get("status") != "matched"]
+        if not targets:
+            continue
+        rows = load_catalogue(client, pid, refresh=refresh, progress=(
+            (lambda count, done: progress(
+                f"{platform}: {count:,} catalogue games cached" + (" (complete)" if done else "")))
+            if progress else None))
+        index = {}
+        for row in rows:
+            index.setdefault(normalize(row["name"]), []).append(row)
+        statuses = Counter()
+        for key, title in targets:
+            clean = search_title(platform, title)
+            if len(clean) < 3 or re.search(r"\[(?:DLC|Addon|Add-on)\]", clean, re.I):
+                statuses["skipped-metadata"] += 1
+                continue
+            result = select_match(platform, clean, index.get(normalize(clean), []), pid)
+            statuses[result["status"]] += 1
+            if result["status"] == "matched":
+                entries[key] = {**result, "searchedTitle": clean}
+        atomic_json(CACHE, cache)
+        # Export after each console so completed work survives later failures.
+        export_cache(cache)
+        totals.update(statuses)
+        if progress:
+            progress(f"{platform}: " + ", ".join(f"{k}={v}" for k, v in sorted(statuses.items())))
+    return totals
 
 
 def scan(client, names, cache, max_queries=50, console_ids=None, progress=None,
@@ -397,13 +483,22 @@ def export_cache(cache, keys=None, path=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="Show eligible unique titles without credentials")
-    parser.add_argument("--max-queries", type=int, default=50, help="Maximum new game searches (default 50)")
+    parser.add_argument("--bulk", action="store_true",
+                        help="Cache console catalogues (500 games/page) and match all missing titles locally")
+    parser.add_argument("--refresh-catalogue", action="store_true",
+                        help="With --bulk, rebuild selected console catalogue caches from the first page")
+    parser.add_argument("--max-queries", type=int, default=50,
+                        help="Maximum individual game searches (default 50); ignored with --bulk")
     parser.add_argument("--batch-size", type=int, default=10, help="Game searches per IGDB request, 1-10 (default 10)")
     parser.add_argument("--workers", type=int, default=3, help="Concurrent requests, 1-4 (default 3)")
     parser.add_argument("--platforms", help="Comma-separated Wolodrive platform IDs")
     parser.add_argument("--retry-unmatched", action="store_true",
                         help="Retry cached not-found/review results; never clear matched results")
     args = parser.parse_args(argv)
+    if args.refresh_catalogue and not args.bulk:
+        parser.error("--refresh-catalogue requires --bulk")
+    if args.bulk and args.retry_unmatched:
+        parser.error("--bulk already rechecks unsuccessful titles; omit --retry-unmatched")
     if not 0 <= args.max_queries <= 2000:
         parser.error("--max-queries must be 0..2000")
     if not 1 <= args.batch_size <= 10 or not 1 <= args.workers <= 4:
@@ -433,19 +528,25 @@ def main(argv=None):
 
     pending = [key for key in candidates if needs_query(key)]
     retries = sum(key in cache["results"] for key in pending)
-    print(f"Unique uncovered game/platform titles: {len(candidates):,}; "
-          f"pending: {len(pending):,} (including {retries:,} improved-title retries); "
-          f"already processed: {len(candidates)-len(pending):,}", flush=True)
+    if args.bulk:
+        print(f"Bulk mode: {len(candidates):,} uncovered titles; "
+              "previously unsuccessful searches are rechecked locally.", flush=True)
+    else:
+        print(f"Unique uncovered game/platform titles: {len(candidates):,}; "
+              f"pending: {len(pending):,} (including {retries:,} improved-title retries); "
+              f"already processed: {len(candidates)-len(pending):,}", flush=True)
     if args.dry_run:
         changes = [(name, search_title(platform, name)) for platform, name in candidates.values()
                    if normalize(name) != normalize(search_title(platform, name))]
         print(f"Titles with removable source suffixes: {len(changes):,}")
         for old, new in changes[:8]:
             print(f"  {old!r} -> {new!r}")
-    print("Pending by console:", dict(Counter(key.split("|", 1)[0] for key in pending).most_common(12)))
+    print("Uncovered by console:" if args.bulk else "Pending by console:",
+          dict(Counter(key.split("|", 1)[0] for key in
+                       (candidates if args.bulk else pending)).most_common(12)))
     if args.dry_run:
         return 0
-    if args.max_queries == 0:
+    if args.max_queries == 0 and not args.bulk:
         # Rebuild an export from local successful lookups without credentials.
         # Do not filter to the currently uncovered catalogue: successful
         # results become "covered" after enrich_artwork.py merges them.
@@ -461,6 +562,16 @@ def main(argv=None):
     unavailable = sorted({plat for plat, _ in candidates.values()} - ids.keys())
     if unavailable:
         print("Unresolved IGDB console names (skipped):", ", ".join(unavailable), file=sys.stderr)
+    if args.bulk:
+        print("Bulk catalogue: 500 games/page, shared ~3 requests/second limiter; "
+              "no individual title searches", flush=True)
+        totals = scan_bulk(client, candidates, cache, ids,
+                           refresh=args.refresh_catalogue,
+                           progress=lambda message: print(message, flush=True))
+        matches = export_cache(cache)
+        print(f"Bulk results: {dict(totals)}; IGDB cached matches exported: {matches}.", flush=True)
+        print("Run python scripts/enrich_artwork.py --offline to merge covers into Wolodrive.")
+        return 0
     print(f"Multi-Query: {args.batch_size} searches/request, {args.workers} workers, "
           "shared ~3 requests/second limiter", flush=True)
     requested_count = scan(
