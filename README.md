@@ -1,6 +1,6 @@
 <div align="center">
 
-![Poldrive banner](docs/poldrive-banner.svg)
+![PolDrive banner](docs/poldrive-banner.svg)
 
 **A console-first game catalogue, built for PlayStation 5, Linux and the web.**
 
@@ -11,20 +11,20 @@ Browse games and ROM listings in a TV-style interface with cover art, search, pl
 ![Linux](https://img.shields.io/badge/Linux-SDL2-20232a?style=flat-square)
 ![PS5](https://img.shields.io/badge/PS5-LAN%20browser%20payload-20232a?style=flat-square)
 
-[What is Poldrive?](#what-is-poldrive) · [Features](#features) · [Get started](#get-started) · [Supported systems](#supported-systems) · [Documentation](#documentation)
+[What is PolDrive?](#what-is-poldrive) · [Features](#features) · [Get started](#get-started) · [Supported systems](#supported-systems) · [Documentation](#documentation)
 
 </div>
 
 > [!IMPORTANT]
-> **Poldrive is currently a catalogue browser, not a working game installer.** It does **not** yet download packages, install PKGs, mount games or launch games. The PS5 LAN service serves the catalogue, not a remote download/install API.
+> **PolDrive is currently a catalogue browser, not a working game installer.** It does **not** yet download packages, install PKGs, mount games or launch games. The PS5 LAN service serves the catalogue, not a remote download/install API.
 
-## What is Poldrive?
+## What is PolDrive?
 
-**Poldrive** is an in-development, controller-friendly interface for exploring game and homebrew catalogue metadata. It presents games, ROM listings, artwork and available source/package information through a dark, console-inspired UI.
+**PolDrive** is an in-development, controller-friendly interface for exploring game and homebrew catalogue metadata. It presents games, ROM listings, artwork and available source/package information through a dark, console-inspired UI.
 
 The project contains three related experiences:
 
-- **PS5 browser payload** — a self-contained ELF that serves the web catalogue from the console and can register a Poldrive shortcut under **Home / Media** on supported Payload Manager setups.
+- **PS5 browser payload** — a self-contained ELF that serves the web catalogue from the console and can register a PolDrive shortcut under **Home / Media** on supported Payload Manager setups.
 - **Linux native app** — a C/SDL2 interface used as the visual and interaction reference.
 - **Web app** — a React/TypeScript preview that runs in a desktop browser or from static hosting, including AI Studio.
 
@@ -106,7 +106,7 @@ make ps5-web
 ```
 
 1. Copy the generated `build/Poldrive.elf` to `/data/pldmgr/payloads/Poldrive/Poldrive.elf` on the console.
-2. Launch **Poldrive** from Payload Manager. The payload hosts the embedded catalogue and attempts to register a **Poldrive** tile under **Home / Media**.
+2. Launch **PolDrive** from Payload Manager. The payload hosts the embedded catalogue and attempts to register a **PolDrive** tile under **Home / Media**.
 3. Open the catalogue on the PS5, or from another device on the same LAN at `http://<PS5-IP>:<port>/`. The service prefers port **8097** but may choose another available port; find the actual port in `/data/wolodrive-web.log` or `/data/wolodrive-web.endpoint`.
 
 Payload Manager's loopback service (port 8084) and an ELF loader must be available for the Home / Media shortcut to relaunch the app after each jailbreak. A previously compiled ELF can be used without building it yourself; this repository does **not** guarantee that a ready-to-install release is published.
@@ -115,9 +115,9 @@ The native PS5 SDL build (`make ps5`) is **experimental** and distinct from `mak
 
 ## Supported systems
 
-There is a difference between **devices that run Poldrive** and **consoles represented in its catalogue**.
+There is a difference between **devices that run PolDrive** and **consoles represented in its catalogue**.
 
-### Where Poldrive runs
+### Where PolDrive runs
 
 | Environment | Experience | Status |
 | :-- | :-- | :-- |
@@ -131,7 +131,7 @@ There is a difference between **devices that run Poldrive** and **consoles repre
 
 The library UI includes platform groupings such as **PS1, PS2, PS3, PS4, PS5, PSP; Xbox and Xbox 360; Nintendo NES through Switch and handhelds; Sega consoles; Atari; SNK; NEC; and select arcade and other systems**.
 
-These are **catalogue categories, not a claim that Poldrive can emulate or run those systems**. Some console tiles have no connected catalogue data. Games and ROMs appear only when relevant source metadata is available; the Emulators section is not a bundled emulator.
+These are **catalogue categories, not a claim that PolDrive can emulate or run those systems**. Some console tiles have no connected catalogue data. Games and ROMs appear only when relevant source metadata is available; the Emulators section is not a bundled emulator.
 
 ## Controls
 

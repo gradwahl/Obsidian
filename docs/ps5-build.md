@@ -16,7 +16,7 @@ shortcut setup code. Helper objects/ELFs in build/ are internal intermediates.
 
 Save this one ELF as
 /data/pldmgr/payloads/Poldrive/Poldrive.elf and launch it through
-Payload Manager. The embedded helper prepares the Poldrive red P icon under
+Payload Manager. The embedded helper prepares the PolDrive red P icon under
 Home / Media automatically. No separate shortcut-installer ELF needs copying.
 Subsequent launches skip registration when the recorded shortcut metadata and
 icon match. Failed updates invalidate the registration marker and retry later.
@@ -25,7 +25,7 @@ only this title's files. It does not uninstall existing apps. If TitleDir is
 unavailable it uses Payload Manager's registration-scan fallback. The fallback
 and browser API both returned 0 on firmware 13.20 with the bundled helper.
 
-Old Poldrive diagnostic builds were moved outside Payload Manager's scan tree
+Old PolDrive diagnostic builds were moved outside Payload Manager's scan tree
 into /data/wolodrive-debug-backup-20261020-1920. Reload Payload Manager to refresh
 its list. Other applications and payloads were not moved.
 
@@ -90,9 +90,9 @@ service must not be advertised as a completed remote installer.
 
 To roll back this additive browser build, remove its new targets, generators,
 source and tests; keep the existing make ps5 and npm run build:static workflows.
-Deleting Poldrive through the console UI removes its registered shortcut;
+Deleting PolDrive through the console UI removes its registered shortcut;
 retain saved ELF files if it will be installed again.
 
-Branding uses Poldrive in the native/web UI, metadata and the Media tile. The
+Branding uses PolDrive in the native/web UI, metadata and the Media tile. The
 existing WOLO00001 title identity and internal data/cache paths remain compatible
 so this update keeps preferences and does not create a second dashboard app.

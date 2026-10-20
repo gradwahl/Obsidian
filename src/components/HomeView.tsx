@@ -3,6 +3,7 @@ import { GameItem, LanguageCode, HomeCategoryId } from '../types';
 import { TV_LAYOUT } from '../layout';
 import { t } from '../translations';
 import { HeroBanner } from './HeroBanner';
+import { UbiquityHomeView } from './UbiquityHomeView';
 import { GameCard } from './GameCard';
 
 export interface HomeCategoryRow {
@@ -13,9 +14,10 @@ export interface HomeCategoryRow {
 
 interface HomeViewProps {
   games: GameItem[];
+  uiTheme?: 'netflix' | 'ubiquity';
   categories?: HomeCategoryRow[];
   activeCategoryIndex?: number;
-  onSelectCategory?: (catIndex: number) => void;
+  onSelectCategory?: (catIndex: number, colIndex?: number) => void;
   language: LanguageCode;
   selected: number;
   sidebarFocused: boolean;
@@ -31,6 +33,7 @@ interface HomeViewProps {
 
 export function HomeView({
   games,
+  uiTheme = 'netflix',
   categories,
   activeCategoryIndex = 0,
   onSelectCategory,
@@ -48,6 +51,8 @@ export function HomeView({
 }: HomeViewProps) {
   const carousel = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Retain scroll velocity when D-pad presses arrive before the previous move settles.
+  const scrollMotion = useRef(new WeakMap<HTMLDivElement, { velocity: number }>());
   const [gridExpanded, setGridExpanded] = useState(false);
 
   const hasMultiCategories = Boolean(categories && categories.length > 0);
@@ -57,21 +62,46 @@ export function HomeView({
   const activeList = activeCat ? activeCat.games : games;
   const selectedIndex = Math.max(0, Math.min(selected, activeList.length - 1));
   const focusedGame = activeList[selectedIndex] || activeList[0] || null;
+  const singleStart = !hasMultiCategories && games.length > 64 ? Math.max(0, selectedIndex - 6) : 0;
+  const singleEnd = !hasMultiCategories && games.length > 64
+    ? Math.min(games.length, selectedIndex + 15) : games.length;
 
   useEffect(() => {
-    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
-    if (hasMultiCategories) {
-      const el = rowRefs.current[activeCategoryIndex];
-      el?.scrollTo({
-        left: selectedIndex * (TV_LAYOUT.cardWidth + TV_LAYOUT.cardGap),
-        behavior
-      });
-    } else {
-      carousel.current?.scrollTo({
-        left: selectedIndex * (TV_LAYOUT.cardWidth + TV_LAYOUT.cardGap),
-        behavior
-      });
+    const el = hasMultiCategories ? rowRefs.current[activeCategoryIndex] : carousel.current;
+    if (!el) return;
+    const target = Math.min(selectedIndex * (TV_LAYOUT.cardWidth + TV_LAYOUT.cardGap),
+      Math.max(0, el.scrollWidth - el.clientWidth));
+    const motion = scrollMotion.current.get(el) || { velocity: 0 };
+    scrollMotion.current.set(el, motion);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.scrollLeft = target;
+      motion.velocity = 0;
+      return;
     }
+
+    // The native SDL carousel uses this exact critically damped spring.
+    // Updating its destination preserves momentum when someone taps quickly.
+    const speed = 24;
+    let frame = 0;
+    let previous = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, Math.max(0, (now - previous) / 1000));
+      previous = now;
+      const offset = el.scrollLeft - target;
+      const movement = (motion.velocity + speed * offset) * dt;
+      const decay = Math.exp(-speed * dt);
+      const next = target + (offset + movement) * decay;
+      motion.velocity = (motion.velocity - speed * movement) * decay;
+      if (Math.abs(next - target) < 0.05 && Math.abs(motion.velocity) < 0.5) {
+        el.scrollLeft = target;
+        motion.velocity = 0;
+        return;
+      }
+      el.scrollLeft = next;
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
   }, [selectedIndex, activeCategoryIndex, hasMultiCategories]);
 
   useEffect(() => {
@@ -86,6 +116,14 @@ export function HomeView({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [hasMultiCategories]);
+
+  if (uiTheme === 'ubiquity' && !gridExpanded) {
+    return <UbiquityHomeView
+      games={games} categories={categories} activeCategoryIndex={activeCategoryIndex}
+      onSelectCategory={onSelectCategory} language={language} selected={selected}
+      sidebarFocused={sidebarFocused} onSelect={onSelect} onOpen={onOpen}
+      onPlay={onPlay} heading={title} emptyMessage={emptyMessage} showDate={showDate} />;
+  }
 
   if (hasMultiCategories && gridExpanded && activeCat) {
     return (
@@ -184,8 +222,8 @@ export function HomeView({
                         isSelected={isCatActive && colIdx === index && !sidebarFocused}
                         language={language}
                         onSelect={() => {
-                          if (!isCatActive) onSelectCategory?.(catIdx);
-                          onSelect(index);
+                          if (!isCatActive) onSelectCategory?.(catIdx, index);
+                          else onSelect(index);
                         }}
                         onOpen={() => onOpen(game)}
                       />
@@ -201,16 +239,21 @@ export function HomeView({
           <h2 className="tv-row-title">{title || t(language, 'TXT_LATEST_GAMES')}</h2>
           {games.length ? (
             <div className="tv-carousel" ref={carousel}>
-              {games.map((game, index) => (
-                <GameCard
+              {singleStart > 0 && <span aria-hidden="true" className="tv-virtual-spacer"
+                style={{ flexBasis: singleStart * (TV_LAYOUT.cardWidth + TV_LAYOUT.cardGap) - TV_LAYOUT.cardGap }} />}
+              {games.slice(singleStart, singleEnd).map((game, offset) => {
+                const index = singleStart + offset;
+                return <GameCard
                   key={`${game.id_code}_${index}`}
                   game={game}
                   isSelected={selectedIndex === index && !sidebarFocused}
                   language={language}
                   onSelect={() => onSelect(index)}
                   onOpen={() => onOpen(game)}
-                />
-              ))}
+                />;
+              })}
+              {singleEnd < games.length && <span aria-hidden="true" className="tv-virtual-spacer"
+                style={{ flexBasis: (games.length - singleEnd) * (TV_LAYOUT.cardWidth + TV_LAYOUT.cardGap) - TV_LAYOUT.cardGap }} />}
             </div>
           ) : null}
         </>

@@ -49,9 +49,9 @@ export const SystemStatsBar: React.FC<SystemStatsBarProps> = ({
         <span className="tv-footer-telemetry">
           data: null | ext0: null | CPU: null | GPU: null
         </span>
-        <div className="tv-footer-logo" aria-label="Poldrive">
+        <div className="tv-footer-logo" aria-label="PolDrive">
           <strong>P</strong>
-          <span>oldrive</span>
+          <span>olDrive</span>
         </div>
       </div>
     </footer>

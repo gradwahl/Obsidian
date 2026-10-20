@@ -15,12 +15,18 @@ static void ui_open_game(WolodriveApp *app, GameItem *item) {
     app->detail_item = item;
     app->detail_parent = NULL;
     app->detail_open = true;
+    app->detail_ubiquity_options = false;
     app->detail_tab = GAME_INSTALL;
     app->detail_selection = app->detail_scroll = 0;
     app->detail_content_focus = false;
     track_description_focus(app, item);
 }
 static void game_back(WolodriveApp *app) {
+    if (app->ui_theme == UI_THEME_UBIQUITY && app->detail_ubiquity_options) {
+        app->detail_ubiquity_options = false;
+        app->detail_selection = 1;
+        return;
+    }
     if (app->detail_parent) {
         GameItem *parent = app->detail_parent;
         ui_open_game(app, parent);
@@ -67,6 +73,61 @@ static void game_select_tab(WolodriveApp *app, int tab) {
     app->detail_content_focus = false;
 }
 static void handle_game_details_input(WolodriveApp *app, const SDL_Event *ev) {
+    if (app->ui_theme == UI_THEME_UBIQUITY && !app->detail_ubiquity_options &&
+        !app->screenshot_viewer) {
+        int command = 0; /* -1 previous, +1 next, 2 activate, 3 back */
+        if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+            int mx = ev->button.x, my = ev->button.y;
+            if (my < 100 && mx < 120) command = 3;
+            else if (my >= 902 && my < 974) {
+                if (mx >= 169 && mx < 470) { app->detail_selection = 0; command = 2; }
+                else if (mx >= 485 && mx < 559) { app->detail_selection = 1; command = 2; }
+                else if (mx >= 574 && mx < 648) { app->detail_selection = 2; command = 2; }
+            }
+        } else if (ev->type == SDL_KEYDOWN) {
+            switch (ev->key.keysym.sym) {
+                case SDLK_LEFT: case SDLK_a: command = -1; break;
+                case SDLK_RIGHT: case SDLK_d: command = 1; break;
+                case SDLK_RETURN: case SDLK_SPACE: command = 2; break;
+                case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_b: command = 3; break;
+                case SDLK_PAGEUP: app->detail_scroll = SDL_max(0, app->detail_scroll - 90); return;
+                case SDLK_PAGEDOWN: app->detail_scroll += 90; return;
+                case SDLK_i: app->show_original_description = !app->show_original_description; return;
+                default: break;
+            }
+            if (ev->key.repeat && command >= 2) return;
+        } else if (ev->type == SDL_CONTROLLERBUTTONDOWN) {
+            switch (ev->cbutton.button) {
+                case SDL_CONTROLLER_BUTTON_DPAD_LEFT: command = -1; break;
+                case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: command = 1; break;
+                case SDL_CONTROLLER_BUTTON_A: command = 2; break;
+                case SDL_CONTROLLER_BUTTON_B: command = 3; break;
+                case SDL_CONTROLLER_BUTTON_RIGHTSTICK:
+                    app->show_original_description = !app->show_original_description;
+                    return;
+                default: break;
+            }
+        } else if (ev->type == SDL_MOUSEWHEEL) {
+            int dir = ev->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
+            app->detail_scroll = SDL_max(0, app->detail_scroll - ev->wheel.y * dir * 48);
+            return;
+        }
+        if (command == -1) app->detail_selection = SDL_max(0, app->detail_selection - 1);
+        if (command == 1) app->detail_selection = SDL_min(2, app->detail_selection + 1);
+        if (command == 3) { game_back(app); return; }
+        if (command == 2) {
+            if (app->detail_selection == 0) {
+                if (app->detail_item->format == FMT_CATALOG) {
+                    app->detail_ubiquity_options = true;
+                    game_select_tab(app, GAME_DETAILS);
+                } else sys_trigger_action(app, app->detail_item);
+            } else if (app->detail_selection == 1) {
+                app->detail_ubiquity_options = true;
+                game_select_tab(app, GAME_INSTALL);
+            } else game_back(app);
+        }
+        return;
+    }
     GameItem *entries[MAX_CATALOG_ITEMS];
     ScreenshotSet shots = {0};
     if (app->detail_tab == GAME_SCREENSHOTS) screenshots_get(app,app->detail_item,&shots);
@@ -169,7 +230,14 @@ static void render_screenshot_viewer(WolodriveApp *app, const ScreenshotSet *sho
     draw_text(app,app->font_small,TR(app,TXT_SCREEN_VIEWER_HINT),60,1010,white,1750);
 }
 
+#include "ui_ubiquity_details.h"
+
 static void render_game_details(WolodriveApp *app) {
+    if (app->ui_theme == UI_THEME_UBIQUITY && !app->detail_ubiquity_options &&
+        !app->screenshot_viewer) {
+        render_ubiquity_game_details(app);
+        return;
+    }
     SDL_Renderer *r = app->renderer;
     GameItem *item = app->detail_item;
     SDL_Color white = {245,245,245,255}, muted = {175,175,175,255};

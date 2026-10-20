@@ -1,10 +1,10 @@
-# Poldrive
+# PolDrive
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
 ### Artwork matching and box-art cache
 
-Poldrive's box-art enrichment uses three conservative stages: first-party
+PolDrive's box-art enrichment uses three conservative stages: first-party
 artwork URLs already present in the source, an exact **same-console and title**
 match from another source, and [Libretro Named_Boxarts](https://github.com/libretro-thumbnails/libretro-thumbnails)
 using exact or uniquely normalised filename matches. Unknown console
@@ -21,7 +21,7 @@ when a card is visible, and manual local art always wins.
 
 Supplied image URLs can fail even when they return HTTP 200: Axekin's image
 host currently returns an HTML bot challenge for the PS1 examples tested.
-Poldrive prepares independent IGDB/Libretro fallbacks for supplied covers and
+PolDrive prepares independent IGDB/Libretro fallbacks for supplied covers and
 for matching rows that inherit those source URLs. Healthy supplied art retains
 its priority; a load/decode failure advances to the independent cover in cards,
 heroes and details, in both the web and native renderer. It does not attempt
@@ -227,7 +227,7 @@ it in the Twitch Developer Console before proceeding. Never add the new
 secret to Git, a tracked configuration, a screenshot, or a command-line
 argument.
 
-From Windows PowerShell (in the Poldrive repository):
+From Windows PowerShell (in the PolDrive repository):
 
 ```powershell
 $env:IGDB_CLIENT_ID = Read-Host 'Twitch Client ID'

@@ -39,7 +39,7 @@ static char *http_get_string(const char *url) {
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_mem_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Poldrive/2.0 (PS5-13.60; Pegasus-DL-Client)");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "PolDrive/2.0 (PS5-13.60; Pegasus-DL-Client)");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 8L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
@@ -370,6 +370,10 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     if (!boxart) boxart = json_object_value(object_start, object_end, "boxCoverUrl");
     target->boxart_url[0] = 0;
     if (boxart && *boxart == '"') text_decode_json_string(boxart+1, object_end, target->boxart_url, sizeof(target->boxart_url));
+    if (!target->boxart_url[0]) {
+        const char *archive_url = sys_archive_cover_url(target->id_code, target->title);
+        if (archive_url) SDL_strlcpy(target->boxart_url, archive_url, sizeof(target->boxart_url));
+    }
     const char *icon = json_object_value(object_start, object_end, "iconUrl");
     if (!icon) icon = json_object_value(object_start, object_end, "icon");
     target->icon_url[0] = 0;

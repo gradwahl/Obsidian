@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
     startup_log_stage("Creating window");
     app->window = SDL_CreateWindow(
-        "Poldrive",
+        "PolDrive",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         win_w, win_h, win_flags
     );

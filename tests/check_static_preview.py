@@ -7,6 +7,7 @@ import re
 import subprocess
 import threading
 import urllib.request
+import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PREVIEW = ROOT / "static-preview"
@@ -50,12 +51,20 @@ def main():
                 assert len(chunks) == 1, f"Missing/duplicated full index: {source}"
                 links.extend("/assets/" + chunk.name for chunk in chunks)
             artwork_chunks = list((PREVIEW / "assets").glob("cover-matches-*.js"))
-            assert len(artwork_chunks) == 1, "Artwork override manifest must be lazy-loaded"
+            artwork_manifest = ROOT / "assets/artwork/cover-matches.json"
+            if artwork_manifest.exists():
+                assert len(artwork_chunks) == 1, "Generated artwork overlay must be lazy-loaded"
+            else:
+                assert not artwork_chunks, "Do not include a stale artwork overlay"
             assert not (PREVIEW / "assets/artwork/cover-matches.json").exists()
             assert not (PREVIEW / "assets/artwork/cover-matches.tsv").exists()
             links.extend("/assets/" + chunk.name for chunk in artwork_chunks)
             for name in sorted(set(links + ["/" + path for path in artwork])):
-                with urllib.request.urlopen(base + name) as response:
+                try:
+                    response = urllib.request.urlopen(base + urllib.parse.quote(name, safe="/%"))
+                except urllib.error.HTTPError as error:
+                    raise AssertionError(f"Missing static resource {name}: {error}") from error
+                with response:
                     assert response.read() == (PREVIEW / name.lstrip("/")).read_bytes(), name
                     if name.endswith(".js"):
                         assert response.headers.get_content_type() in (

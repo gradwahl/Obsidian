@@ -8,11 +8,12 @@ import { HomeView } from './HomeView';
 interface LibraryBrowserProps {
   isEmulatorsView: boolean; catalog: GameItem[]; language: LanguageCode;
   onOpenGame: (game: GameItem) => void; filters: CatalogFilters;
+  uiTheme?: 'netflix' | 'ubiquity';
   onRefresh: () => void; syncInProgress: boolean;
 }
 
 export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView, catalog, language,
-  onOpenGame, filters, onRefresh, syncInProgress }) => {
+  onOpenGame, filters, uiTheme = 'netflix', onRefresh, syncInProgress }) => {
   const [company, setCompany] = useState<LibraryCompany | null>(null);
   const [console, setConsole] = useState<LibraryConsole | null>(null);
   const [page, setPage] = useState(0);
@@ -32,8 +33,8 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
     <span>{title}{company && ` / ${company.name}`}{console && ` / ${console.name}`}</span>
   </div>;
 
-  if (console) return <div className="tv-library-games">
-    <HomeView games={gamesFor(console)} language={language} title={console.name} showDate={false}
+  if (console) return <div className={uiTheme === 'ubiquity' ? 'tv-library-games tv-library-ubiquity-games' : 'tv-library-games'}>
+    <HomeView games={gamesFor(console)} uiTheme={uiTheme} language={language} title={console.name} showDate={false}
       emptyMessage={t(language, isEmulatorsView ? 'TXT_EMULATOR_NOT_CONNECTED'
         : (console.title_id_prefix || console.platform_id) ? 'TXT_NO_PACKAGES' : 'TXT_CONSOLE_NOT_CONNECTED')}
       selected={selected} sidebarFocused={false} onSelect={setSelected} onOpen={onOpenGame}

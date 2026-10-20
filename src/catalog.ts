@@ -1,5 +1,6 @@
 import { GameItem, CatalogFilters, HomeCategoryId } from './types';
 import rawCatalog from './catalogData.json';
+import archiveArtUrls from './archiveArtworkUrls.json';
 import additionalSources from '../config/additional_sources.json';
 
 /* Single offline source registry for React and the generated native snapshot. */
@@ -42,7 +43,18 @@ function computeDeterministicMetadata(item: GameItem): GameItem {
   };
 }
 
-export const INITIAL_CATALOG: GameItem[] = ((rawCatalog as GameItem[]) || []).map(computeDeterministicMetadata);
+/* Verified filename matches from PolDrive-archive; images are requested only
+   when rendered. Existing source covers remain an automatic failure fallback. */
+const archiveImages = archiveArtUrls as Record<string, string>;
+export function withArchiveArtwork(game: GameItem): GameItem {
+  const url = archiveImages[game.id_code + '|' + game.title];
+  // Built-in /assets/covers/ entries are legacy packaged art, not user overrides.
+  // Keep those as fallbacks; only explicit external/local artwork takes priority.
+  if (!url || (game.cover_local_path && !game.cover_local_path.startsWith('/assets/covers/')) || game.boxart_url) return game;
+  return { ...game, boxart_url: url };
+}
+export const INITIAL_CATALOG: GameItem[] = ((rawCatalog as GameItem[]) || [])
+  .map(computeDeterministicMetadata).map(withArchiveArtwork);
 
 export function normalizeTitleKey(title: string): string {
   let s = title.trim();
@@ -63,13 +75,19 @@ export function normalizeTitleKey(title: string): string {
 }
 
 export function searchPlatform(item: GameItem): number {
-  if (item.id_code.toUpperCase().startsWith('CUSA')) return 4;
-  if (item.id_code.toUpperCase().startsWith('PPSA')) return 5;
+  if (item.platform === 'sony-ps4' || item.id_code.toUpperCase().startsWith('CUSA')) return 4;
+  if (item.platform === 'sony-ps5' || item.id_code.toUpperCase().startsWith('PPSA')) return 5;
   return 0;
 }
 
+function sameConsoleKey(item: GameItem): string {
+  if (item.platform) return item.platform;
+  const system = searchPlatform(item);
+  return system === 5 ? 'sony-ps5' : system === 4 ? 'sony-ps4' : 'unknown';
+}
+
 export function isSameGame(a: GameItem, b: GameItem): boolean {
-  if (a.is_game !== b.is_game || a.is_dlc !== b.is_dlc || searchPlatform(a) !== searchPlatform(b)) {
+  if (a.is_game !== b.is_game || a.is_dlc !== b.is_dlc || sameConsoleKey(a) !== sameConsoleKey(b)) {
     return false;
   }
   const keyA = normalizeTitleKey(a.title);
@@ -101,7 +119,7 @@ function getDistinctFilteredGames(catalog: GameItem[], filters: CatalogFilters):
   const filtered = catalog.filter((it) => it.is_game && matchesFilters(it, filters));
   const seen = new Map<string, GameItem>();
   for (const it of filtered) {
-    const key = `${searchPlatform(it)}_${normalizeTitleKey(it.title)}`;
+    const key = `${sameConsoleKey(it)}_${normalizeTitleKey(it.title)}`;
     const current = seen.get(key);
     if (!current || (it.catalog_added_at || 0) > (current.catalog_added_at || 0)) {
       seen.set(key, it);

@@ -73,7 +73,7 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...) {
     memset(&req, 0, sizeof(req));
     req.target_id = -1;
     req.use_icon_image_uri = 1;
-    snprintf(req.message, sizeof(req.message), "[Poldrive] %s", buffer);
+    snprintf(req.message, sizeof(req.message), "[PolDrive] %s", buffer);
     snprintf(req.icon_uri, sizeof(req.icon_uri), "cxml://psnotification/tex_icon_system");
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 #endif
@@ -154,7 +154,7 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
     snprintf(it->id_code, sizeof(it->id_code), "%s", id);
     snprintf(it->title, sizeof(it->title), "%s", title);
     snprintf(it->version, sizeof(it->version), "01.00");
-    snprintf(it->source_name, sizeof(it->source_name), "Pegasus-DL / Poldrive");
+    snprintf(it->source_name, sizeof(it->source_name), "Pegasus-DL / PolDrive");
     it->description_id = description_id;
     snprintf(it->install_path, sizeof(it->install_path), "%s", path);
     snprintf(it->cover_url, sizeof(it->cover_url), "%s", cover_url ? cover_url : "");
@@ -176,6 +176,20 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
 
 /* Shared, offline React catalogue snapshot compiled into the native Linux/PS5 app. */
 #include "native_catalog_snapshot.h"
+#include "archive_artwork_index.h"
+#include "native_source_index.h"
+
+/* Exact game ID + title lookup avoids cross-console and reissued-ID mistakes. */
+const char *sys_archive_cover_url(const char *id, const char *title) {
+    if (!id || !title || !id[0] || !title[0]) return NULL;
+    for (size_t i = 0; i < ARCHIVE_ARTWORK_MATCH_COUNT; i++) {
+        const ArchiveArtworkMatch *match = &ARCHIVE_ARTWORK_MATCHES[i];
+        if (strcmp(match->id, id) == 0 && strcmp(match->title, title) == 0)
+            return match->url;
+    }
+    return NULL;
+}
+
 
 static uint32_t native_seed_hash(const GameItem *item) {
     uint32_t h = 2166136261u;
@@ -226,6 +240,8 @@ int sys_import_native_snapshot(WolodriveApp *app) {
         SDL_strlcpy(it->source_name,s->source,sizeof(it->source_name));
         SDL_strlcpy(it->description,s->description,sizeof(it->description));
         SDL_strlcpy(it->cover_url,s->cover,sizeof(it->cover_url));
+        const char *archive_url = sys_archive_cover_url(s->id, s->title);
+        if (archive_url) SDL_strlcpy(it->boxart_url, archive_url, sizeof(it->boxart_url));
         SDL_strlcpy(it->install_path,s->path,sizeof(it->install_path));
         it->catalog_added_at=s->added;
         it->size_gb=s->size_gb;
@@ -250,6 +266,51 @@ int sys_import_native_snapshot(WolodriveApp *app) {
     return added;
 }
 
+/* Pre-indexed, bounded public page metadata. The native catalogue is a
+   fixed-size array; do not copy every web record into PS5 system memory. */
+static int sys_import_native_sources(WolodriveApp *app) {
+    if (!app) return 0;
+    int loaded = 0;
+    for (size_t i = 0; i < NATIVE_SOURCE_CATALOGUE_COUNT &&
+                       app->catalog_count < MAX_CATALOG_ITEMS; i++) {
+        const NativeSourceSeed *entry = &NATIVE_SOURCE_CATALOGUE[i];
+        if (!entry->id[0] || !entry->title[0]) continue;
+        GameItem *game = &app->catalog[app->catalog_count++];
+        memset(game, 0, sizeof(*game));
+        SDL_strlcpy(game->id_code, entry->id, sizeof(game->id_code));
+        SDL_strlcpy(game->title, entry->title, sizeof(game->title));
+        SDL_strlcpy(game->source_name, entry->source, sizeof(game->source_name));
+        SDL_strlcpy(game->platform, entry->platform, sizeof(game->platform));
+        SDL_strlcpy(game->version, entry->version, sizeof(game->version));
+        SDL_strlcpy(game->description, entry->description, sizeof(game->description));
+        if (entry->cover[0] &&
+            (strncmp(entry->cover, "https://", 8) == 0 ||
+             strncmp(entry->cover, "http://", 7) == 0))
+            SDL_strlcpy(game->cover_url, entry->cover, sizeof(game->cover_url));
+        game->format = FMT_CATALOG;
+        game->state = STATE_AVAILABLE;
+        game->is_game = entry->is_game != 0;
+        game->is_dlc = !game->is_game;
+        game->size_gb = entry->size_gb;
+        game->description_id = TEXT_COUNT;
+        game->cover_r = 24;
+        game->cover_g = 30;
+        game->cover_b = 40;
+        if (entry->date[0]) {
+            SDL_strlcpy(game->release_date, entry->date, sizeof(game->release_date));
+            unsigned year = 0, month = 0, day = 0;
+            if (sscanf(entry->date, "%4u-%2u-%2u", &year, &month, &day) == 3)
+                game->catalog_added_at = (uint64_t)year * 10000000000ULL +
+                    (uint64_t)month * 100000000ULL + (uint64_t)day * 1000000ULL;
+        }
+        loaded++;
+    }
+    app->catalog_dirty = true;
+    fprintf(stderr, "[PolDrive] Loaded %d indexed source entries (native bounded snapshot)\n",
+            loaded);
+    return loaded;
+}
+
 void sys_init(WolodriveApp *app) {
     app->catalog_count = 0;
 #ifdef __PS5__
@@ -267,6 +328,7 @@ void sys_init(WolodriveApp *app) {
 #endif
     SDL_AtomicSet(&app->language, i18n_load_language(app->language_path, i18n_detect_language()));
     settings_load(app);
+    theme_load(app);
     app->sync_status_id = TXT_READY;
     if (app->window) SDL_SetWindowTitle(app->window, TR(app, TXT_WINDOW_TITLE));
 
@@ -333,6 +395,7 @@ void sys_init(WolodriveApp *app) {
 
     /* Share the React catalogue and source list on Linux and PS5, even offline. */
     sys_import_native_snapshot(app);
+    sys_import_native_sources(app);
     sys_update_stats(&app->stats);
     sys_send_notification(app, TR(app, TXT_STARTED), WOLODRIVE_NAME, WOLODRIVE_VERSION);
 }

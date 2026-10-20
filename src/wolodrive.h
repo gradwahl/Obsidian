@@ -12,7 +12,7 @@
 
 #define TR(app, id) i18n_text((Language)SDL_AtomicGet(&(app)->language), (id))
 
-#define WOLODRIVE_NAME          "Poldrive"
+#define WOLODRIVE_NAME          "PolDrive"
 #define WOLODRIVE_VERSION       "2.0.0-PRO (PS5 13.60)"
 #define WOLODRIVE_DATA_PATH     "/data/homebrew/wolodrive"
 #define SHADOWMOUNT_PATH        "/data/homebrew"
@@ -26,6 +26,9 @@
 #else
 #define COVERS_CACHE_DIR        "assets/covers"
 #endif
+
+#define UI_THEME_NETFLIX 0
+#define UI_THEME_UBIQUITY 1
 
 #define SCREEN_WIDTH            1920
 #define SCREEN_HEIGHT           1080
@@ -171,6 +174,7 @@ typedef struct {
     SDL_atomic_t language;
     char language_path[512];
     char settings_path[512];
+    int ui_theme;  /* 0 = original Netflix/Glass, 1 = (u)biquity */
     CatalogFilters filters;
     int settings_selection;
     int settings_column;
@@ -192,6 +196,7 @@ typedef struct {
     struct UiTextCache *text_cache;
     TTF_Font *font_logo;
     TTF_Font *font_hero_title;
+    TTF_Font *font_ubiquity_title;
     TTF_Font *font_row_title;
     TTF_Font *font_body;
     TTF_Font *font_small;
@@ -229,6 +234,7 @@ typedef struct {
     float sidebar_expand;
     float sidebar_width;
     float sidebar_dim_alpha;
+    float sidebar_indicator_y; /* Animated Netflix-style active rail marker. */
     GameItem *hero_current_item;
     GameItem *hero_prev_item;
     float hero_crossfade;
@@ -238,6 +244,7 @@ typedef struct {
     int search_count, search_selected, search_key;
     bool search_results_focus;
     bool detail_open, detail_content_focus;
+    bool detail_ubiquity_options; /* Legacy packages, DLC and screenshots on demand. */
     GameItem *detail_item, *detail_parent;
     int detail_tab, detail_selection, detail_scroll;
     LibraryArtwork library_artwork[MAX_LIBRARY_ARTWORK];
@@ -262,10 +269,13 @@ void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);
 void sys_cancel_action(WolodriveApp *app, GameItem *item);
 int sys_import_native_snapshot(WolodriveApp *app);
+const char *sys_archive_cover_url(const char *id, const char *title);
 bool settings_accepts_item(const WolodriveApp *app, const GameItem *item);
 bool settings_source_enabled(const WolodriveApp *app, const char *source);
 bool settings_filters_active(const WolodriveApp *app);
 bool settings_load(WolodriveApp *app);
+bool theme_load(WolodriveApp *app);
+bool theme_save(const WolodriveApp *app);
 bool settings_save(const WolodriveApp *app);
 const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt);
 const char *sys_format_short_badge(PackageFormat fmt);

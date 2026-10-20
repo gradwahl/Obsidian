@@ -58,12 +58,6 @@ SDL_Rect artwork_fit(int width, int height, SDL_Rect box, bool crop) {
     return (SDL_Rect){box.x + (box.w-w)/2, box.y + (box.h-h)/2, w, h};
 }
 
-static Uint64 artwork_hash(const char *url) {
-    Uint64 hash = 14695981039346656037ULL;
-    while (*url) { hash ^= (unsigned char)*url++; hash *= 1099511628211ULL; }
-    return hash;
-}
-
 static const char *artwork_url(const GameItem *item, bool backdrop) {
     if (backdrop) return item->backdrop_url[0] ? item->backdrop_url :
         item->landscape_url[0] ? item->landscape_url : item->cover_url[0] ? item->cover_url :
@@ -111,64 +105,73 @@ static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *
     SDL_strlcpy(request->key, url, sizeof(request->key));
     if (request->soft) SDL_strlcat(request->key, ":soft", sizeof(request->key));
     if (request->complete_box) SDL_strlcat(request->key, ":box", sizeof(request->key));
-    snprintf(request->path, sizeof(request->path), "%s/%016llx.art", COVERS_CACHE_DIR, (unsigned long long)artwork_hash(url));
+    /* Stream remote artwork into bounded memory; no persistent .art cache. */
+    request->needs_download = true;
 }
 
-typedef struct { FILE *file; size_t bytes; } ArtworkDownload;
+/* Remote covers are memory-only: do not persist network images on PS5.
+   The SDL texture LRU is already capped at 48 MiB, and in-flight downloads
+   have a separate 16 MiB cap. Manual local overrides are still supported. */
+#define ART_TRANSFER_LIMIT (16u * 1024u * 1024u)
+typedef struct { unsigned char *data; size_t bytes, capacity; } ArtworkDownload;
 static size_t artwork_write(void *data, size_t size, size_t count, void *userdata) {
     ArtworkDownload *download = userdata;
+    if (size && count > SIZE_MAX / size) return 0;
     size_t bytes = size * count;
-    if (bytes > 16u * 1024u * 1024u - download->bytes) return 0;
-    size_t written = fwrite(data, 1, bytes, download->file);
-    download->bytes += written;
-    return written;
+    if (download->bytes > ART_TRANSFER_LIMIT ||
+        bytes > ART_TRANSFER_LIMIT - download->bytes) return 0;
+    size_t requested = download->bytes + bytes;
+    if (requested > download->capacity) {
+        size_t capacity = download->capacity ? download->capacity : 64 * 1024;
+        while (capacity < requested) capacity *= 2;
+        unsigned char *expanded = realloc(download->data, capacity);
+        if (!expanded) return 0;
+        download->data = expanded;
+        download->capacity = capacity;
+    }
+    if (bytes) memcpy(download->data + download->bytes, data, bytes);
+    download->bytes += bytes;
+    return bytes;
 }
 static int artwork_progress(void *userdata, curl_off_t a, curl_off_t b, curl_off_t c, curl_off_t d) {
     (void)a; (void)b; (void)c; (void)d;
     return SDL_AtomicGet(&((struct ArtworkCache *)userdata)->stop);
 }
-
 static SDL_Surface *artwork_load(struct ArtworkCache *cache, const ArtworkEntry *entry) {
-    SDL_Surface *surface = IMG_Load(entry->path);
-    if (surface || entry->local) return surface;
+    if (entry->local) return IMG_Load(entry->path);
     if (strncmp(entry->url, "https://", 8) && strncmp(entry->url, "http://", 7)) return NULL;
-    char temporary[280];
-    snprintf(temporary, sizeof(temporary), "%s.tmp", entry->path);
-    FILE *file = fopen(temporary, "wb");
-    if (!file) return NULL;
     CURL *curl = curl_easy_init();
-    ArtworkDownload download = {file, 0};
-    CURLcode result = CURLE_FAILED_INIT;
+    if (!curl) return NULL;
+    ArtworkDownload download = {0};
+    CURLcode result;
     long status = 0;
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, entry->url);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_URL, entry->url);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 #if LIBCURL_VERSION_NUM >= 0x075500
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "http,https");
-        curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+    curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "http,https");
+    curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
 #else
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
-        curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+    curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+    curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
 #endif
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 12L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, artwork_write);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
-        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, artwork_progress);
-        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, cache);
-        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-        result = curl_easy_perform(curl);
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-        curl_easy_cleanup(curl);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 12L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "PolDrive/2.0 (streamed artwork)");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, artwork_write);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, artwork_progress);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, cache);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    result = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_cleanup(curl);
+    SDL_Surface *surface = NULL;
+    if (result == CURLE_OK && status >= 200 && status < 300 &&
+        download.data && download.bytes && download.bytes <= ART_TRANSFER_LIMIT) {
+        SDL_RWops *stream = SDL_RWFromConstMem(download.data, (int)download.bytes);
+        if (stream) surface = IMG_Load_RW(stream, 1);
     }
-    int closed = fclose(file);
-    if (result == CURLE_OK && status >= 200 && status < 300 && closed == 0)
-        surface = IMG_Load(temporary);
-    if (surface) {
-        /* Windows rename cannot replace an existing corrupt file. */
-        remove(entry->path);
-        if (rename(temporary, entry->path) != 0) remove(temporary);
-    } else remove(temporary);
+    free(download.data);
     return surface;
 }
 
@@ -217,6 +220,9 @@ static int artwork_run_worker(struct ArtworkCache *cache, bool downloading) {
             if (downloading) {
                 if (!entry->needs_download || (entry->failed && (Sint32)(now-entry->retry) < 0)) continue;
             } else {
+                /* Local overrides load on this worker; remote requests stream on the
+                   download worker only, never touching the console filesystem. */
+                if (entry->needs_download || !entry->local) continue;
                 /* Recheck disk while a failed/missing download waits for retry:
                    a bulk import must become usable without waiting 30 seconds. */
                 if (entry->disk_tried && now-entry->disk_checked < 1000) continue;
@@ -300,7 +306,8 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
 #ifdef __PS5__
         ART_MKDIR("/data/homebrew"); ART_MKDIR(WOLODRIVE_DATA_PATH);
 #endif
-        ART_MKDIR(COVERS_CACHE_DIR);
+        /* COVERS_CACHE_DIR is intentionally not created for streamed artwork.
+           Existing disk caches are left alone and can be cleared manually. */
         ART_MKDIR(ART_OVERRIDES);
         app->artwork = cache;
         cache->thread = SDL_CreateThread(artwork_worker, "artwork", cache);

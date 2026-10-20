@@ -1,4 +1,4 @@
-/* Prepare Poldrive's browser shortcut and register it with the PS5 app service. */
+/* Prepare PolDrive's browser shortcut and register it with the PS5 app service. */
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -56,7 +56,7 @@ static const char param_json[] =
     "\"deeplinkUri\":\"http://127.0.0.1:8084/loadpayload:/data/pldmgr/payloads/"
     "Poldrive/Poldrive.elf\","
     "\"localizedParameters\":{\"defaultLanguage\":\"en-US\","
-    "\"en-US\":{\"titleName\":\"Poldrive\"}}}\n";
+    "\"en-US\":{\"titleName\":\"PolDrive\"}}}\n";
 
 static int write_asset(const char *path, const void *bytes, size_t size) {
     FILE *file = fopen(path, "wb");
@@ -114,7 +114,7 @@ int main(void) {
     fprintf(log, "AppInst initialize: 0x%x\n", (unsigned)result);
     if (!result) {
         result = register_shortcut(log);
-        fprintf(log, "Register Poldrive (%s) under Media: 0x%x\n", TITLE_ID, (unsigned)result);
+        fprintf(log, "Register PolDrive (%s) under Media: 0x%x\n", TITLE_ID, (unsigned)result);
         sceAppInstUtilTerminate();
     }
     if (!result) {

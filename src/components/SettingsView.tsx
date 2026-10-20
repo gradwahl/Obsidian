@@ -9,13 +9,19 @@ interface SettingsViewProps {
   onChangeFilters: (filters: CatalogFilters) => void;
   availableSources: string[];
   language: LanguageCode;
+  uiTheme: 'netflix' | 'ubiquity';
+  gamepadThemeIndex: number;
+  onChangeTheme: (theme: 'netflix' | 'ubiquity') => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   filters,
   onChangeFilters,
   availableSources,
-  language
+  language,
+  uiTheme,
+  gamepadThemeIndex,
+  onChangeTheme
 }) => {
   // Checkbox state for "All sources"
   const allSourcesChecked = !filters.sources_limited;
@@ -245,6 +251,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="tv-theme-settings" role="group" aria-label="Appearance">
+            <h3 className="tv-theme-title">Appearance / Wygląd</h3>
+            <div className="tv-theme-choices">
+              <button type="button"
+                className={'tv-theme-option ' + (uiTheme === 'netflix' ? 'tv-theme-option-active' : '') + (gamepadThemeIndex === 0 ? ' tv-theme-option-gamepad' : '')}
+                aria-pressed={uiTheme === 'netflix'} onClick={() => onChangeTheme('netflix')}>
+                <span>Netflix / Glass</span><span>{uiTheme === 'netflix' ? '●' : '○'}</span>
+              </button>
+              <button type="button"
+                className={'tv-theme-option ' + (uiTheme === 'ubiquity' ? 'tv-theme-option-active' : '') + (gamepadThemeIndex === 1 ? ' tv-theme-option-gamepad' : '')}
+                aria-pressed={uiTheme === 'ubiquity'} onClick={() => onChangeTheme('ubiquity')}>
+                <span>(u)biquity</span><span>{uiTheme === 'ubiquity' ? '●' : '○'}</span>
+              </button>
             </div>
           </div>
 

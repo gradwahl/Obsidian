@@ -15,6 +15,7 @@ import { SidebarView, LanguageCode } from '../types';
 import { t, LANGUAGES } from '../translations';
 
 interface SidebarProps {
+  uiTheme?: 'netflix' | 'ubiquity';
   currentView: SidebarView;
   onSelectView: (view: SidebarView) => void;
   language: LanguageCode;
@@ -25,6 +26,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
+  uiTheme = 'netflix',
   currentView,
   onSelectView,
   language,
@@ -64,6 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const currentLangObj = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
+  const activeNavIndex = Math.max(0, navItems.findIndex((item) => item.view === currentView));
 
   return (
     <>
@@ -132,13 +135,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Native PS5 wordmark: a red P on the collapsed rail, 'oldrive' revealed when expanded. */}
-          <div className="tv-brand-logo" aria-label="Poldrive">
+          <div className="tv-brand-logo" aria-label="PolDrive">
             <span className="tv-brand-mark" aria-hidden="true">P</span>
-            <span className="tv-brand-title" aria-hidden="true">oldrive</span>
+            <span className="tv-brand-title" aria-hidden="true">olDrive</span>
           </div>
 
           {/* Navigation list */}
           <nav className="tv-navigation">
+            <div className="tv-nav-marker" aria-hidden="true"
+              style={{ transform: `translate3d(0, ${activeNavIndex * (uiTheme === 'ubiquity' ? 64 : 92)}px, 0)` }} />
             {navItems.map((item) => {
               const isActive = currentView === item.view;
               return (

@@ -76,7 +76,7 @@ int sceAppInstUtilAppInstallAll(void *params) {
         param = json.loads((system / "param.json").read_text())
         self.assertEqual(param["titleId"], "WOLO00001")
         self.assertEqual(param["applicationCategoryType"], 65536)
-        self.assertEqual(param["localizedParameters"]["en-US"]["titleName"], "Poldrive")
+        self.assertEqual(param["localizedParameters"]["en-US"]["titleName"], "PolDrive")
         self.assertTrue(param["deeplinkUri"].endswith("/Poldrive/Poldrive.elf"))
         self.assertEqual((system / "icon0.png").read_bytes(), (self.directory / "icon.png").read_bytes())
 

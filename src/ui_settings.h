@@ -29,7 +29,9 @@ static int settings_sources(WolodriveApp *app, const char **names) {
 }
 
 static SDL_Rect settings_target(int column, int row) {
-    if (column && row == 5) return (SDL_Rect){SETTINGS_RIGHT+20, 939, 550, 54};
+    if (column && row == 7) return (SDL_Rect){SETTINGS_RIGHT+20, 939, 550, 54};
+    if (column && row == 5) return (SDL_Rect){SETTINGS_RIGHT+20, 725, 550, 54};
+    if (column && row == 6) return (SDL_Rect){SETTINGS_RIGHT+20, 793, 550, 54};
     return (SDL_Rect){(column ? SETTINGS_RIGHT : SETTINGS_LEFT)+20,
                       SETTINGS_FIRST_Y + row*SETTINGS_STEP,
                       column ? 550 : 780, 54};
@@ -45,7 +47,7 @@ static void settings_keep_visible(WolodriveApp *app, int count) {
         if (app->settings_selection >= app->settings_scroll+SETTINGS_SOURCE_ROWS)
             app->settings_scroll = app->settings_selection-SETTINGS_SOURCE_ROWS+1;
     } else {
-        app->settings_selection = SDL_max(0, SDL_min(app->settings_selection, 5));
+        app->settings_selection = SDL_max(0, SDL_min(app->settings_selection, 7));
     }
 }
 
@@ -58,7 +60,14 @@ static void settings_toggle(WolodriveApp *app) {
     SDL_LockMutex(app->catalog_mutex);
     if (app->settings_column == 1) {
         int row = app->settings_selection;
-        if (row == 5) memset(&app->filters, 0, sizeof(app->filters));
+        if (row == 7) memset(&app->filters, 0, sizeof(app->filters));
+        else if (row == 5 || row == 6) {
+            int theme = row == 6 ? UI_THEME_UBIQUITY : UI_THEME_NETFLIX;
+            app->ui_theme = theme;
+            SDL_UnlockMutex(app->catalog_mutex);
+            if (!theme_save(app)) sys_send_notification(app, TR(app, TXT_SETTINGS_SAVE_FAILED));
+            return;
+        }
         else if (row == 0) app->filters.disabled_formats = app->filters.disabled_formats ? 0 : 15;
         else app->filters.disabled_formats ^= 1u << (row-1);
     } else if (app->settings_selection == 0) {
@@ -104,7 +113,7 @@ static bool handle_settings_input(WolodriveApp *app, const SDL_Event *ev) {
 
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         for (int col = 0; col < 2; col++) {
-            int last = col ? 5 : SETTINGS_SOURCE_ROWS-1;
+            int last = col ? 7 : SETTINGS_SOURCE_ROWS-1;
             for (int row = 0; row <= last; row++) {
                 int index = col ? row : app->settings_scroll+row;
                 if (!col && index > count) break;
@@ -150,12 +159,12 @@ static bool handle_settings_input(WolodriveApp *app, const SDL_Event *ev) {
         return true;
     }
     if (action == 1 && app->settings_selection > 0) app->settings_selection--;
-    else if (action == 2 && app->settings_selection < (app->settings_column ? 5 : count))
+    else if (action == 2 && app->settings_selection < (app->settings_column ? 7 : count))
         app->settings_selection++;
     else if (action == 3) settings_toggle(app);
     else if (action == 4 && app->settings_column == 0) {
         app->settings_column = 1;
-        app->settings_selection = SDL_min(app->settings_selection, 5);
+        app->settings_selection = SDL_min(app->settings_selection, 7);
     } else if (action == 5 && app->settings_column == 1) {
         app->settings_column = 0;
         app->settings_selection = SDL_min(app->settings_selection, count);
@@ -230,10 +239,29 @@ static void render_settings(WolodriveApp *app) {
                                !app->sidebar_focus && app->settings_column == 1 && app->settings_selection == row,
                                row == 0);
     }
-    SDL_Rect reset = settings_target(1,5);
+    draw_text(app, app->font_row_title, "Appearance / Wygląd", SETTINGS_RIGHT+20, 676, white, 0);
+    for (int theme = 0; theme < 2; theme++) {
+        int row = 5 + theme;
+        SDL_Rect rect = settings_target(1, row);
+        bool active = app->ui_theme == theme;
+        fill_rounded_rect(r, rect.x, rect.y, rect.w, rect.h, 12,
+                          active ? 49 : 27, active ? 22 : 27, active ? 33 : 33, 255);
+        draw_rounded_border(r, rect.x, rect.y, rect.w, rect.h, 12, 1,
+                            active ? 229 : 72, active ? 9 : 72, active ? 20 : 82, 255);
+        const char *label = theme == 0 ? "Netflix / Glass" : "(u)biquity";
+        draw_fitted_text(app, app->font_small, label,
+                         (SDL_Rect){rect.x+18, rect.y+5, rect.w-75, rect.h-10},
+                         white, rect, false);
+        draw_text(app, app->font_small, active ? "●" : "○",
+                  rect.x + rect.w - 46, rect.y+12, white, 0);
+        if (!app->sidebar_focus && app->settings_column == 1 && app->settings_selection == row)
+            draw_rounded_border(r, rect.x, rect.y, rect.w, rect.h, 12, 2,
+                                245, 245, 245, 255);
+    }
+    SDL_Rect reset = settings_target(1,7);
     settings_rounded(r,reset,36,36,46);
     draw_border(r,reset.x,reset.y,reset.w,reset.h,1,52,52,68,255);
     draw_fitted_text(app,app->font_small,TR(app,TXT_SETTINGS_RESET),reset,white,reset,true);
-    if (!app->sidebar_focus && app->settings_column == 1 && app->settings_selection == 5)
+    if (!app->sidebar_focus && app->settings_column == 1 && app->settings_selection == 7)
         draw_border(r,reset.x,reset.y,reset.w,reset.h,2,245,245,245,255);
 }

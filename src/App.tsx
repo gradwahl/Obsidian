@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { SidebarView, LanguageCode, GameItem, CatalogFilters, SystemStats } from './types';
 import { Sidebar } from './components/Sidebar';
 import { HomeView, HomeCategoryRow } from './components/HomeView';
 import { NativeViewport } from './components/NativeViewport';
 import { GameDetailModal } from './components/GameDetailModal';
+import { UbiquityGameDetails } from './components/UbiquityGameDetails';
 import { SearchGrid } from './components/SearchGrid';
 import { LibraryBrowser } from './components/LibraryBrowser';
 import { SettingsView } from './components/SettingsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
 import { INITIAL_CATALOG, getLatestGames, getHomeCategoryGames, getDistinctSources, matchesFilters } from './catalog';
+import { loadSourceCatalogues } from './sourceCatalogues';
 import { t } from './translations';
 
 export function App() {
@@ -27,10 +29,21 @@ export function App() {
   });
 
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const [uiTheme, setUiTheme] = useState<'netflix' | 'ubiquity'>(() => {
+    try { return localStorage.getItem('poldrive-ui-theme') === 'ubiquity' ? 'ubiquity' : 'netflix'; }
+    catch { return 'netflix'; }
+  });
+  const [themeChoiceIndex, setThemeChoiceIndex] = useState(() => uiTheme === 'ubiquity' ? 1 : 0);
+  const changeUiTheme = (next: 'netflix' | 'ubiquity') => {
+    setThemeChoiceIndex(next === 'ubiquity' ? 1 : 0);
+    setUiTheme(next);
+    try { localStorage.setItem('poldrive-ui-theme', next); } catch { /* session-only */ }
+  };
 
   // 2. View state
   const [currentView, setCurrentView] = useState<SidebarView>('home');
   const [isSidebarFocused, setIsSidebarFocused] = useState(false);
+  const lastGamepadPress = useRef(0);
 
   // 3. Catalog state
   const [catalog, setCatalog] = useState<GameItem[]>(INITIAL_CATALOG);
@@ -61,12 +74,25 @@ export function App() {
 
   // 5. Selected category & game for Home carousel
   const [activeHomeCategory, setActiveHomeCategory] = useState(0);
-  const [selectedHomeCol, setSelectedHomeCol] = useState(0);
+  // Each Netflix row remembers its own focused cover, like the native SDL view.
+  const [selectedHomeCols, setSelectedHomeCols] = useState<number[]>([0, 0, 0, 0, 0]);
+  const selectedHomeCol = selectedHomeCols[activeHomeCategory] ?? 0;
+  const setSelectedHomeCol = useCallback<React.Dispatch<React.SetStateAction<number>>>((value) => {
+    setSelectedHomeCols((previous) => {
+      const current = previous[activeHomeCategory] ?? 0;
+      const next = typeof value === 'function' ? value(current) : value;
+      if (next === current) return previous;
+      const updated = [...previous];
+      updated[activeHomeCategory] = next;
+      return updated;
+    });
+  }, [activeHomeCategory]);
   const [selectedDownloadCol, setSelectedDownloadCol] = useState(0);
 
   // 6. Modal details state
   const [detailGame, setDetailGame] = useState<GameItem | null>(null);
   const [detailParentGame, setDetailParentGame] = useState<GameItem | null>(null);
+  const [detailActionIndex, setDetailActionIndex] = useState(0);
 
   // 7. Toast notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -83,9 +109,9 @@ export function App() {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
-  // Initial welcome notification matching C code: Started Poldrive (2.0.0-PRO (PS5 13.60))
+  // Initial welcome notification matching C code: Started PolDrive (2.0.0-PRO (PS5 13.60))
   useEffect(() => {
-    showToast(t(language, 'TXT_STARTED', 'Poldrive', '2.0.0-PRO (PS5 13.60)'));
+    showToast(t(language, 'TXT_STARTED', 'PolDrive', '2.0.0-PRO (PS5 13.60)'));
   }, []);
 
   // Update document title on language change
@@ -146,7 +172,7 @@ export function App() {
   const activeHeroGame = homeGames[selectedHomeCol] || homeGames[0] || null;
   useEffect(() => {
     setSelectedHomeCol((value) => Math.max(0, Math.min(value, homeGames.length - 1)));
-  }, [homeGames.length, activeHomeCategory]);
+  }, [homeGames.length, activeHomeCategory, setSelectedHomeCol]);
 
   // Downloads view items
   const downloadItems = useMemo(
@@ -164,52 +190,47 @@ export function App() {
     showToast(t(language, 'TXT_ACTION_UNAVAILABLE'));
   };
 
-  // Katalogi Sync action
+  // Load verified public metadata indexes. The initial snapshot remains available
+  // while the individual source chunks load in the browser.
+  useEffect(() => {
+    let cancelled = false;
+    loadSourceCatalogues()
+      .then(result => {
+        if (cancelled) return;
+        setCatalog([...INITIAL_CATALOG, ...result.entries]);
+        const loaded = result.statuses.filter(status => status.entries > 0);
+        const failures = result.statuses.filter(status => status.status === 'error');
+        setSyncStatus('Loaded ' + result.entries.length.toLocaleString() +
+          ' additional entries from ' + loaded.length + ' sources' +
+          (failures.length ? ' (' + failures.length + ' unavailable)' : ''));
+      })
+      .catch(error => {
+        if (!cancelled) setSyncStatus('Catalogue loading failed: ' + String(error));
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const handleSyncPegasus = async () => {
     if (syncInProgress) {
       showToast(t(language, 'TXT_SYNC_BUSY'));
       return;
     }
     setSyncInProgress(true);
-    setSyncStatus(t(language, 'TXT_SYNC_MANIFEST'));
-    showToast(t(language, 'TXT_SYNC_MANIFEST'));
-
+    setSyncStatus('Loading verified source catalogues...');
     try {
-      // Fetch default sources
-      const res = await fetch(
-        'https://raw.githubusercontent.com/pegasus-ps5/pegasus-dl/refs/heads/main/catalogs/default-sources.json',
-        { headers: { 'User-Agent': 'Poldrive/2.0 (PS5-13.60; Katalogi-Client)' } }
-      );
-      if (res.ok) {
-        const manifest = await res.json();
-        const sourcesCount = manifest.sources?.length || 5;
-        setSyncStatus(
-          t(
-            language,
-            'TXT_SYNC_DONE',
-            catalog.length,
-            sourcesCount,
-            catalog.filter((c) => c.cover_local_path).length,
-            catalog.length
-          )
-        );
-        showToast(
-          t(
-            language,
-            'TXT_SYNC_DONE',
-            catalog.length,
-            sourcesCount,
-            catalog.filter((c) => c.cover_local_path).length,
-            catalog.length
-          )
-        );
-      } else {
-        setSyncStatus(t(language, 'TXT_READY'));
-        showToast(t(language, 'TXT_SYNC_DONE', catalog.length, 5, 244, catalog.length));
-      }
-    } catch {
-      setSyncStatus(t(language, 'TXT_READY'));
-      showToast(t(language, 'TXT_SYNC_DONE', catalog.length, 5, 244, catalog.length));
+      const result = await loadSourceCatalogues();
+      setCatalog([...INITIAL_CATALOG, ...result.entries]);
+      const successful = result.statuses.filter(source => source.entries > 0);
+      const errors = result.statuses.filter(source => source.status === 'error');
+      const message = 'Loaded ' + result.entries.length.toLocaleString() +
+        ' additional entries from ' + successful.length + ' sources' +
+        (errors.length ? ' (' + errors.length + ' unavailable)' : '');
+      setSyncStatus(message);
+      showToast(message);
+    } catch (error) {
+      const message = 'Catalogue refresh failed: ' + String(error);
+      setSyncStatus(message);
+      showToast(message);
     } finally {
       setSyncInProgress(false);
     }
@@ -220,6 +241,12 @@ export function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Escape or Backspace: close modal or focus sidebar
       if (e.key === 'Escape') {
+        if (detailGame && uiTheme === 'ubiquity') {
+          const subpanelClose = document.querySelector<HTMLButtonElement>(
+            '.ubq-detail-lightbox button, .ubq-detail-options-header button'
+          );
+          if (subpanelClose) { subpanelClose.click(); return; }
+        }
         if (detailGame) {
           if (detailParentGame) {
             setDetailGame(detailParentGame);
@@ -233,6 +260,37 @@ export function App() {
         return;
       }
 
+      if (detailGame && uiTheme === 'ubiquity') {
+        const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
+          '.ubq-detail-option-list button'));
+        if (options.length) {
+          const idx = options.indexOf(document.activeElement as HTMLButtonElement);
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            options[Math.max(0, Math.min(options.length - 1,
+              idx + (e.key === 'ArrowDown' ? 1 : -1)))].focus();
+            return;
+          }
+          if ((e.key === 'Enter' || e.key === ' ') && !(e.target as HTMLElement).closest('button')) {
+            e.preventDefault();
+            options[Math.max(0, idx)].click();
+            return;
+          }
+          return;
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'a') {
+          e.preventDefault(); setDetailActionIndex(index => Math.max(0, index - 1)); return;
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd') {
+          e.preventDefault(); setDetailActionIndex(index => Math.min(2, index + 1)); return;
+        }
+        if ((e.key === 'Enter' || e.key === ' ') &&
+            !(e.target as HTMLElement).closest('button,input,textarea')) {
+          e.preventDefault();
+          document.querySelectorAll<HTMLButtonElement>('.ubq-detail-actions button')[detailActionIndex]?.click();
+          return;
+        }
+      }
       // 'l' or 'L' opens language menu
       if ((e.key === 'l' || e.key === 'L') && !detailGame && currentView !== 'search') {
         setLanguageMenuOpen((prev) => !prev);
@@ -267,6 +325,12 @@ export function App() {
         } else if (e.key === 'Enter' || e.key === ' ') {
           if (activeHeroGame) setDetailGame(activeHeroGame);
         }
+      } else if (currentView === 'settings' && !detailGame && !isSidebarFocused) {
+        if (e.key === 'ArrowUp') { e.preventDefault(); setThemeChoiceIndex(0); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); setThemeChoiceIndex(1); }
+        else if (e.key === 'Enter') {
+          changeUiTheme(themeChoiceIndex === 0 ? 'netflix' : 'ubiquity');
+        } else if (e.key === 'ArrowLeft') setIsSidebarFocused(true);
       } else if (isSidebarFocused) {
         const views: SidebarView[] = [
           'search',
@@ -280,10 +344,10 @@ export function App() {
         ];
         const curIdx = views.indexOf(currentView);
         if (e.key === 'ArrowDown' || e.key === 's') {
-          const next = views[(curIdx + 1) % views.length];
+          const next = views[Math.min(views.length - 1, curIdx + 1)];
           setCurrentView(next);
         } else if (e.key === 'ArrowUp' || e.key === 'w') {
-          const prev = views[(curIdx - 1 + views.length) % views.length];
+          const prev = views[Math.max(0, curIdx - 1)];
           setCurrentView(prev);
         } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
           setIsSidebarFocused(false);
@@ -301,24 +365,41 @@ export function App() {
     homeGames,
     homeCategories.length,
     selectedHomeCol,
-    activeHeroGame
+    activeHeroGame,
+    themeChoiceIndex,
+    uiTheme,
+    detailActionIndex
   ]);
 
   // Gamepad polling loop
   useEffect(() => {
     let animId: number;
-    let lastButtonPress = 0;
+    // Persist the input cooldown across view/state changes while a button is held.
 
     const pollGamepad = () => {
       const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
       const gp = gamepads[0];
       if (gp) {
         const now = Date.now();
-        if (now - lastButtonPress > 220) {
+        if (now - lastGamepadPress.current > 165) {
           // Cross (Button 0): select / open
           if (gp.buttons[0]?.pressed) {
-            lastButtonPress = now;
-            if (detailGame) {
+            lastGamepadPress.current = now;
+            if (isSidebarFocused && !detailGame) {
+              setIsSidebarFocused(false);
+            } else if (currentView === 'settings' && !detailGame) {
+              changeUiTheme(themeChoiceIndex === 0 ? 'netflix' : 'ubiquity');
+            } else if (detailGame && uiTheme === 'ubiquity') {
+              const screenshotClose = document.querySelector<HTMLButtonElement>('.ubq-detail-lightbox button');
+              const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
+                '.ubq-detail-option-list button'));
+              if (screenshotClose) screenshotClose.click();
+              else if (options.length) {
+                options[Math.max(0, options.indexOf(document.activeElement as HTMLButtonElement))].click();
+              } else {
+                document.querySelectorAll<HTMLButtonElement>('.ubq-detail-actions button')[detailActionIndex]?.click();
+              }
+            } else if (detailGame) {
               handleTriggerAction(detailGame);
             } else if (currentView === 'home' && activeHeroGame) {
               setDetailGame(activeHeroGame);
@@ -326,9 +407,14 @@ export function App() {
           }
           // Circle (Button 1): back
           else if (gp.buttons[1]?.pressed) {
-            lastButtonPress = now;
+            lastGamepadPress.current = now;
             if (detailGame) {
-              if (detailParentGame) {
+              const subpanelClose = uiTheme === 'ubiquity'
+                ? document.querySelector<HTMLButtonElement>(
+                    '.ubq-detail-lightbox button, .ubq-detail-options-header button')
+                : null;
+              if (subpanelClose) subpanelClose.click();
+              else if (detailParentGame) {
                 setDetailGame(detailParentGame);
                 setDetailParentGame(null);
               } else {
@@ -341,42 +427,77 @@ export function App() {
           }
           // Square (Button 2): toggle language
           else if (gp.buttons[2]?.pressed) {
-            lastButtonPress = now;
+            lastGamepadPress.current = now;
             setLanguageMenuOpen((prev) => !prev);
           }
           // Triangle (Button 3): refresh
           else if (gp.buttons[3]?.pressed) {
-            lastButtonPress = now;
+            lastGamepadPress.current = now;
             handleSyncPegasus();
           }
           // D-Pad Up
           else if (gp.buttons[12]?.pressed) {
-            lastButtonPress = now;
-            if (currentView === 'home' && !detailGame && !isSidebarFocused) {
+            lastGamepadPress.current = now;
+            if (detailGame && uiTheme === 'ubiquity') {
+              const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
+                '.ubq-detail-option-list button'));
+              if (options.length) {
+                const idx = options.indexOf(document.activeElement as HTMLButtonElement);
+                options[Math.max(0, idx - 1)].focus();
+              }
+            } else if (isSidebarFocused && !detailGame) {
+              const views: SidebarView[] = ['search', 'home', 'games', 'emulators', 'files', 'payloads', 'downloads', 'settings'];
+              setCurrentView((view) => views[Math.max(0, views.indexOf(view) - 1)]);
+            } else if (currentView === 'settings' && !detailGame) {
+              setThemeChoiceIndex(0);
+            } else if (currentView === 'home' && !detailGame) {
               setActiveHomeCategory((cat) => Math.max(0, cat - 1));
             }
           }
           // D-Pad Down
           else if (gp.buttons[13]?.pressed) {
-            lastButtonPress = now;
-            if (currentView === 'home' && !detailGame && !isSidebarFocused) {
+            lastGamepadPress.current = now;
+            if (detailGame && uiTheme === 'ubiquity') {
+              const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
+                '.ubq-detail-option-list button'));
+              if (options.length) {
+                const idx = options.indexOf(document.activeElement as HTMLButtonElement);
+                options[Math.min(options.length - 1, idx + 1)].focus();
+              }
+            } else if (isSidebarFocused && !detailGame) {
+              const views: SidebarView[] = ['search', 'home', 'games', 'emulators', 'files', 'payloads', 'downloads', 'settings'];
+              setCurrentView((view) => views[Math.min(views.length - 1, views.indexOf(view) + 1)]);
+            } else if (currentView === 'settings' && !detailGame) {
+              setThemeChoiceIndex(1);
+            } else if (currentView === 'home' && !detailGame) {
               setActiveHomeCategory((cat) => Math.min(homeCategories.length - 1, cat + 1));
             }
           }
           // D-Pad Left
           else if (gp.buttons[14]?.pressed) {
-            lastButtonPress = now;
-            if (currentView === 'home' && !detailGame) {
+            lastGamepadPress.current = now;
+            if (detailGame && uiTheme === 'ubiquity') {
+              if (!document.querySelector('.ubq-detail-options')) {
+                setDetailActionIndex(index => Math.max(0, index - 1));
+              }
+            } else if (currentView === 'settings' && !detailGame) {
+              setIsSidebarFocused(true);
+            } else if (currentView === 'home' && !detailGame) {
               if (selectedHomeCol === 0) setIsSidebarFocused(true);
               else setSelectedHomeCol((c) => Math.max(0, c - 1));
             }
           }
           // D-Pad Right
           else if (gp.buttons[15]?.pressed) {
-            lastButtonPress = now;
-            if (currentView === 'home' && !detailGame) {
-              if (isSidebarFocused) setIsSidebarFocused(false);
-              else setSelectedHomeCol((c) => Math.min(homeGames.length - 1, c + 1));
+            lastGamepadPress.current = now;
+            if (detailGame && uiTheme === 'ubiquity') {
+              if (!document.querySelector('.ubq-detail-options')) {
+                setDetailActionIndex(index => Math.min(2, index + 1));
+              }
+            }
+            else if (isSidebarFocused && !detailGame) setIsSidebarFocused(false);
+            else if (currentView === 'home' && !detailGame) {
+              setSelectedHomeCol((c) => Math.min(homeGames.length - 1, c + 1));
             }
           }
         }
@@ -395,11 +516,14 @@ export function App() {
     homeCategories.length,
     activeHeroGame,
     isSidebarFocused,
-    language
+    language,
+    themeChoiceIndex,
+    uiTheme,
+    detailActionIndex
   ]);
 
   return (
-    <NativeViewport><div className="tv-app">
+    <NativeViewport><div className={uiTheme === 'ubiquity' ? 'tv-app tv-theme-ubiquity' : 'tv-app'}>
       {/* Toast Notification */}
       <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
 
@@ -407,6 +531,7 @@ export function App() {
       <div className="tv-shell">
         {/* Left Navigation Rail */}
         <Sidebar
+          uiTheme={uiTheme}
           currentView={currentView}
           onSelectView={(v) => {
             setCurrentView(v);
@@ -425,11 +550,18 @@ export function App() {
           {currentView === 'home' && (
             <HomeView
               games={homeGames}
+              uiTheme={uiTheme}
               categories={homeCategories}
               activeCategoryIndex={activeHomeCategory}
-              onSelectCategory={(catIdx) => {
+              onSelectCategory={(catIdx, colIdx) => {
                 setActiveHomeCategory(catIdx);
-                setSelectedHomeCol(0);
+                if (colIdx !== undefined) {
+                  setSelectedHomeCols((previous) => {
+                    const updated = [...previous];
+                    updated[catIdx] = colIdx;
+                    return updated;
+                  });
+                }
                 setIsSidebarFocused(false);
               }}
               language={language}
@@ -454,6 +586,7 @@ export function App() {
             <LibraryBrowser
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={false}
+              uiTheme={uiTheme}
               catalog={catalog}
               language={language}
               onOpenGame={(g) => {
@@ -469,6 +602,7 @@ export function App() {
             <LibraryBrowser
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={true}
+              uiTheme={uiTheme}
               catalog={catalog}
               language={language}
               onOpenGame={(g) => {
@@ -481,7 +615,7 @@ export function App() {
 
           {/* Empty categories and Downloads share the native hero/carousel layout. */}
           {['files', 'payloads', 'downloads'].includes(currentView) &&
-            <HomeView games={currentView === 'downloads' ? downloadItems : []} language={language}
+            <HomeView games={currentView === 'downloads' ? downloadItems : []} uiTheme={uiTheme} language={language}
               title={t(language, currentView === 'files' ? 'TXT_NAV_FILES' : currentView === 'payloads' ? 'TXT_NAV_PAYLOADS' : 'TXT_NAV_DOWNLOADS')}
               emptyMessage={t(language, currentView === 'downloads' ? 'TXT_NO_DOWNLOADS' : 'TXT_SECTION_UNAVAILABLE')}
               showDate={false} selected={currentView === 'downloads' ? selectedDownloadCol : 0}
@@ -510,13 +644,44 @@ export function App() {
               onChangeFilters={handleFiltersChange}
               availableSources={availableSources}
               language={language}
+              uiTheme={uiTheme}
+              gamepadThemeIndex={themeChoiceIndex}
+              onChangeTheme={changeUiTheme}
             />
           )}
         </main>
       </div>
 
       {/* Expanded Game Details Modal */}
-      {detailGame && (
+      {detailGame && uiTheme === 'ubiquity' && (
+        <UbiquityGameDetails
+          game={detailGame}
+          catalog={catalog}
+          language={language}
+          actionIndex={detailActionIndex}
+          onActionIndexChange={setDetailActionIndex}
+          onClose={() => {
+            setDetailGame(null);
+            setDetailParentGame(null);
+            setDetailActionIndex(0);
+          }}
+          onTriggerAction={handleTriggerAction}
+          onSelectGame={(selected) => {
+            setDetailParentGame(detailGame);
+            setDetailGame(selected);
+            setDetailActionIndex(0);
+          }}
+          parentGame={detailParentGame}
+          onBackToParent={() => {
+            if (detailParentGame) {
+              setDetailGame(detailParentGame);
+              setDetailParentGame(null);
+              setDetailActionIndex(0);
+            }
+          }}
+        />
+      )}
+      {detailGame && uiTheme !== 'ubiquity' && (
         <GameDetailModal
           game={detailGame}
           catalog={catalog}

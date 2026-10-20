@@ -20,7 +20,7 @@
 .tv-sidebar-dim { position: absolute; left: 92px; right: 0; top: 0; bottom: 0; background: rgba(0, 0, 0, .45); opacity: 0; pointer-events: none; z-index: 35; transition: opacity .26s ease, left .26s cubic-bezier(.22, 1, .36, 1); }
 .tv-sidebar-dim-active { left: 272px; opacity: 1; }
 .tv-language { position: absolute; top: 16px; left: 0; right: 0; height: 64px; z-index: 2; }
-.tv-language > button { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 64px; padding: 0 24px 0 28px; border: 0; border-radius: 0; background: transparent; font-size: 20px; overflow: hidden; white-space: nowrap; }
+.tv-language > button { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 64px; padding: 0 24px 0 28px; border: 0; border-radius: 14px; background: rgba(28,28,38,.58); backdrop-filter: blur(12px); font-size: 20px; overflow: hidden; white-space: nowrap; }
 .tv-language > button > div:first-child { gap: 26px; }
 .tv-language > button svg { width: 30px; height: 30px; color: #dcdcdc; flex-shrink: 0; }
 .tv-language > button .tv-nav-label { color: #dedede; }
@@ -32,23 +32,29 @@
 .tv-brand-title { position: absolute; left: 58px; top: 8px; color: #f5f5f5; font-size: 26px; font-weight: 700; white-space: nowrap; }
 .tv-sidebar-settings .tv-brand-logo { display: none; }
 .tv-navigation { position: absolute; top: 148px; width: 100%; }
-.tv-nav-item { position: relative; display: flex; align-items: center; gap: 26px; width: 100%; height: 92px; padding: 0 16px 0 28px; border: 0; background: transparent; color: #a5a5aa; font-size: 20px; font-weight: 700; text-align: left; overflow: hidden; white-space: nowrap; }
+.tv-nav-item { position: relative; z-index: 1; display: flex; align-items: center; gap: 26px; width: calc(100% - 16px); margin: 0 8px; height: 92px; padding: 0 8px 0 20px; border: 0; border-radius: 14px; background: transparent; color: #b95c64; font-size: 20px; font-weight: 700; text-align: left; overflow: hidden; white-space: nowrap; transition: color .16s ease; }
+.tv-nav-item:hover { color: #fff; }
+.tv-nav-marker { position: absolute; top: 8px; left: 8px; width: calc(100% - 16px); height: 76px; border-radius: 14px; background: rgba(45,16,24,.96); border: 1px solid rgba(255,75,88,.4); box-shadow: 0 0 18px rgba(229,9,20,.2), inset 0 0 22px rgba(229,9,20,.08); pointer-events: none; z-index: 0; transition: transform .18s cubic-bezier(.22, 1, .36, 1); }
 .tv-nav-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tv-nav-icon { display: flex; flex: 0 0 30px; align-items: center; }
 .tv-nav-icon svg { width: 30px; height: 30px; color: inherit; stroke: currentColor; stroke-width: 1.9; }
 .tv-nav-label { display: flex; flex: 1; min-width: 0; }
 .tv-nav-title { display: inline-block; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; }
 .tv-fitted-text { display: inline-block; flex: none; white-space: nowrap; }
-.tv-nav-active { background: #1a1a1a; color: #f5f5f5; }
-.tv-nav-active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: #e50914; }
-.tv-nav-focused { outline: 2px solid #ff3c3c; outline-offset: -7px; }
+.tv-nav-active { color: #f5f5f5; }
+.tv-nav-active .tv-nav-icon { color: #ff2837; }
+.tv-nav-focused { outline: 2px solid rgba(255,100,112,.95); outline-offset: -8px; border-radius: 14px; }
 @media (prefers-reduced-motion: reduce) {
-  .tv-sidebar, .tv-sidebar-dim, .tv-nav-label, .tv-brand-title { transition-duration: .01ms; }
+  .tv-sidebar, .tv-sidebar-dim, .tv-nav-label, .tv-brand-title, .tv-nav-marker, .tv-nav-item { transition-duration: .01ms; }
 }
 .tv-home { position: relative; width: 100%; height: 1020px; flex: none; overflow: hidden; }
 .tv-hero { position: absolute; top: 0; left: 0; width: 100%; height: 670px; overflow: hidden; background: #000000; }
 .tv-hero-backdrop { position: absolute; top: 0; right: 0; width: 78%; height: 670px; pointer-events: none; overflow: hidden; }
-.tv-hero-art { position: absolute; top: 0; right: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; opacity: 0.94; transition: opacity 0.3s ease; }
+.tv-hero-art { position: absolute; top: 0; right: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; opacity: 0.94; }
+.tv-hero-incoming { opacity: 0; transition: opacity .35s ease; }
+.tv-hero-incoming-loaded { opacity: .94; }
+@keyframes tvHeroInfoAppear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+.tv-hero-info-appear { animation: tvHeroInfoAppear .24s ease-out both; }
 @keyframes tvHeroCrossfade { from { opacity: 0; transform: scale(1.01); } to { opacity: .94; transform: scale(1); } }
 .tv-hero-crossfade { animation: tvHeroCrossfade 0.38s ease-out; }
 .tv-hero-shade {
@@ -86,14 +92,16 @@
   margin-left: 1px;
 }
 .tv-hero h1 { position: absolute; top: 138px; left: 38px; width: 940px; height: 132px; overflow: hidden; font-size: 52px; line-height: 1.25; font-weight: 700; margin: 0; }
-.tv-hero-metadata { position: absolute; top: 272px; left: 38px; max-width: 1060px; height: 34px; color: #b9b9b9; font-size: 20px; font-weight: 700; white-space: nowrap; }
-.tv-hero-description { position: absolute; top: 314px; left: 38px; width: 720px; height: 134px; color: #b9b9b9; font-size: 24px; line-height: 1.35; overflow-y: auto; white-space: pre-wrap; }
-.tv-hero-actions { position: absolute; left: 38px; top: 462px; display: flex; align-items: center; gap: 16px; z-index: 5; }
-.tv-hero-btn { height: 48px; padding: 0 26px; border-radius: 6px; font-size: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; transition: transform 0.16s ease, background 0.16s ease; }
+.tv-hero-metadata { position: absolute; top: 276px; left: 38px; max-width: calc(100% - 76px); height: 32px; display: flex; align-items: center; gap: 8px; overflow: hidden; color: #dadade; font-size: 20px; font-weight: 700; white-space: nowrap; }
+.tv-meta-pill { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 14px; border-radius: 16px; background: rgba(22,22,30,.78); border: 1px solid rgba(255,255,255,.15); line-height: 1; }
+.tv-hero-description { position: absolute; top: 320px; left: 38px; width: 720px; height: 134px; color: #b9b9b9; font-size: 24px; line-height: 1.35; overflow-y: auto; white-space: pre-wrap; }
+.tv-hero-actions { position: absolute; left: 38px; top: 470px; display: flex; align-items: center; gap: 16px; z-index: 5; }
+.tv-hero-btn { height: 50px; padding: 0 26px; border-radius: 25px; font-size: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; transition: transform .16s ease, box-shadow .16s ease, background .16s ease; }
 .tv-hero-btn:hover { transform: scale(1.04); }
-.tv-hero-btn-primary { background: #e50914; color: #fff; border: 2px solid rgba(255,255,255,0.85); }
-.tv-hero-btn-secondary { background: rgba(42, 42, 52, 0.92); color: #f5f5f5; border: 1px solid rgba(180, 180, 195, 0.75); }
-.tv-description-toggle-inline { height: 48px; padding: 0 18px; border-radius: 6px; background: #23232b; color: #f5f5f5; font-size: 18px; font-weight: 700; }
+.tv-hero-btn-primary { background: linear-gradient(135deg, #ff1e27 0%, #c80812 100%); color: #fff; border: 1px solid rgba(255,255,255,.33); box-shadow: 0 6px 24px rgba(229,9,20,.45); }
+.tv-hero-btn-secondary { background: rgba(28,28,38,.72); backdrop-filter: blur(12px); color: #f5f5f5; border: 1px solid rgba(255,255,255,.18); }
+.tv-description-toggle-inline { height: 50px; padding: 0 22px; border-radius: 25px; background: rgba(28,28,38,.72); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.18); color: #f5f5f5; font-size: 18px; font-weight: 700; white-space: nowrap; transition: transform .16s ease, background .16s ease; }
+.tv-description-toggle-inline:hover { background: rgba(44,44,54,.85); transform: scale(1.03); }
 .tv-description-toggle { position: absolute; left: 38px; top: 478px; width: 330px; height: 42px; padding: 0 12px; background: #23232b; color: #f5f5f5; font-size: 20px; font-weight: 700; text-align: left; white-space: nowrap; overflow: hidden; }
 .tv-categories-viewport { position: absolute; left: 0; right: 0; top: 526px; height: 422px; overflow: hidden; }
 .tv-categories-stack { transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
@@ -101,7 +109,7 @@
 .tv-category-header { display: flex; align-items: center; justify-content: space-between; padding: 0 48px 0 38px; height: 42px; }
 .tv-row-title-btn { background: transparent; border: 0; padding: 0; color: #f5f5f5; font-size: 28px; line-height: 34px; font-weight: 700; text-align: left; }
 .tv-row-title-btn:hover { color: #e50914; }
-.tv-show-all-btn { height: 34px; padding: 0 16px; border-radius: 6px; background: rgba(34, 34, 44, 0.92); border: 1px solid #e50914; color: #f5f5f5; font-size: 16px; font-weight: 700; }
+.tv-show-all-btn { height: 34px; padding: 0 16px; border-radius: 17px; background: rgba(34, 34, 44, 0.92); border: 1px solid #e50914; color: #f5f5f5; font-size: 16px; font-weight: 700; }
 .tv-show-all-btn:hover { background: #e50914; color: #fff; }
 .tv-row-title { position: absolute; left: 38px; top: 532px; margin: 0; font-size: 28px; line-height: 34px; font-weight: 700; }
 .tv-carousel { position: absolute; left: 34px; top: 572px; right: 0; height: 388px; display: flex; gap: 16px; padding: 10px 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
@@ -109,19 +117,21 @@
 .tv-carousel::-webkit-scrollbar { display: none; }
 .tv-carousel::after { content: ""; flex: 0 0 1390px; }
 .tv-carousel-empty { position: absolute; left: 38px; top: 590px; font-size: 26px; color: #aaa; }
-.tv-home-grid-mode { background: #0a0a0e; }
+.tv-home-grid-mode { background: #0a0a0e; animation: tvGridEnter .24s ease-out both; }
+@keyframes tvGridEnter { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .tv-grid-header { position: absolute; left: 38px; right: 48px; top: 24px; height: 48px; display: flex; align-items: center; justify-content: space-between; z-index: 5; }
 .tv-grid-title { margin: 0; font-size: 36px; font-weight: 700; color: #f5f5f5; }
 .tv-expanded-grid { position: absolute; left: 38px; right: 38px; top: 88px; bottom: 72px; overflow-y: auto; display: grid; grid-template-columns: repeat(6, 216px); gap: 24px 20px; padding: 12px 6px; }
-.tv-card { position: relative; display: flex; flex-direction: column; flex: 0 0 216px; width: 216px; height: 368px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: #000; color: #f5f5f5; text-align: left; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease; }
-.tv-card-selected { outline: 4px solid #f0f0f0; outline-offset: 0; transform: scale(1.06); z-index: 4; box-shadow: 0 14px 32px rgba(0, 0, 0, 0.75); }
-.tv-cover { position: relative; height: 300px; width: 100%; flex: none; display: flex; flex-direction: column; overflow: hidden; border: 2px solid #163e6e; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+.tv-card { position: relative; display: flex; flex-direction: column; flex: 0 0 216px; width: 216px; height: 368px; padding: 0; border: 0; border-radius: 18px; overflow: hidden; background: #000; color: #f5f5f5; text-align: left; transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, outline-color .2s ease; }
+.tv-card-selected { outline: 3px solid rgba(248,248,252,.98); outline-offset: 1px; transform: translateY(-6px) scale(1.06); z-index: 4; box-shadow: 0 0 0 2px rgba(229,9,20,.68), 0 0 24px rgba(229,9,20,.5), 0 16px 32px rgba(0,0,0,.75); }
+.tv-cover { position: relative; height: 300px; width: 100%; flex: none; display: flex; flex-direction: column; overflow: hidden; border: 2px solid #163e6e; border-top-left-radius: 18px; border-top-right-radius: 18px; }
 .tv-rating-badge { position: absolute; top: 8px; right: 8px; z-index: 3; padding: 2px 8px; border-radius: 4px; background: rgba(12, 12, 16, 0.88); color: #ffcd2d; font-size: 14px; font-weight: 700; }
 .tv-platform { height: 32px; flex: 0 0 32px; padding: 0 8px; font-size: 20px; font-weight: 700; line-height: 32px; }
 .tv-platform-ps5 { background: #f5f5f5; color: #0c0c10; }
 .tv-platform-ps4 { background: #003e9b; color: white; }
 .tv-cover-image { position: relative; min-height: 0; flex: 1; overflow: hidden; }
-.tv-cover-image img { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: fill; object-position: center; }
+.tv-cover-image img { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; object-position: center; transition: transform .2s cubic-bezier(.22, 1, .36, 1); }
+.tv-card-selected .tv-cover-image img { transform: scale(1.025); }
 .tv-cover-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 16px; color: #ddd; }
 .tv-cover-placeholder strong { display: inline-flex; align-items: baseline; color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
 .tv-cover-placeholder strong::first-letter { color: #e50914; }
@@ -221,11 +231,10 @@
 .tv-settings input, .tv-settings button[role="checkbox"] { width: 24px; height: 24px; }
 @media (prefers-reduced-motion: reduce) { .tv-stage *, .tv-stage *::before, .tv-stage *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
-/* Ujednolicenie Web Preview z silnikiem C/SDL2 Poldrive */
+/* Ujednolicenie Web Preview z silnikiem C/SDL2 PolDrive */
 .tv-sidebar svg, .sidebar svg {
-    color: #e50914 !important;
-    stroke: #e50914 !important;
-    stroke-width: 2.4px !important;
+    stroke: currentColor;
+    stroke-width: 2.4px;
 }
 .tv-brand-logo, .brand-logo-p {
     background: transparent !important;
@@ -334,4 +343,238 @@
     line-height: 1;
     letter-spacing: -0.5px;
     margin-left: 1px;
+}
+
+/* Optional (u)biquity layout inspired by the Playnite Fullscreen theme by Red Schism.
+   Both renderers keep existing catalogue entries, actions and navigation order. */
+.tv-theme-settings { margin-top: 18px; padding: 16px 0 0; border-top: 1px solid rgba(255,255,255,.10); }
+.tv-theme-title { color: #fff; font-size: 20px; font-weight: 800; margin: 0 0 10px; }
+.tv-theme-choices { display: grid; gap: 8px; }
+.tv-theme-option { width: 100%; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: #19191e; color: #d1d1da; border: 1px solid #34343d; border-radius: 12px; font-size: 19px; font-weight: 700; }
+.tv-theme-option:hover { background: #292934; }
+.tv-theme-option-active { background: #311b23; border-color: #e50914; color: white; box-shadow: inset 0 0 12px rgba(229,9,20,.12); }
+.tv-theme-ubiquity { background: #07080b; }
+.tv-theme-ubiquity .tv-main, .tv-theme-ubiquity .tv-home { background: #07080b; }
+.tv-theme-ubiquity .tv-hero { height: 960px; background: #07080b; }
+.tv-theme-ubiquity .tv-hero-backdrop { width: 100%; height: 960px; }
+.tv-theme-ubiquity .tv-hero-art { object-position: center 34%; }
+.tv-theme-ubiquity .tv-hero-shade {
+  background: linear-gradient(90deg, rgba(5,6,9,.9) 0%, rgba(7,8,10,.52) 36%, rgba(7,8,10,0) 75%),
+              linear-gradient(0deg, #08090d 4%, rgba(7,8,10,.9) 18%, rgba(7,8,10,.06) 68%);
+}
+.tv-theme-ubiquity .tv-wordmark { top: 38px; left: 48px; transform: scale(.72); transform-origin: top left; }
+.tv-theme-ubiquity .tv-hero h1 { top: 150px; left: 48px; width: 1100px; font-size: 62px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 3px 16px rgba(0,0,0,.55); }
+.tv-theme-ubiquity .tv-hero-metadata { top: 312px; left: 48px; }
+.tv-theme-ubiquity .tv-hero-description { top: 366px; left: 48px; width: 795px; height: 122px; color: #e0e0e3; }
+.tv-theme-ubiquity .tv-hero-actions { top: 510px; left: 48px; }
+.tv-theme-ubiquity .tv-categories-viewport { top: 560px; height: 440px; }
+.tv-theme-ubiquity .tv-category-header { padding-left: 48px; }
+.tv-theme-ubiquity .tv-row-title-btn, .tv-theme-ubiquity .tv-row-title { text-transform: uppercase; letter-spacing: 5px; font-size: 25px; font-weight: 600; }
+.tv-theme-ubiquity .tv-carousel { left: 44px; }
+.tv-theme-ubiquity .tv-category-carousel { left: 44px; }
+.tv-theme-ubiquity .tv-card { border-radius: 5px; background: #0d0e13; }
+.tv-theme-ubiquity .tv-cover { border-radius: 5px 5px 0 0; border: 1px solid rgba(255,255,255,.23); }
+.tv-theme-ubiquity .tv-card-selected { outline: 2px solid #f5f5f5; outline-offset: 1px; box-shadow: 0 12px 32px rgba(0,0,0,.9), 0 0 14px rgba(250,250,255,.25); }
+.tv-theme-ubiquity .tv-card-title, .tv-theme-ubiquity .tv-card-footer { background: rgba(9,10,14,.95); }
+.tv-theme-ubiquity .tv-nav-marker { background: rgba(230,230,235,.12); border-color: rgba(255,255,255,.28); box-shadow: 0 0 12px rgba(255,255,255,.08); }
+.tv-theme-ubiquity .tv-sidebar { background: rgba(6,7,10,.94); border-right-color: rgba(255,255,255,.08); }
+.tv-theme-ubiquity .tv-nav-active .tv-nav-icon { color: #f3f3f5; }
+.tv-theme-ubiquity .tv-meta-pill { border-radius: 4px; background: rgba(7,7,11,.64); border-color: rgba(255,255,255,.2); }
+.tv-theme-ubiquity .tv-hero-btn-primary { background: rgba(245,245,245,.96); color: #101016; border: 1px solid #fff; box-shadow: 0 4px 20px rgba(0,0,0,.5); }
+.tv-theme-ubiquity .tv-hero-btn-secondary { background: rgba(15,15,18,.72); border-color: rgba(255,255,255,.5); }
+@media (prefers-reduced-motion: reduce) {
+  .tv-theme-ubiquity *, .tv-theme-ubiquity *::before, .tv-theme-ubiquity *::after { transition: none !important; animation: none !important; }
+}
+
+/* Small, resampled fade profiles from the user-supplied (u)biquity 2.0.4
+   package. Native SDL2 reproduces these fades with scanline overlays. */
+.tv-theme-ubiquity .tv-hero-shade {
+  background-image:
+    url('../assets/themes/ubiquity/fade-left.png'),
+    url('../assets/themes/ubiquity/fade-bottom.png'),
+    linear-gradient(90deg, rgba(5,6,9,.88) 0%, rgba(7,8,10,.30) 44%, transparent 80%),
+    linear-gradient(0deg, #08090d 4%, rgba(7,8,10,.86) 18%, rgba(7,8,10,.03) 68%);
+  background-size: 70% 100%, 100% 55%, 100% 100%, 100% 100%;
+  background-position: left center, bottom center, left center, center;
+  background-repeat: no-repeat;
+}
+
+.tv-theme-option-gamepad { outline: 2px solid rgba(245,245,245,.9); outline-offset: 1px; }
+
+/* Faithful structural (u)biquity home: unlike Netflix/Glass this is its own
+   composition, adapted to PolDrive's data and controller controls. */
+.tv-theme-ubiquity .tv-main { margin-left: 64px; width: 1856px; }
+.tv-theme-ubiquity .tv-sidebar { width: 64px; background: rgba(7,8,11,.96); border-right: 0; }
+.tv-theme-ubiquity .tv-sidebar-collapsed { width: 64px; }
+.tv-theme-ubiquity .tv-sidebar-expanded { width: 252px; }
+.tv-theme-ubiquity .tv-sidebar-dim { left: 64px; }
+.tv-theme-ubiquity .tv-sidebar-dim-active { left: 252px; }
+.tv-theme-ubiquity .tv-brand-logo { display: none; }
+.tv-theme-ubiquity .tv-language { top: 6px; height: 48px; }
+.tv-theme-ubiquity .tv-language > button { height: 48px; padding: 0 14px; border-radius: 0; background: transparent; }
+.tv-theme-ubiquity .tv-language > button svg { width: 19px; height: 19px; }
+.tv-theme-ubiquity .tv-language > button > div:first-child { gap: 24px; }
+.tv-theme-ubiquity .tv-navigation { top: 88px; }
+.tv-theme-ubiquity .tv-nav-item { height: 64px; width: calc(100% - 14px); margin: 0 7px; padding: 0 8px 0 15px; gap: 24px; color: #a1a3a7; border-radius: 2px; }
+.tv-theme-ubiquity .tv-nav-icon, .tv-theme-ubiquity .tv-nav-icon svg { width: 21px; height: 21px; flex-basis: 21px; stroke-width: 1.6px; }
+.tv-theme-ubiquity .tv-nav-active .tv-nav-icon { color: #f2f2f4; }
+.tv-theme-ubiquity .tv-nav-marker { top: 8px; left: 7px; width: calc(100% - 14px); height: 48px; border-radius: 3px; background: rgba(235,236,241,.12); border: 0; box-shadow: inset 2px 0 rgba(245,245,248,.86); }
+.tv-theme-ubiquity .tv-nav-focused { outline: 1px solid #fff; outline-offset: -3px; border-radius: 3px; }
+.tv-theme-ubiquity .tv-status { display: none; }
+
+.tv-theme-ubiquity .ubq-home { position: relative; background: #070808; height: 1020px; overflow: hidden; }
+.ubq-cinematic-background { position: absolute; inset: 0; pointer-events: none; background: #0b0d12; }
+.ubq-cinematic-background > img { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; object-position: 55% 35%; }
+.ubq-backdrop-next { animation: ubqBackdropAppear .42s ease-out both; }
+@keyframes ubqBackdropAppear { from { opacity: 0; } to { opacity: 1; } }
+.ubq-cinematic-vignette { position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(8,9,12,.91) 0%, rgba(8,9,12,.66) 22%, rgba(8,9,12,.14) 54%, rgba(8,9,12,.08) 100%),
+              linear-gradient(0deg, rgba(5,6,8,1) 0%, rgba(5,6,8,.87) 11%, rgba(5,6,8,.24) 35%, transparent 63%),
+              linear-gradient(180deg, rgba(5,6,8,.3) 0%, transparent 16%); }
+.ubq-ambient-top { position: absolute; z-index: 2; top: 19px; left: 32px; right: 38px; display: flex; align-items: center; gap: 20px; font-size: 15px; font-weight: 600; letter-spacing: .07em; color: rgba(240,240,245,.83); }
+.ubq-menu-glyph { font-size: 22px; color: #fff; }
+.ubq-product-name { font-weight: 800; font-size: 16px; }
+.ubq-product-name b { color: #e50914; }
+.ubq-system-label { margin-left: auto; text-transform: uppercase; font-size: 12px; opacity: .8; letter-spacing: .22em; }
+.ubq-feature { position: absolute; z-index: 2; left: 86px; top: 142px; width: 850px; max-height: 455px; text-shadow: 1px 2px 8px rgba(0,0,0,.48); animation: ubqFeatureEnter .27s ease-out both; }
+@keyframes ubqFeatureEnter { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.ubq-feature-title { display: block; width: 820px; max-height: 194px; overflow: hidden; margin: 0; font-size: 74px; line-height: 1.05; font-weight: 800; letter-spacing: .085em; text-transform: uppercase; color: #fff; }
+.ubq-feature-metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 21px; font-size: 19px; font-weight: 600; color: #e9e9ec; }
+.ubq-feature-metadata i { display: inline-block; width: 4px; height: 4px; background: rgba(255,255,255,.66); border-radius: 50%; }
+.ubq-score { color: #f5eeee; }
+.ubq-feature-description { width: 740px; margin: 18px 0 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; color: #dedee0; font-size: 20px; line-height: 1.45; font-weight: 400; }
+.ubq-shelf { position: absolute; left: 86px; right: 0; bottom: 66px; height: 312px; z-index: 4; }
+.ubq-shelf-heading { display: flex; justify-content: space-between; align-items: baseline; margin: 0 50px 17px 0; }
+.ubq-shelf-heading h2 { margin: 0; text-transform: uppercase; font-size: 22px; line-height: 32px; letter-spacing: .32em; font-weight: 500; color: #ededf3; text-shadow: 1px 2px 5px #000; }
+.ubq-shelf-heading > span { color: #d2d2d9; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ubq-shelf-track { display: flex; align-items: flex-start; gap: 20px; height: 250px; padding: 5px 12px 12px 3px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.ubq-shelf-track::-webkit-scrollbar { display: none; }
+.ubq-virtual-spacer { flex-shrink: 0; flex-grow: 0; pointer-events: none; height: 1px; }
+.tv-virtual-spacer { flex-shrink: 0; flex-grow: 0; pointer-events: none; height: 1px; }
+.ubq-game-cover { position: relative; display: block; flex: 0 0 232px; width: 232px; height: 232px; border: 1px solid rgba(235,235,240,.18); background: #13151c; border-radius: 2px; padding: 0; color: white; overflow: hidden; transition: transform .16s ease-out, outline .16s ease, box-shadow .16s ease; }
+.ubq-square-art { position: absolute; inset: 0; display: block; width: 232px; height: 232px; overflow: hidden; background: #11151d; }\n.ubq-square-art img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+.ubq-game-cover-selected {
+  z-index: 6;
+  transform: scale(1.025);
+  outline: none;
+  border-color: rgba(255,255,255,.95);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 0 10px rgba(255,255,255,.45), 0 0 18px rgba(229,9,20,.24), 0 12px 24px rgba(0,0,0,.82);
+  animation: ubqFocusStrobe 2.6s linear infinite;
+}
+/* A single clean border, inset over the artwork AND title; no separate white bottom stripe. */
+.ubq-game-cover-selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(250,250,255,.98);
+  border-radius: 2px;
+  box-shadow: inset 0 0 6px rgba(255,255,255,.2);
+  pointer-events: none;
+  z-index: 8;
+}
+/* Two restrained flashes inside a long soft-glow cycle. Never flash the background. */
+@keyframes ubqFocusStrobe {
+  0%, 33%, 100% {
+    box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 0 10px rgba(255,255,255,.4),
+                0 0 18px rgba(229,9,20,.24), 0 12px 24px rgba(0,0,0,.82);
+  }
+  9%, 21% {
+    box-shadow: 0 0 0 2px rgba(255,255,255,.95), 0 0 17px rgba(255,255,255,.8),
+                0 0 30px rgba(229,9,20,.62), 0 12px 24px rgba(0,0,0,.82);
+  }
+  14%, 26% {
+    box-shadow: 0 0 0 1px rgba(255,255,255,.82), 0 0 12px rgba(255,255,255,.55),
+                0 0 22px rgba(229,9,20,.38), 0 12px 24px rgba(0,0,0,.82);
+  }
+}
+.ubq-cover-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: linear-gradient(140deg, #1e2b3d, #070b12); text-align: center; font-size: 18px; }
+.ubq-cover-footer { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; height: 40px; background: linear-gradient(0deg, rgba(7,9,14,.95), rgba(7,9,14,.72)); border-top: 1px solid rgba(255,255,255,.1); }\n.ubq-cover-name { display: block; min-width: 0; width: 100%; padding: 0 28px; font-size: 15px; line-height: 1.25; font-weight: 600; text-align: center; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }\n.ubq-cover-download { position: absolute; right: 8px; bottom: 8px; width: 20px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 500; line-height: 1; color: #f4f5fa; text-shadow: 0 1px 2px #000; pointer-events: none; }
+
+.ubq-category-select { position: absolute; z-index: 5; left: 85px; bottom: 22px; display: flex; align-items: center; gap: 18px; max-width: 1250px; overflow: hidden; }
+.ubq-category-select button { flex: 0 0 auto; border: 0; background: transparent; padding: 5px 0; color: rgba(235,235,240,.56); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.ubq-category-select button:hover, .ubq-category-select .ubq-category-current { color: #fff; box-shadow: inset 0 -2px rgba(229,9,20,.9); }
+.ubq-shortcuts { position: absolute; bottom: 22px; right: 45px; z-index: 5; display: flex; gap: 17px; align-items: center; color: #dbdbde; font-size: 12px; text-shadow: 1px 1px 2px #000; }
+.ubq-shortcuts b { font-size: 14px; color: #fff; }
+.ubq-shortcuts button { background: transparent; padding: 3px; color: inherit; font-size: inherit; border: 0; }
+.ubq-shortcuts button:hover { color: #fff; text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) {
+  .ubq-backdrop-next, .ubq-feature { animation: none !important; }
+  .ubq-game-cover { transition: none !important; animation: none !important; }
+  .ubq-game-cover-selected {
+    box-shadow: 0 0 0 1px rgba(255,255,255,.85), 0 0 12px rgba(255,255,255,.5),
+                0 0 20px rgba(229,9,20,.36), 0 12px 24px rgba(0,0,0,.82);
+  }
+}
+
+/* The original global footer rule uses !important. The optional theme owns
+   its footer controls, so it must explicitly override that legacy rule. */
+.tv-app.tv-theme-ubiquity > .tv-status { display: none !important; }
+.ubq-backdrop-next { opacity: 0; animation: none; transition: opacity .38s ease-out; }
+.ubq-backdrop-next-ready { opacity: 1; }
+
+/* (u)biquity standalone game details — cinematic full-screen page rather than
+   the Netflix neighbor-strip/package modal. Scoped to this theme only. */
+.tv-theme-ubiquity .ubq-detail-screen { position: absolute; inset: 0; z-index: 90; overflow: hidden; background: #060810; color: #f7f7fa; }
+.ubq-detail-art { position: absolute; inset: 0; background: #10151c; }
+.ubq-detail-art > img { width: 100%; height: 100%; object-fit: cover; object-position: center 35%; }
+.ubq-detail-vignette { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(90deg, rgba(3,5,9,.94) 0%, rgba(3,5,9,.8) 20%, rgba(3,5,9,.4) 47%, rgba(3,5,9,.08) 78%),
+  linear-gradient(0deg, rgba(3,5,9,1) 0%, rgba(3,5,9,.93) 10%, rgba(3,5,9,.31) 34%, transparent 66%),
+  linear-gradient(180deg, rgba(2,3,6,.65) 0%, transparent 22%); }
+.ubq-detail-provider { position: absolute; top: 46px; right: 92px; display: flex; align-items: center; gap: 10px; color: rgba(247,247,248,.84); font-size: 20px; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; }
+.ubq-detail-provider-mark { font-size: 30px; color: #eee; line-height: 1; }
+.ubq-detail-content { position: absolute; top: 298px; left: 169px; right: 80px; bottom: 120px; display: flex; flex-direction: column; align-items: flex-start; }
+.ubq-detail-main { display: flex; flex-direction: column; align-items: flex-start; width: 810px; max-height: 565px; }
+.ubq-detail-game-title { font-size: 81px; text-transform: uppercase; font-weight: 900; letter-spacing: .042em; line-height: .99; margin: 0 0 20px; max-width: 870px; max-height: 178px; overflow: hidden; text-shadow: 0 4px 22px #000; }
+.ubq-detail-byline { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: #efeff1; font-size: 18px; margin-bottom: 13px; text-shadow: 1px 1px 3px #000; }
+.ubq-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 19px; }
+.ubq-detail-tags span { padding: 3px 7px; background: rgba(5,6,8,.65); border: 1px solid rgba(230,231,237,.72); font-size: 15px; font-weight: 500; line-height: 1.2; }
+.ubq-detail-description { color: #f0f0f3; width: 750px; max-height: 172px; min-height: 65px; overflow-y: auto; font-size: 19px; line-height: 1.38; white-space: pre-line; mask-image: linear-gradient(#000 90%, transparent); scrollbar-color: #73757b transparent; scrollbar-width: thin; text-shadow: 1px 1px 4px #000; }
+.ubq-detail-translate { padding: 4px 0; font-size: 14px; color: #d6d7dc; border: none; background: transparent; text-decoration: underline; }
+.ubq-detail-stats { display: flex; gap: 37px; margin-top: 32px; color: white; }
+.ubq-detail-stats > div { display: flex; flex-direction: column; gap: 12px; min-width: 116px; }
+.ubq-detail-stats span { color: #b7b8c0; font-size: 16px; }
+.ubq-detail-stats strong { font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ubq-detail-actions { position: absolute; left: 0; bottom: 22px; display: flex; gap: 16px; align-items: stretch; }
+.ubq-detail-actions button { height: 64px; padding: 0 20px; min-width: 68px; color: #fff; border: 2px solid rgba(235,235,240,.56); border-radius: 2px; background: rgba(16,17,21,.87); font-weight: 600; font-size: 22px; }
+.ubq-detail-actions button:first-child { width: 300px; }
+.ubq-detail-actions button:hover, .ubq-detail-actions button:focus-visible, .ubq-detail-actions .ubq-detail-action-focused { outline: none; border-color: #ff39ae; box-shadow: 0 0 0 1px rgba(255,57,174,.25); }
+.ubq-detail-options { position: absolute; z-index: 95; left: 910px; top: 180px; width: 830px; height: 660px; padding: 35px 42px; background: rgba(7,9,13,.94); border: 1px solid rgba(250,250,255,.3); border-radius: 4px; box-shadow: 0 18px 60px #000; backdrop-filter: blur(10px); }
+.ubq-detail-options-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.ubq-detail-options h2 { margin: 0; font-size: 31px; }
+.ubq-detail-options-header button { width: 45px; height: 45px; border: 1px solid #9c9ca3; color: white; background: transparent; font-size: 22px; }
+.ubq-detail-option-list { display: flex; flex-direction: column; gap: 10px; height: 460px; overflow-y: auto; }
+.ubq-detail-option-list > button { display: flex; flex-direction: column; gap: 6px; padding: 15px 20px; text-align: left; color: white; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.24); }
+.ubq-detail-option-list > button:hover { border-color: #fff; }
+.ubq-detail-option-list span, .ubq-detail-availability { font-size: 14px; color: #aeb0b8; }
+.ubq-detail-lightbox { position: absolute; z-index: 110; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.95); }
+.ubq-detail-lightbox img { max-width: 90%; max-height: 88%; object-fit: contain; }
+.ubq-detail-lightbox button { position: absolute; top: 25px; right: 45px; color: white; background: transparent; border: 0; font-size: 35px; }
+.ubq-detail-parent { position: absolute; z-index: 91; top: 45px; left: 80px; border: 1px solid #aaa; padding: 10px 15px; background: #101017bb; color: #fff; }
+.ubq-detail-close { position: absolute; top: 42px; left: 35px; width: 38px; height: 38px; color: white; background: rgba(5,5,10,.25); border: 0; font-size: 20px; }
+@media (prefers-reduced-motion: reduce) { .ubq-detail-screen * { transition: none !important; animation: none !important; } }
+
+.ubq-detail-option-list > button:focus-visible { border-color: #ff39ae; outline: 2px solid #ff39ae; outline-offset: -2px; }
+
+/* Sony / PlayStation 5 library breadcrumb stays usable on Ubiquity's
+   cinematic game list without obscuring the top-right game artwork. */
+.tv-theme-ubiquity .tv-library-ubiquity-games .tv-breadcrumb {
+  z-index: 9;
+  top: 62px;
+  left: 85px;
+  gap: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(238,238,244,.85);
+  text-shadow: 0 1px 8px rgba(0,0,0,.7);
+}
+.tv-theme-ubiquity .tv-library-ubiquity-games .tv-breadcrumb button {
+  padding: 9px 14px;
+  color: #f4f4f6;
+  background: rgba(12,14,20,.75);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 8px;
+}
+.tv-theme-ubiquity .tv-library-ubiquity-games .tv-breadcrumb button:hover {
+  border-color: rgba(255,255,255,.85);
 }
