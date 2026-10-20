@@ -84,11 +84,13 @@ class DownloadArtworkTests(unittest.TestCase):
             (root / "src/catalogData.json").write_text(json.dumps([
                 {"title": "Native", "id_code": "NATIVE", "cover_url": self.root + "/cover"},
                 {"title": "Local", "cover_url": "/assets/local.png"}]))
+            (root / "assets/artwork/igdb-covers.json").write_text(json.dumps({
+                "schemaVersion": 1, "matches": {"sony-ps1|approved": {"url": self.root + "/approved"}}}))
             records = [("Source", {"id": "1", "title": "Example", "coverUrl": self.root + "/box"})]
             with patch("enrich_artwork.load_records", return_value=records):
                 images, errors = artwork.collect_local(root)
             self.assertEqual(errors, [])
-            self.assertEqual(set(images), {self.root + "/box", self.root + "/cover"})
+            self.assertEqual(set(images), {self.root + "/box", self.root + "/cover", self.root + "/approved"})
             self.assertEqual(len(images[self.root + "/box"]), 1)
             self.assertEqual(len(images[self.root + "/cover"]), 2)
 

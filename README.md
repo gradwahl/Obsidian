@@ -73,7 +73,8 @@ non-commercial projects under the provider's terms. Image URLs are saved, but
 no image bytes are distributed.
 
 To download all cover links currently known to this checkout, including supplied
-source art, approved matches, independent fallbacks and native catalogue covers:
+source art, approved matches and IGDB alternatives, independent fallbacks and
+native catalogue covers:
 
 ```bash
 python3 scripts/download_artwork.py --local --workers 8

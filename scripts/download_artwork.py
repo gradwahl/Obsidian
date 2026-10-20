@@ -37,6 +37,16 @@ def collect_local(root):
         match = manifest["matches"].get(source + "|" + row["id"], {})
         add(match.get("url"), game)
         add(match.get("fallback", {}).get("url"), game)
+    # Retain approved alternatives too, even when the display manifest chose
+    # a different provider or withheld an entry under its priority/review rules.
+    export_path = root / "assets/artwork/igdb-covers.json"
+    if export_path.is_file():
+        export = json.loads(export_path.read_text(encoding="utf-8"))
+        if export.get("schemaVersion") != 1 or not isinstance(export.get("matches"), dict):
+            raise ValueError("Unexpected local IGDB artwork export")
+        for identity, row in export["matches"].items():
+            add(row.get("url"), {"title": identity.split("|", 1)[-1],
+                                 "title_id": identity, "source": "IGDB approved matches"})
     # Native catalogue rows use snake_case fields and may not occur in the
     # metadata-only snapshots consumed by load_records.
     for row in json.loads((root / "src/catalogData.json").read_text(encoding="utf-8")):
