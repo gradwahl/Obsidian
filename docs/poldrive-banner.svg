@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">Poldrive</title>
+  <desc id="desc">Dark console-inspired banner with a red P icon and stylized game covers.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#171821"/>
+      <stop offset="0.6" stop-color="#101117"/>
+      <stop offset="1" stop-color="#090a0e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1015 164) rotate(180) scale(440 300)">
+      <stop stop-color="#e50914" stop-opacity=".26"/>
+      <stop offset="1" stop-color="#e50914" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cardA" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2c3447"/>
+      <stop offset=".55" stop-color="#10151f"/>
+      <stop offset="1" stop-color="#8c111f"/>
+    </linearGradient>
+    <linearGradient id="cardB" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#641826"/>
+      <stop offset=".6" stop-color="#1c1420"/>
+      <stop offset="1" stop-color="#11131a"/>
+    </linearGradient>
+    <linearGradient id="cardC" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#213a4b"/>
+      <stop offset=".5" stop-color="#151b25"/>
+      <stop offset="1" stop-color="#12131a"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity=".5"/>
+    </filter>
+    <clipPath id="clip"><rect width="1200" height="320" rx="22"/></clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="1200" height="320" fill="url(#bg)"/>
+    <rect width="1200" height="320" fill="url(#glow)"/>
+    <path d="M710 0 L1020 320 M790 0 L1100 320 M870 0 L1180 320" stroke="#fff" stroke-opacity=".045" stroke-width="1"/>
+    <circle cx="1116" cy="52" r="238" fill="none" stroke="#e50914" stroke-opacity=".13" stroke-width="1"/>
+    <circle cx="1116" cy="52" r="185" fill="none" stroke="#e50914" stroke-opacity=".11" stroke-width="1"/>
+    <g filter="url(#shadow)">
+      <rect x="65" y="88" width="118" height="140" rx="26" fill="#e50914"/>
+      <path d="M98 119 H139 C160 119 167 133 167 150 C167 167 154 181 132 181 H118 V199 H98 Z M118 139 V163 H132 C144 163 147 158 147 151 C147 144 143 139 132 139 Z" fill="white"/>
+    </g>
+    <text x="211" y="164" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800" letter-spacing="-3">Poldrive</text>
+    <rect x="214" y="186" width="274" height="3" rx="1.5" fill="#e50914"/>
+    <text x="214" y="215" fill="#c4c6d0" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="1.25">YOUR CATALOGUE. YOUR CONSOLE.</text>
+    <text x="214" y="249" fill="#777b89" font-family="Arial, Helvetica, sans-serif" font-size="16">PLAYSTATION 5  /  LINUX  /  WEB</text>
+    <g filter="url(#shadow)">
+      <g transform="translate(764 73) rotate(-11 78 112)">
+        <rect width="156" height="218" rx="12" fill="url(#cardC)" stroke="#4a5266" stroke-width="2"/>
+        <path d="M15 147 Q60 44 144 33" stroke="#75a5c4" stroke-opacity=".25" stroke-width="16" fill="none"/>
+        <circle cx="81" cy="90" r="39" stroke="#a0c8df" stroke-opacity=".24" stroke-width="3" fill="none"/>
+        <rect x="15" y="170" width="83" height="8" rx="4" fill="#fff" opacity=".65"/>
+        <rect x="15" y="186" width="109" height="6" rx="3" fill="#fff" opacity=".23"/>
+      </g>
+      <g transform="translate(902 43) rotate(6 78 112)">
+        <rect width="156" height="218" rx="12" fill="url(#cardA)" stroke="#6f4150" stroke-width="2"/>
+        <circle cx="79" cy="90" r="49" fill="none" stroke="#ed7084" stroke-opacity=".39" stroke-width="11"/>
+        <path d="M0 148 L156 64 M0 173 L156 88" stroke="#f3a7b2" stroke-opacity=".1" stroke-width="17"/>
+        <rect x="14" y="169" width="104" height="8" rx="4" fill="#fff" opacity=".66"/>
+        <rect x="14" y="186" width="77" height="6" rx="3" fill="#fff" opacity=".26"/>
+      </g>
+      <g transform="translate(1034 80) rotate(13 78 112)">
+        <rect width="156" height="218" rx="12" fill="url(#cardB)" stroke="#76303c" stroke-width="2"/>
+        <path d="M32 126 L76 34 L121 126 Z" fill="none" stroke="#ef9a9e" stroke-opacity=".37" stroke-width="8" stroke-linejoin="round"/>
+        <path d="M20 148 Q83 95 138 146" fill="none" stroke="#f18b92" stroke-opacity=".24" stroke-width="9"/>
+        <rect x="14" y="170" width="93" height="8" rx="4" fill="#fff" opacity=".61"/>
+        <rect x="14" y="186" width="117" height="6" rx="3" fill="#fff" opacity=".22"/>
+      </g>
+    </g>
+    <rect x="0" y="317" width="1200" height="3" fill="#e50914"/>
+  </g>
+</svg>
