@@ -127,6 +127,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
+          {/* Decorative Brand Logo "P" */}
+          <div className="tv-brand-logo" title="PEGASUS-DL / WOLODRIVE">
+            <div className="tv-brand-icon">P</div>
+            <span className="tv-nav-label tv-brand-title">PEGASUS-DL</span>
+          </div>
+
           {/* Navigation list */}
           <nav className="tv-navigation">
             {navItems.map((item) => {

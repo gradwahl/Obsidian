@@ -147,7 +147,7 @@ enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 272,
        CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
        CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40,
        HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
-static const SDL_Rect LANGUAGE_BUTTON = {0, 24, SIDEBAR_EXPANDED_W, 90};
+static const SDL_Rect LANGUAGE_BUTTON = {0, 16, SIDEBAR_EXPANDED_W, 64};
 static const SDL_Rect LANGUAGE_MENU = {14, 122, SIDEBAR_EXPANDED_W - 28, LANG_COUNT * 44 + 16};
 static const char *action_label(WolodriveApp *app, GameItem *item);
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
@@ -251,8 +251,10 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
 }
 
 static SDL_Rect sidebar_target(int row) {
-    int position = row == VIEW_SETTINGS ? VIEW_DOWNLOADS+1 : row;
-    return (SDL_Rect){0, row == VIEW_SEARCH ? 150 : 240 + position * 90, SIDEBAR_EXPANDED_W, 90};
+    int y_offset = 148;
+    int row_h = 64;
+    int pos = row == VIEW_SETTINGS ? VIEW_DOWNLOADS + 1 : row;
+    return (SDL_Rect){0, y_offset + pos * row_h, SIDEBAR_EXPANDED_W, row_h};
 }
 
 static CarouselRow *active_home_row(WolodriveApp *app) {
@@ -1938,75 +1940,86 @@ static void render_sidebar(WolodriveApp *app) {
     SDL_RenderGetClipRect(r, &prev_clip);
     SDL_RenderSetClipRect(r, &sb_clip);
 
+    /* Nowy stały logotyp marki P centralnie pod globusem a nad lupą */
+    int brand_y = 86;
+    fill_rect(r, 26, brand_y + 4, 38, 38, 0, 0, 0, 140);
+    fill_rect(r, 24, brand_y + 2, 38, 38, 229, 9, 20, 255);
+    draw_border(r, 24, brand_y + 2, 38, 38, 1, 255, 255, 255, 180);
+    draw_text(app, app->font_row_title ? app->font_row_title : app->font_logo, P, 35, brand_y + 5, (SDL_Color){255, 255, 255, 255}, 0);
+    if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
+        Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
+        if (brand_alpha > 0) {
+            draw_text(app, app->font_small ? app->font_small : app->font_body, PEGASUS-DL, 76, brand_y + 10, (SDL_Color){229, 9, 20, brand_alpha}, 0);
+        }
+    }
+
     for (int row = 0; row < TOTAL_ROWS; row++) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
-        Uint8 c = selected ? 245 : 160;
-        int x = 30, y = target.y + 28;
+
+        Uint8 ir = selected ? 255 : 210;
+        Uint8 ig = selected ? 30  : 35;
+        Uint8 ib = selected ? 40  : 42;
+        Uint8 ia = selected ? 255 : 230;
+
+        int x = 28, y = target.y + 18;
         if (selected) {
-            fill_rect(r, 0, target.y, sb_w - 1, target.h, 25, 25, 25, 255);
-            fill_rect(r, 0, target.y, 4, target.h, 229, 9, 20, 255);
+            fill_rect(r, 0, target.y, sb_w - 1, target.h, 38, 12, 16, 255);
+            fill_rect(r, 0, target.y, 5, target.h, 255, 30, 40, 255);
             if (app->sidebar_focus)
-                draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 245, 245, 245, 255);
+                draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 255, 60, 60, 255);
         }
 
-        /* Ikony geometryczne */
+        /* Pogrubione, wyraziste czerwone ikony (2px-3px, bez przerw i dziur) */
         if (row == VIEW_SEARCH) {
-            SDL_SetRenderDrawColor(r, c, c, c, 255);
-            for (int angle = 0; angle < 360; angle++) {
-                float a = angle * 3.14159265f / 180.0f;
-                SDL_RenderDrawPoint(r, x + 12 + (int)(12 * cosf(a)), y + 12 + (int)(12 * sinf(a)));
-            }
-            SDL_RenderDrawLine(r, x + 21, y + 21, x + 33, y + 33);
+            draw_border(r, x, y, 20, 20, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 16, y + 16, 12, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 18, y + 18, 10, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 20, y + 20, 8, 4, ir, ig, ib, ia);
         } else if (row == VIEW_HOME) {
-            SDL_SetRenderDrawColor(r, c, c, c, 255);
-            SDL_RenderDrawLine(r, x - 2, y + 12, x + 14, y - 1);
-            SDL_RenderDrawLine(r, x + 14, y - 1, x + 30, y + 12);
-            draw_border(r, x + 2, y + 12, 24, 20, 2, c, c, c, 255);
-            fill_rect(r, x + 11, y + 21, 7, 11, c, c, c, 255);
+            fill_rect(r, x - 2, y + 10, 16, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 12, y - 2, 6, 15, ir, ig, ib, ia);
+            fill_rect(r, x + 14, y + 10, 16, 3, ir, ig, ib, ia);
+            draw_border(r, x + 2, y + 10, 24, 18, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 11, y + 16, 7, 12, ir, ig, ib, ia);
         } else if (row == VIEW_GAMES) {
-            SDL_Point outline[] = {{x + 4, y + 5}, {x + 26, y + 5},
-                {x + 30, y + 10}, {x + 34, y + 29}, {x + 27, y + 30},
-                {x + 21, y + 23}, {x + 9, y + 23}, {x + 3, y + 30},
-                {x - 4, y + 29}, {x, y + 10}, {x + 4, y + 5}};
-            SDL_SetRenderDrawColor(r, c, c, c, 255);
-            SDL_RenderDrawLines(r, outline, sizeof(outline) / sizeof(outline[0]));
-            fill_rect(r, x + 4, y + 13, 10, 2, c, c, c, 255);
-            fill_rect(r, x + 8, y + 9, 2, 10, c, c, c, 255);
-            fill_rect(r, x + 22, y + 11, 3, 3, c, c, c, 255);
-            fill_rect(r, x + 26, y + 16, 3, 3, c, c, c, 255);
+            draw_border(r, x - 2, y + 4, 32, 20, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 3, y + 11, 8, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 5, y + 9, 3, 8, ir, ig, ib, ia);
+            fill_rect(r, x + 20, y + 8, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 25, y + 8, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 20, y + 14, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 25, y + 14, 3, 3, ir, ig, ib, ia);
         } else if (row == VIEW_EMULATORS) {
-            draw_border(r, x, y + 25, 32, 8, 2, c, c, c, 255);
-            fill_rect(r, x + 14, y + 11, 3, 14, c, c, c, 255);
-            draw_border(r, x + 10, y + 2, 11, 11, 2, c, c, c, 255);
+            draw_border(r, x, y, 28, 20, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 12, y + 8, 4, 18, ir, ig, ib, ia);
+            fill_rect(r, x + 10, y + 4, 8, 8, ir, ig, ib, ia);
+            fill_rect(r, x - 2, y + 22, 32, 4, ir, ig, ib, ia);
         } else if (row == VIEW_FILES) {
-            SDL_Point folder[] = {{x, y + 7}, {x + 12, y + 7},
-                {x + 17, y + 12}, {x + 32, y + 12}, {x + 32, y + 31},
-                {x, y + 31}, {x, y + 7}};
-            SDL_SetRenderDrawColor(r, c, c, c, 255);
-            SDL_RenderDrawLines(r, folder, sizeof(folder) / sizeof(folder[0]));
-            fill_rect(r, x + 2, y + 15, 28, 2, c, c, c, 255);
+            draw_border(r, x, y + 4, 28, 22, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y, 12, 6, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 12, 24, 3, ir, ig, ib, ia);
         } else if (row == VIEW_PAYLOADS) {
-            draw_border(r, x + 6, y + 6, 22, 22, 2, c, c, c, 255);
-            draw_border(r, x + 12, y + 12, 10, 10, 2, c, c, c, 255);
+            draw_border(r, x + 4, y + 4, 20, 20, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 10, y + 10, 8, 8, ir, ig, ib, ia);
             for (int pin = 0; pin < 3; pin++) {
-                int offset = 10 + pin * 6;
-                fill_rect(r, x + offset, y + 1, 2, 5, c, c, c, 255);
-                fill_rect(r, x + offset, y + 28, 2, 5, c, c, c, 255);
-                fill_rect(r, x + 1, y + offset, 5, 2, c, c, c, 255);
-                fill_rect(r, x + 28, y + offset, 5, 2, c, c, c, 255);
+                int off = 7 + pin * 6;
+                fill_rect(r, x + off, y, 3, 5, ir, ig, ib, ia);
+                fill_rect(r, x + off, y + 23, 3, 5, ir, ig, ib, ia);
+                fill_rect(r, x, y + off, 5, 3, ir, ig, ib, ia);
+                fill_rect(r, x + 23, y + off, 5, 3, ir, ig, ib, ia);
             }
         } else if (row == VIEW_DOWNLOADS) {
-            fill_rect(r, x + 13, y, 3, 22, c, c, c, 255);
-            SDL_SetRenderDrawColor(r, c, c, c, 255);
-            SDL_RenderDrawLine(r, x + 6, y + 15, x + 14, y + 23);
-            SDL_RenderDrawLine(r, x + 14, y + 23, x + 23, y + 15);
-            fill_rect(r, x, y + 29, 30, 2, c, c, c, 255);
+            fill_rect(r, x + 11, y, 6, 16, ir, ig, ib, ia);
+            for (int h = 0; h < 7; h++) fill_rect(r, x + 14 - h * 2, y + 15 + h, h * 4 + 1, 2, ir, ig, ib, ia);
+            fill_rect(r, x - 2, y + 24, 32, 4, ir, ig, ib, ia);
         } else if (row == VIEW_SETTINGS) {
-            for (int line = 0; line < 3; line++) {
-                fill_rect(r, x, y+line*12, 32, 2, c,c,c,255);
-                fill_rect(r, x+(line == 1 ? 20 : 7), y+line*12-3, 5, 8, c,c,c,255);
-            }
+            fill_rect(r, x, y + 2, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 12, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 22, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 6, y - 1, 6, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 18, y + 9, 6, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 10, y + 19, 6, 9, ir, ig, ib, ia);
         }
 
         /* Renderowanie podpisu zakładki (tekst obok ikony) */
@@ -2016,7 +2029,7 @@ static void render_sidebar(WolodriveApp *app) {
                 const char *label_text = sidebar_item_title(app, row);
                 if (label_text && label_text[0] != '\0') {
                     TTF_Font *font = app->font_small ? app->font_small : app->font_body;
-                    SDL_Color text_color = {c, c, c, 255};
+                    SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){220, 130, 135, 255};
                     UiTextEntry *entry = cached_text(app, font, label_text, text_color, 0);
                     if (entry && entry->texture) {
                         int text_x = 84;
