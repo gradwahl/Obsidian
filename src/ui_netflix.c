@@ -134,11 +134,8 @@ enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 272,
        HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
 static const SDL_Rect LANGUAGE_BUTTON = {0, 24, SIDEBAR_EXPANDED_W, 90};
 static const SDL_Rect LANGUAGE_MENU = {14, 122, SIDEBAR_EXPANDED_W - 28, LANG_COUNT * 44 + 16};
+static const char *action_label(WolodriveApp *app, GameItem *item);
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
-static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
-static const SDL_Rect HERO_PLAY_BUTTON = {CONTENT_X, 478, 206, 42};
-static const SDL_Rect HERO_INFO_BUTTON = {CONTENT_X + 222, 478, 236, 42};
-static const SDL_Rect HOME_SHOW_ALL_BUTTON = {SCREEN_WIDTH - 248, 524, 200, 34};
 static void get_hero_button_rects(WolodriveApp *app, GameItem *hero,
                                   SDL_Rect *play_rect, SDL_Rect *info_rect, SDL_Rect *toggle_rect) {
     int y = 478, h = 44;
@@ -1162,9 +1159,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         app->description_hovered = contains_point(DESCRIPTION_AREA, ev->motion.x, ev->motion.y);
     }
     if ((ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_i && !ev->key.repeat) ||
-        (ev->type == SDL_CONTROLLERBUTTONDOWN && ev->cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSTICK) ||
-        (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT &&
-         contains_point(DESCRIPTION_BUTTON, ev->button.x, ev->button.y))) {
+        (ev->type == SDL_CONTROLLERBUTTONDOWN && ev->cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSTICK)) {
         if (focused && focused->description_id == TEXT_COUNT) {
             app->show_original_description = !app->show_original_description;
             app->description_scroll = 0;
@@ -1729,7 +1724,7 @@ static void render_carousels(WolodriveApp *app) {
             fill_rect(r, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, SCREEN_HEIGHT, 10, 10, 14, 248);
             draw_text(app, app->font_row_title, home_category_title(app, app->home_cat_index),
                       CONTENT_X, TOPBAR_HEIGHT + 12, white, 900);
-            SDL_Rect back_btn = {HOME_SHOW_ALL_BUTTON.x - 40, TOPBAR_HEIGHT + 12, 260, 36};
+            SDL_Rect back_btn = {SCREEN_WIDTH - 288, TOPBAR_HEIGHT + 12, 240, 36};
             fill_rect(r, back_btn.x, back_btn.y, back_btn.w, back_btn.h, 36, 36, 46, 255);
             draw_border(r, back_btn.x, back_btn.y, back_btn.w, back_btn.h, 1, 229, 9, 20, 255);
             draw_fitted_text(app, app->font_small, TR(app, TXT_SHOW_LESS),
