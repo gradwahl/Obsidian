@@ -12,7 +12,7 @@ PS5_PAYLOAD_SDK ?= /opt/ps5-payload-sdk
 all: build-linux
 
 linux: build-linux
-	@echo "[WOLODRIVE] Uruchamianie Wolodrive 2.0 (Linux Mint x64 + Pegasus-DL)..."
+	@echo "[POLDRIVE] Uruchamianie Wolodrive 2.0 (Linux Mint x64 + Pegasus-DL)..."
 	./build/wolodrive
 
 preview: linux
@@ -27,7 +27,7 @@ build-linux: src/native_catalog_snapshot.h
 	    -o build/wolodrive \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` \
 	    -lm -lpthread
-	@echo "[WOLODRIVE] Zbudowano natywną binarkę Linux: build/wolodrive"
+	@echo "[POLDRIVE] Zbudowano natywną binarkę Linux: build/wolodrive"
 
 test-native-snapshot: src/native_catalog_snapshot.h
 	@mkdir -p build
@@ -78,10 +78,10 @@ test: src/native_catalog_snapshot.h
 build-windows:
 	@mkdir -p build assets/covers
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c 	    -o build/wolodrive.exe 	     	    -lm -lpthread
-	@echo "[WOLODRIVE] Zbudowano natywna binarke Windows: build/wolodrive.exe"
+	@echo "[POLDRIVE] Zbudowano natywna binarke Windows: build/wolodrive.exe"
 
 windows: build-windows
-	@echo "[WOLODRIVE] Uruchamianie Wolodrive 2.0 (Windows)..."
+	@echo "[POLDRIVE] Uruchamianie Wolodrive 2.0 (Windows)..."
 	./build/wolodrive.exe
 
 ps5: src/native_catalog_snapshot.h
@@ -90,22 +90,46 @@ ps5: src/native_catalog_snapshot.h
 	    echo "[BŁĄD] Nie znaleziono PS5_PAYLOAD_SDK w ${PS5_PAYLOAD_SDK}."; \
 	    exit 1; \
 	fi
-	clang --target=x86_64-scei-ps5 -D_GNU_SOURCE -O2 -Wall -D__PS5__ \
-	    -I"${PS5_PAYLOAD_SDK}/include" -I"${PS5_PAYLOAD_SDK}/include/SDL2" \
+	@"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --exists sdl2 SDL2_ttf SDL2_image libcurl
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -O2 -Wall -D__PS5__ \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags sdl2 SDL2_ttf SDL2_image libcurl` \
 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
-	    -L"${PS5_PAYLOAD_SDK}/lib" \
-	    -lSDL2 -lSDL2_ttf -lSDL2_image -lfreetype -lpng -ljpeg -lwebp -lcurl -lssl -lcrypto -lz -lpthread -lkernel -lm \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --libs --static sdl2 SDL2_ttf SDL2_image libcurl` \
+	    -lm \
 	    -o build/wolodrive.elf
-	@echo "[WOLODRIVE] Zbudowano payload PS5: build/wolodrive.elf"
+	@echo "[POLDRIVE] Zbudowano payload PS5: build/wolodrive.elf"
+
+# This additive target preserves the native PS5 build and the AI Studio output.
+.PHONY: ps5-web ps5-shortcut test-web-payload
+ps5-web:
+	npm run build:static
+	python3 scripts/embed_web_preview.py static-preview build/ps5_web_assets.h
+	python3 scripts/generate_ps5_shortcut_icon.py build/wolodrive-icon0.png build/ps5_shortcut_icon.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -Dmain=wolodrive_install_shortcut -O2 -Wall -Wextra -Ibuild \
+	    -c src/web_shortcut_installer.c -o build/wolodrive-shortcut.o
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -DWOLO_BUNDLED_SHORTCUT -O2 -Wall -Wextra \
+	    src/web_browser_helper.c build/wolodrive-shortcut.o -lSceIpmi -lSceAppInstUtil \
+	    -lSceSystemService -lSceUserService -o build/wolodrive-browser-helper.elf
+	python3 scripts/embed_browser_helper.py build/wolodrive-browser-helper.elf build/ps5_browser_helper.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -O2 -Wall -Wextra \
+	    -Ibuild src/web_payload.c -lpthread -o build/wolodrive-web.elf
+	cp build/wolodrive-web.elf build/Poldrive.elf
+
+ps5-shortcut: ps5-web
+
+test-web-payload:
+	python3 tests/test_web_payload.py
+	python3 tests/test_browser_helper.py
+	python3 tests/test_ps5_shortcut.py
 
 deploy:
 	@if [ ! -f "build/wolodrive.elf" ]; then \
 	    make ps5; \
 	fi
-	@echo "[WOLODRIVE] Wysyłanie build/wolodrive.elf do ${PS5_IP}:${PS5_PORT}..."
+	@echo "[POLDRIVE] Wysyłanie build/wolodrive.elf do ${PS5_IP}:${PS5_PORT}..."
 	nc -q 0 "${PS5_IP}" "${PS5_PORT}" < build/wolodrive.elf || \
 	socat -u FILE:build/wolodrive.elf TCP:"${PS5_IP}":"${PS5_PORT}"
-	@echo "[WOLODRIVE] Payload wysłany pomyślnie!"
+	@echo "[POLDRIVE] Payload wysłany pomyślnie!"
 
 deploy-ftp:
 	curl -T build/wolodrive.elf "ftp://${PS5_IP}:${PS5_FTP_PORT}/data/homebrew/wolodrive/wolodrive.elf" --ftp-create-dirs

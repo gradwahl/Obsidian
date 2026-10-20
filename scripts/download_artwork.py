@@ -1,4 +1,4 @@
-"""Download catalog card artwork into Wolodrive's existing URL-keyed disk cache."""
+"""Download catalog card artwork into Poldrive's existing URL-keyed disk cache."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.client import HTTPException
@@ -69,7 +69,7 @@ def fetch(url, limit):
     if urllib.parse.urlsplit(url).scheme not in ("http", "https"):
         raise ValueError("Only HTTP(S) URLs are supported")
     request_url = urllib.parse.quote(url, safe=":/?#[]@!$&'()*+,;=%")
-    request = urllib.request.Request(request_url, headers={"User-Agent": "Wolodrive-Artwork/1.0"})
+    request = urllib.request.Request(request_url, headers={"User-Agent": "Poldrive-Artwork/1.0"})
     with urllib.request.urlopen(request, timeout=12) as response:
         if urllib.parse.urlsplit(response.url).scheme not in ("http", "https"):
             raise ValueError("Unsupported redirect scheme")

@@ -1,6 +1,6 @@
 # Public source indexing audit — 2026-10-19
 
-Wolodrive indexes **metadata and public source-page links only**. An indexed
+Poldrive indexes **metadata and public source-page links only**. An indexed
 entry is not a guarantee that a game file can be downloaded, is legitimate, or
 can be installed. One title may have multiple platform or region records.
 
@@ -23,7 +23,7 @@ can be installed. One title may have multiple platform or region records.
 **Web full** indexes load as separate JS data chunks in the React static preview.
 The native Linux/PS5 app still uses the bounded initial snapshot of these
 sources. Its existing `MAX_CATALOG_ITEMS=26000` fixed `GameItem` array
-takes ~311 MB in `WolodriveApp` already. Loading tens of thousands more items
+takes ~311 MB in `PoldriveApp` already. Loading tens of thousands more items
 there requires a disk-backed/compact index or paged native search rather than
 raising the fixed limit without evaluating PS5 memory safety.
 

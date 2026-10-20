@@ -39,7 +39,7 @@ static char *http_get_string(const char *url) {
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_mem_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "PolDrive/2.0 (PS5-13.60; Pegasus-DL-Client)");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Poldrive/2.0 (PS5-13.60; Pegasus-DL-Client)");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 8L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);

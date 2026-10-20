@@ -1,10 +1,10 @@
-# Wolodrive
+# Poldrive
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
 ### Artwork matching and box-art cache
 
-Wolodrive's box-art enrichment uses three conservative stages: first-party
+Poldrive's box-art enrichment uses three conservative stages: first-party
 artwork URLs already present in the source, an exact **same-console and title**
 match from another source, and [Libretro Named_Boxarts](https://github.com/libretro-thumbnails/libretro-thumbnails)
 using exact or uniquely normalised filename matches. Unknown console
@@ -21,7 +21,7 @@ when a card is visible, and manual local art always wins.
 
 Supplied image URLs can fail even when they return HTTP 200: Axekin's image
 host currently returns an HTML bot challenge for the PS1 examples tested.
-Wolodrive prepares independent IGDB/Libretro fallbacks for supplied covers and
+Poldrive prepares independent IGDB/Libretro fallbacks for supplied covers and
 for matching rows that inherit those source URLs. Healthy supplied art retains
 its priority; a load/decode failure advances to the independent cover in cards,
 heroes and details, in both the web and native renderer. It does not attempt
@@ -227,7 +227,7 @@ it in the Twitch Developer Console before proceeding. Never add the new
 secret to Git, a tracked configuration, a screenshot, or a command-line
 argument.
 
-From Windows PowerShell (in the Wolodrive repository):
+From Windows PowerShell (in the Poldrive repository):
 
 ```powershell
 $env:IGDB_CLIENT_ID = Read-Host 'Twitch Client ID'
@@ -1012,7 +1012,7 @@ logical scaling when it is resized.
 On first launch, the app detects `LC_ALL`, `LC_MESSAGES`, then `LANG`. Unsupported
 locales default to English. A saved choice takes priority on subsequent launches.
 Linux stores the choice in SDL's user preference directory (normally
-`~/.local/share/Wolodrive/Wolodrive/language`); PS5 uses
+`~/.local/share/PolDrive/PolDrive/language`); PS5 uses
 `/data/homebrew/wolodrive/language`. If saving fails, the language still changes
 for the current session and a notification explains that it could not be saved.
 

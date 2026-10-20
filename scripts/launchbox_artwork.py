@@ -76,7 +76,7 @@ def fetch_archive(path, refresh=False):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".download.tmp")
     try:
-        with urlopen(Request(METADATA_URL, headers={"User-Agent": "Wolodrive-Artwork/1.0"}), timeout=60) as response:
+        with urlopen(Request(METADATA_URL, headers={"User-Agent": "Poldrive-Artwork/1.0"}), timeout=60) as response:
             with temporary.open("wb") as output:
                 total = 0
                 while chunk := response.read(1024 * 1024):

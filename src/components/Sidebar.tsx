@@ -131,10 +131,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Native PS5 wordmark: a red P on the collapsed rail, 'olDrive' revealed when expanded. */}
-          <div className="tv-brand-logo" aria-label="PolDrive">
+          {/* Native PS5 wordmark: a red P on the collapsed rail, 'oldrive' revealed when expanded. */}
+          <div className="tv-brand-logo" aria-label="Poldrive">
             <span className="tv-brand-mark" aria-hidden="true">P</span>
-            <span className="tv-brand-title" aria-hidden="true">olDrive</span>
+            <span className="tv-brand-title" aria-hidden="true">oldrive</span>
           </div>
 
           {/* Navigation list */}

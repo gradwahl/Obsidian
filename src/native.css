@@ -221,7 +221,7 @@
 .tv-settings input, .tv-settings button[role="checkbox"] { width: 24px; height: 24px; }
 @media (prefers-reduced-motion: reduce) { .tv-stage *, .tv-stage *::before, .tv-stage *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
-/* Ujednolicenie Web Preview z silnikiem C/SDL2 PolDrive */
+/* Ujednolicenie Web Preview z silnikiem C/SDL2 Poldrive */
 .tv-sidebar svg, .sidebar svg {
     color: #e50914 !important;
     stroke: #e50914 !important;

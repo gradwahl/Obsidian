@@ -625,7 +625,7 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
         SDL_SetTextureAlphaMod(texture, 255);
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
     } else {
-        /* Elegancki, stylowy Placeholder z logo PolDrive i gradientem bazowym */
+        /* Elegancki, stylowy Placeholder z logo Poldrive i gradientem bazowym */
         fill_vertical_gradient(r, x, y, w, h,
                                it->cover_r, it->cover_g, it->cover_b, alpha,
                                (uint8_t)(it->cover_r / 3), (uint8_t)(it->cover_g / 3), (uint8_t)(it->cover_b / 3), alpha,
@@ -642,7 +642,7 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
             int ph_y = y + h / 2 - (is_hero ? 28 : 22);
             SDL_Color ph_red = { 229, 9, 20, (Uint8)((210 * alpha) / 255) };
             int ph_pw = draw_text(app, ph_f, "P", x + 18, ph_y, ph_red, 0);
-            draw_text(app, ph_f, "olDrive", x + 18 + (ph_pw > 0 ? ph_pw + 1 : 14), ph_y, watermark_col, 0);
+            draw_text(app, ph_f, "oldrive", x + 18 + (ph_pw > 0 ? ph_pw + 1 : 14), ph_y, watermark_col, 0);
         }
 
         draw_text(app, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
@@ -1722,7 +1722,7 @@ static void render_hero_banner(WolodriveApp *app) {
 
     {
         int p_w = draw_text(app, app->font_logo, "P", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
-        draw_text(app, app->font_logo, "olDrive", CONTENT_X + (p_w > 0 ? p_w + 1 : 22), 100, white, 0);
+        draw_text(app, app->font_logo, "oldrive", CONTENT_X + (p_w > 0 ? p_w + 1 : 22), 100, white, 0);
     }
     /* Two title lines fit without displacing metadata or description. */
     SDL_Rect title_clip = {CONTENT_X, 142, 940, 136};
@@ -2007,7 +2007,7 @@ static void render_sidebar(WolodriveApp *app) {
         Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
         if (brand_alpha > 0) {
             TTF_Font *sub_font = app->font_row_title ? app->font_row_title : app->font_body;
-            draw_text(app, sub_font, "olDrive", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
+            draw_text(app, sub_font, "oldrive", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
         }
     }
 
@@ -2230,7 +2230,7 @@ static void render_top_bar(WolodriveApp *app) {
 
     {
         int fp_w = draw_text(app, app->font_small, "P", SCREEN_WIDTH - 135, 1039, red, 0);
-        draw_text(app, app->font_small, "olDrive", SCREEN_WIDTH - 135 + (fp_w > 0 ? fp_w + 1 : 14), 1039, white, 0);
+        draw_text(app, app->font_small, "oldrive", SCREEN_WIDTH - 135 + (fp_w > 0 ? fp_w + 1 : 14), 1039, white, 0);
     }
 }
 

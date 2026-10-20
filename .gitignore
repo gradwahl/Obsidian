@@ -12,3 +12,4 @@ assets/artwork/*
 !assets/artwork/igdb-covers.json
 .cache/wolodrive-artwork/
 assets/screenshots/
+/static-preview

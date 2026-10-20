@@ -81,7 +81,7 @@ def page(number):
     query = urlencode({"categories": CATEGORY, "per_page": 100, "page": number,
                        "_fields": "id,link,title,categories,content.rendered"})
     url = "https://dlpsgame.com/wp-json/wp/v2/posts?" + query
-    with urlopen(Request(url, headers={"User-Agent": "Wolodrive-Artwork/1.0"}), timeout=25) as response:
+    with urlopen(Request(url, headers={"User-Agent": "Poldrive-Artwork/1.0"}), timeout=25) as response:
         data = response.read(16 * 1024 * 1024 + 1)
         total, pages = int(response.headers["X-WP-Total"]), int(response.headers["X-WP-TotalPages"])
     if len(data) > 16 * 1024 * 1024 or not 1 <= pages <= 100 or not 1 <= total <= 10000:
