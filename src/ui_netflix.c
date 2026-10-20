@@ -537,65 +537,59 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
         SDL_RenderSetClipRect(r, &intersection);
 
         if (is_hero) {
+            /* 1. Szerokie rozciągnięcie pola grafiki (dstrect = 78% szerokości okna od 22% X) */
+            int dst_x = (int)(SCREEN_WIDTH * 0.22f);
+            int dst_y = 0;
+            int dst_w = SCREEN_WIDTH - dst_x;
+            int dst_h = (int)(SCREEN_HEIGHT * 0.62f);
+            if (dst_h < h) dst_h = h;
+            SDL_Rect dstrect = {dst_x, dst_y, dst_w, dst_h};
+
             float tex_aspect = (float)width / (float)height;
+            float dst_aspect = (float)dst_w / (float)dst_h;
 
-            fill_vertical_gradient(r, x, y, w, h,
-                                   color.r / 4, color.g / 4, color.b / 4, alpha,
-                                   10, 10, 14, alpha, 24);
-
-            int zone_x = x + (int)(w * 0.35f);
-            int zone_w = w - (int)(w * 0.35f);
-            int zone_h = h;
-
-            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-            SDL_SetTextureAlphaMod(texture, (Uint8)((240 * alpha) / 255));
-
-            if (tex_aspect >= 1.15f) {
-                float zone_aspect = (float)zone_w / (float)zone_h;
-                SDL_Rect srcrect;
-                if (tex_aspect > zone_aspect) {
-                    srcrect.h = height;
-                    srcrect.w = (int)lroundf((float)height * zone_aspect);
-                    srcrect.x = (width - srcrect.w) / 2;
-                    srcrect.y = 0;
-                } else {
-                    srcrect.w = width;
-                    srcrect.h = (int)lroundf((float)width / zone_aspect);
-                    srcrect.x = 0;
-                    srcrect.y = (height - srcrect.h) / 2;
-                }
-                SDL_Rect dstrect = {zone_x, y, zone_w, zone_h};
-                SDL_RenderCopy(r, texture, &srcrect, &dstrect);
+            /* 2. Wypełnienie całej szerokości dstrect z wycentrowaniem i 25% top bias */
+            SDL_Rect srcrect;
+            if (tex_aspect > dst_aspect) {
+                srcrect.h = height;
+                srcrect.w = (int)lroundf((float)height * dst_aspect);
+                srcrect.x = (width - srcrect.w) / 2;
+                srcrect.y = 0;
             } else {
-                int art_w = (int)lroundf((float)zone_h * tex_aspect);
-                if (art_w > zone_w) art_w = zone_w;
-                int art_x = zone_x + (zone_w - art_w);
-                SDL_Rect dstrect = {art_x, y, art_w, zone_h};
-                SDL_RenderCopy(r, texture, NULL, &dstrect);
+                srcrect.w = width;
+                srcrect.h = (int)lroundf((float)width / dst_aspect);
+                if (srcrect.h > height) srcrect.h = height;
+                srcrect.x = 0;
+                srcrect.y = (int)lroundf((float)(height - srcrect.h) * 0.25f);
             }
 
-            int fade_w = (zone_x - x) + 600;
-            if (fade_w > w) fade_w = w;
-            for (int gx = 0; gx < fade_w; gx++) {
+            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+            SDL_SetTextureAlphaMod(texture, (Uint8)((245 * alpha) / 255));
+            SDL_RenderCopy(r, texture, &srcrect, &dstrect);
+
+            /* Pełna czerń od lewej krawędzi ekranu do dst_x */
+            fill_rect(r, 0, 0, dst_x, dst_h, 0, 0, 0, (Uint8)alpha);
+
+            /* 3. Płynne zanikanie lewej krawędzi przez 55% szerokości dstrect (100% czerń -> 0%) */
+            int fade_w = (int)(dst_w * 0.55f);
+            for (int gx = 0; gx <= fade_w; gx++) {
                 float t = (float)gx / (float)fade_w;
                 float dark_factor = (1.0f - t) * (1.0f - t);
                 Uint8 dark_a = (Uint8)(255.0f * dark_factor * alpha / 255.0f);
-                if (dark_a > 0) fill_rect(r, x + gx, y, 1, h, 10, 10, 14, dark_a);
+                if (dark_a > 0) fill_rect(r, dst_x + gx, dst_y, 1, dst_h, 0, 0, 0, dark_a);
             }
 
-            fill_vertical_gradient(r, x, y + h - 160, w, 160,
-                                   10, 10, 14, 0,
-                                   10, 10, 14, (Uint8)alpha, 32);
+            /* 4. Płynne zanikanie dolnej krawędzi przez 35% wysokości dstrect w pętli 64-krokowej */
+            int fade_h = (int)(dst_h * 0.35f);
+            int fade_y = dst_y + dst_h - fade_h;
+            fill_vertical_gradient(r, 0, fade_y, SCREEN_WIDTH, fade_h,
+                                   0, 0, 0, 0,
+                                   0, 0, 0, (Uint8)alpha, 64);
 
-            fill_vertical_gradient(r, x, y, w, 80,
-                                   10, 10, 14, (Uint8)((140 * alpha) / 255),
-                                   10, 10, 14, 0, 16);
-
-            for (int gx = 0; gx < 80; gx++) {
-                float t = (float)gx / 80.0f;
-                Uint8 dark_a = (Uint8)((180.0f * t) * alpha / 255.0f);
-                if (dark_a > 0) fill_rect(r, x + w - 80 + gx, y, 1, h, 10, 10, 14, dark_a);
-            }
+            /* Top vignette for clean topbar blending */
+            fill_vertical_gradient(r, 0, 0, SCREEN_WIDTH, 80,
+                                   0, 0, 0, (Uint8)((160 * alpha) / 255),
+                                   0, 0, 0, 0, 24);
 
             SDL_SetTextureAlphaMod(texture, 255);
             SDL_RenderSetClipRect(r, clipped ? &previous : NULL);

@@ -55,9 +55,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         <div className="tv-hero-backdrop">
           <img
             key={`${game?.id_code}_${source}`}
-            className={`tv-hero-art tv-hero-crossfade ${
-              source === game?.backdrop_url ? 'tv-hero-landscape' : 'tv-hero-portrait'
-            }`}
+            className="tv-hero-art tv-hero-crossfade"
             src={source}
             alt=""
             onError={() => setFailedSources((values) => [...values, source])}
