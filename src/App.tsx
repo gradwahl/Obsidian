@@ -542,7 +542,14 @@ export function App() {
       )}
 
       {/* Bottom Telemetry & Status Bar */}
-      <SystemStatsBar stats={stats} syncStatus={syncStatus} />
+      <SystemStatsBar
+        stats={stats}
+        syncStatus={syncStatus}
+        language={language}
+        currentView={currentView}
+        onRefresh={handleSyncPegasus}
+        syncInProgress={syncInProgress}
+      />
     </div></NativeViewport>
   );
 }

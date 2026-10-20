@@ -7,7 +7,7 @@
 .tv-stage button:focus-visible, .tv-stage input:focus-visible { outline: 3px solid #f5f5f5; outline-offset: 3px; }
 .tv-app, .tv-shell { position: absolute; inset: 0; }
 .tv-shell { display: flex; }
-.tv-main { position: relative; width: 1828px; height: 1016px; overflow: hidden; display: flex; flex-direction: column; margin-left: 92px; }
+.tv-main { position: relative; width: 1828px; height: 1020px; overflow: hidden; display: flex; flex-direction: column; margin-left: 92px; }
 /* The PS5 SDL2 rail animates from 92px to 272px over the content instead of
    moving the content. Use state classes, not :hover CSS, so keyboard/gamepad
    focus and the always-expanded Settings view behave the same as native. */
@@ -45,16 +45,46 @@
 @media (prefers-reduced-motion: reduce) {
   .tv-sidebar, .tv-sidebar-dim, .tv-nav-label, .tv-brand-title { transition-duration: .01ms; }
 }
-.tv-home { position: relative; width: 100%; height: 1016px; flex: none; overflow: hidden; }
+.tv-home { position: relative; width: 100%; height: 1020px; flex: none; overflow: hidden; }
 .tv-hero { position: absolute; top: 0; left: 0; width: 100%; height: 670px; overflow: hidden; background: #000000; }
 .tv-hero-backdrop { position: absolute; top: 0; right: 0; width: 78%; height: 670px; pointer-events: none; overflow: hidden; }
 .tv-hero-art { position: absolute; top: 0; right: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; opacity: 0.94; transition: opacity 0.3s ease; }
 @keyframes tvHeroCrossfade { from { opacity: 0; transform: scale(1.01); } to { opacity: .94; transform: scale(1); } }
 .tv-hero-crossfade { animation: tvHeroCrossfade 0.38s ease-out; }
-.tv-hero-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #000000 0%, #000000 22%, rgba(0,0,0,0.85) 38%, rgba(0,0,0,0.3) 60%, transparent 100%), linear-gradient(to top, #000000 0%, rgba(0,0,0,0.8) 20%, transparent 50%), linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 80px); }
-.tv-wordmark { position: absolute; top: 96px; left: 38px; display: flex; align-items: center; gap: 14px; height: 44px; }
-.tv-wordmark strong { color: #e50914; font-size: 32px; font-weight: 700; }
-.tv-wordmark span { font-size: 16px; font-weight: 700; }
+.tv-hero-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, #000000 0%, #000000 22%, rgba(0, 0, 0, 0.96) 32%, rgba(0, 0, 0, 0.88) 42%, rgba(0, 0, 0, 0.62) 55%, rgba(0, 0, 0, 0.28) 70%, rgba(0, 0, 0, 0.06) 84%, transparent 100%),
+    linear-gradient(to top, #000000 0%, #000000 14%, rgba(0, 0, 0, 0.92) 24%, rgba(0, 0, 0, 0.55) 38%, transparent 58%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.2) 50px, transparent 100px);
+}
+.tv-wordmark {
+  position: absolute;
+  top: 96px;
+  left: 38px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  height: 44px;
+  user-select: none;
+}
+.tv-wordmark strong {
+  color: #e50914;
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+.tv-wordmark span {
+  color: #f5f5f5;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  margin-left: 1px;
+}
 .tv-hero h1 { position: absolute; top: 138px; left: 38px; width: 940px; height: 132px; overflow: hidden; font-size: 52px; line-height: 1.25; font-weight: 700; margin: 0; }
 .tv-hero-metadata { position: absolute; top: 272px; left: 38px; max-width: 1060px; height: 34px; color: #b9b9b9; font-size: 20px; font-weight: 700; white-space: nowrap; }
 .tv-hero-description { position: absolute; top: 314px; left: 38px; width: 720px; height: 134px; color: #b9b9b9; font-size: 24px; line-height: 1.35; overflow-y: auto; white-space: pre-wrap; }
@@ -93,18 +123,15 @@
 .tv-cover-image { position: relative; min-height: 0; flex: 1; overflow: hidden; }
 .tv-cover-image img { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: fill; object-position: center; }
 .tv-cover-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 16px; color: #ddd; }
-.tv-cover-placeholder strong { opacity: .45; font-size: 20px; }
+.tv-cover-placeholder strong { display: inline-flex; align-items: baseline; color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.tv-cover-placeholder strong::first-letter { color: #e50914; }
 .tv-cover-placeholder span { font-size: 16px; }
 .tv-card-title { display: block; flex: 0 0 28px; height: 28px; width: 100%; padding: 2px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 700; line-height: 24px; background: #121216; }
 .tv-card-footer { display: flex; justify-content: center; align-items: center; width: 100%; height: 40px; flex: 0 0 40px; padding: 0 8px; color: #aaa; font-size: 20px; line-height: 1; font-weight: 700; white-space: nowrap; overflow: hidden; }
 .tv-card-selected .tv-card-footer { background: #f0f0f0; color: #000; }
-.tv-home-position { position: absolute; top: 950px; left: 38px; display: flex; gap: 16px; align-items: center; height: 30px; color: #aaa; font-size: 16px; }
-.tv-home-position button { width: 32px; }
-.tv-home-hints { position: absolute; left: 38px; top: 984px; display: flex; align-items: center; gap: 38px; color: #aaa; font-size: 16px; font-weight: 700; }
-.tv-home-hints button { text-align: left; }
-.tv-home-logo { position: absolute; left: 1348px; top: 956px; color: #e50914; font-size: 32px; font-weight: 700; }
-.tv-status { position: absolute; left: 92px; right: 0; top: 1016px; height: 64px; padding: 16px 38px; background: #000; display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; color: #aaa; font-size: 16px; font-weight: 700; z-index: 20; }
-.tv-status span { max-width: 850px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-home-position { position: absolute; top: 956px; left: 38px; display: flex; gap: 16px; align-items: center; height: 30px; color: #a5a5af; font-size: 16px; font-weight: 600; }
+.tv-home-position button { width: 32px; background: transparent; border: 1px solid #333; color: #aaa; border-radius: 4px; }
+.tv-home-position button:hover { border-color: #e50914; color: #fff; }
 .tv-detail-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.86); }
 .tv-neighbors { position: absolute; top: 20px; left: 310px; display: flex; width: 1560px; height: 165px; }
 .tv-neighbor { width: 118px; height: 165px; flex: 0 0 118px; margin-left: 126px; margin-right: 146px; }
@@ -208,7 +235,11 @@
     font-size: 28px !important;
     text-shadow: 2px 2px 0px rgba(90, 0, 5, 0.85) !important;
 }
-.tv-footer, .bottom-bar, footer {
+.tv-footer, .bottom-bar, footer, .tv-status {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 1020px !important;
     height: 60px !important;
     min-height: 60px !important;
     max-height: 60px !important;
@@ -216,5 +247,91 @@
     border-top: 2px solid #e50914 !important;
     display: flex !important;
     align-items: center !important;
-    padding: 0 24px 0 130px !important;
+    justify-content: space-between !important;
+    padding: 0 48px 0 130px !important;
+    color: #a5a5af !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    z-index: 30 !important;
+    box-sizing: border-box !important;
+}
+
+.tv-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+    flex: 1;
+}
+
+.tv-footer-keybinds {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.tv-footer-hint {
+    white-space: nowrap;
+    color: #a5a5af;
+    font-size: 14px;
+}
+
+.tv-footer-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+.tv-footer-btn:hover {
+    color: #f5f5f5;
+}
+
+.tv-footer-sync {
+    color: #d2d2d7;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 520px;
+}
+
+.tv-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    flex-shrink: 0;
+}
+
+.tv-footer-telemetry {
+    color: #a5a5af;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.tv-footer-logo {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+    user-select: none;
+    line-height: 1;
+}
+
+.tv-footer-logo strong {
+    color: #e50914;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.5px;
+}
+
+.tv-footer-logo span {
+    color: #f5f5f5;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    margin-left: 1px;
 }
