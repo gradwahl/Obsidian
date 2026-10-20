@@ -112,6 +112,60 @@ class IGDBTests(unittest.TestCase):
         self.assertEqual(igdb.select_match("sony-ps4", "Phasmophobia PS5", [row], 48)
                          ["status"], "not-found")
 
+    def test_packaging_suffixes_only_on_their_console(self):
+        samples = [
+            ("nintendo-3ds", "Rhythm Thief & the Emperor's Treasure [Decrypted] 3DS (EUR/USA) ROM",
+             "Rhythm Thief & the Emperor's Treasure"),
+            ("nintendo-3ds", "Paper Mario: Sticker Star Decrypted 3DS (USA) ROM",
+             "Paper Mario: Sticker Star"),
+            ("nintendo-3ds", "Super Mario 3D Land 3DS Legit CIA (USA)", "Super Mario 3D Land"),
+            ("nintendo-3ds", "League of Heroes 3DS CIA & Decrypted (EUR/USA) ROM eShop",
+             "League of Heroes"),
+            ("nintendo-3ds", "BlockForm 3DS (USA) CIA (NEW3DS ONLY)", "BlockForm"),
+            ("nintendo-3ds", "Shakedown: Hawaii 3DS (EUR/USA) CIA (Updated)", "Shakedown: Hawaii"),
+            ("nintendo-wiiu", "PixelMaker WII U ISO (Loadiine) (UPDATE v16) (USA)", "PixelMaker"),
+            ("nintendo-wiiu", "How to Train Your Dragon 2 for WII U ISO (Loadiine) (EUR)",
+             "How to Train Your Dragon 2"),
+            ("sony-psp", "After Burner: Black Falcon (ULES-00753)", "After Burner: Black Falcon"),
+            ("sony-ps3", "Need For Speed SHIFT(BLAS-50137)", "Need For Speed SHIFT"),
+        ]
+        for platform, raw, clean in samples:
+            with self.subTest(title=raw):
+                self.assertEqual(igdb.search_title(platform, raw), clean)
+                other = "sony-ps5" if platform != "sony-ps5" else "sony-ps4"
+                self.assertNotEqual(igdb.search_title(other, raw), clean)
+
+    def test_distribution_cleanup_preserves_game_variants(self):
+        samples = [
+            ("nintendo-3ds", "Example (UNDUB) 3DS (EUR) CIA", "Example (UNDUB)"),
+            ("nintendo-3ds", "Example Deluxe Edition 3DS (USA) CIA", "Example Deluxe Edition"),
+            ("nintendo-3ds", "Example: Update v1.1 3DS (USA) CIA", "Example: Update v1.1"),
+            ("nintendo-3ds", "Example (English) 3DS (USA) CIA", "Example (English)"),
+            ("nintendo-3ds", "Example 3DS (USA) CIA [DLC]", None),
+            ("nintendo-3ds", "Example 3DS ROM Randomizer", None),
+            ("nintendo-wiiu", "Example WII U ISO (Loadiine) (DLCs)", None),
+            ("nintendo-switch", "Example Switch NSP [DLC/Update] (eShop)", None),
+            ("sony-psp", "Example (BLAS-50137)", None),
+        ]
+        base = {"id": 1, "name": "Example", "platforms": [48], "cover": {"image_id": "co12345"}}
+        for platform, raw, clean in samples:
+            with self.subTest(title=raw):
+                if clean:
+                    self.assertEqual(igdb.search_title(platform, raw), clean)
+                self.assertNotEqual(igdb.search_title(platform, raw), "Example")
+                self.assertEqual(igdb.select_match(platform, raw, [base], 48)["status"], "not-found")
+
+    def test_trailing_article_keeps_subtitles_and_ambiguity(self):
+        self.assertEqual(igdb.match_name("Addams Family, The"), igdb.match_name("The Addams Family"))
+        self.assertEqual(igdb.match_name("Addams Family, The: Pugsley's Scavenger Hunt"),
+                         igdb.match_name("The Addams Family: Pugsley's Scavenger Hunt"))
+        self.assertNotEqual(igdb.match_name("The Addams Family"), igdb.match_name("Addams Family"))
+        a = {"id": 1, "name": "The Example", "platforms": [48], "cover": {"image_id": "co12345"}}
+        b = {**a, "id": 2, "name": "Example, The", "cover": {"image_id": "co54321"}}
+        self.assertEqual(igdb.select_match("sony-ps4", "Example, The", [a], 48)["status"], "matched")
+        self.assertEqual(igdb.select_match("sony-ps4", "Example, The", [a, b], 48)["status"], "review")
+        self.assertEqual(igdb.select_match("sony-ps4", "Example, The", [a], 167)["status"], "not-found")
+
     def test_old_failed_lookups_retry_cleaned_name_only_once(self):
         cache = {"schemaVersion": 1, "results": {
             "sony-ps5|phasmophobiaps5": {"status": "not-found"},

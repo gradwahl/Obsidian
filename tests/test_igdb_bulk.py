@@ -136,6 +136,16 @@ class BulkTests(unittest.TestCase):
         self.assertEqual(set(json.loads(igdb.CACHE.read_text())["results"]),
                          {"sony-ps4|found"})
 
+    def test_bulk_indexes_articles_and_cleaned_distribution_suffixes(self):
+        client = Mock()
+        client.catalogue_page.return_value = [
+            game(1, "The Example", platform=37), game(2, "Another Game", platform=37)]
+        names = {"nintendo-3ds|example": ("nintendo-3ds", "Example, The 3DS (USA) CIA"),
+                 "nintendo-3ds|another": ("nintendo-3ds", "Another Game Decrypted 3DS (EUR) ROM")}
+        cache = {"schemaVersion": 1, "results": {}}
+        self.assertEqual(igdb.scan_bulk(client, names, cache, {"nintendo-3ds": 37})["matched"], 2)
+        self.assertEqual(len(json.loads(igdb.EXPORT.read_text())["matches"]), 2)
+
     def test_bulk_dry_run_needs_no_credentials_or_client(self):
         with (patch.object(igdb, "load_records", return_value=[]),
               patch.object(igdb, "ROOT", self.root),

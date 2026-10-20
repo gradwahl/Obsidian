@@ -3,68 +3,69 @@
 These counts describe metadata matches, not downloaded or verified images.
 Ambiguous edition/region covers are withheld for manual review.
 
-**Entries:** 85,608 | **direct art:** 20,393 | **matched:** 19,274 | **review:** 1,170 | **missing:** 44,771
+**Entries:** 85,608 | **direct art:** 20,393 | **matched:** 40,923 | **review:** 1,170 | **missing:** 23,122
 
-Native artwork overrides: 100
+Native artwork overrides: 270
 
 ## Sources
 
 | Source | Direct | Matched | Review | Missing | Coverage |
 |---|---:|---:|---:|---:|---:|
-| Archive.org / AlvRo | 0 | 34 | 0 | 29 | 54.0% |
-| Archive.org / maelly_pooh | 0 | 0 | 0 | 131 | 0.0% |
-| Axekin | 19,564 | 55 | 23 | 431 | 97.7% |
+| Archive.org / AlvRo | 0 | 39 | 0 | 24 | 61.9% |
+| Archive.org / maelly_pooh | 0 | 90 | 0 | 41 | 68.7% |
+| Axekin | 19,564 | 171 | 23 | 315 | 98.3% |
 | CDRomance | 0 | 1 | 0 | 24 | 4.0% |
-| DownloadGamePSP | 0 | 557 | 10 | 1,405 | 28.2% |
+| DownloadGamePSP | 0 | 1,331 | 10 | 631 | 67.5% |
 | GFS Catalog | 685 | 0 | 0 | 0 | 100.0% |
-| NoPayStation | 0 | 3,832 | 159 | 7,941 | 32.1% |
-| PKGPS4 | 0 | 0 | 0 | 64 | 0.0% |
-| PSN-Content | 0 | 1,710 | 0 | 3,749 | 31.3% |
+| NoPayStation | 0 | 5,088 | 159 | 6,685 | 42.6% |
+| PKGPS4 | 0 | 51 | 0 | 13 | 79.7% |
+| PSN-Content | 0 | 2,274 | 0 | 3,185 | 41.7% |
 | ROMsHQ | 0 | 0 | 0 | 5 | 0.0% |
 | RomHeaven | 141 | 0 | 0 | 0 | 100.0% |
-| RomsTime | 0 | 13,037 | 975 | 10,085 | 54.1% |
-| SuperPSX | 0 | 4 | 0 | 3,888 | 0.1% |
-| Vimm's Lair | 0 | 44 | 3 | 15 | 71.0% |
+| RomsTime | 0 | 16,813 | 975 | 6,309 | 69.8% |
+| SuperPSX | 0 | 3,255 | 0 | 637 | 83.6% |
+| Vimm's Lair | 0 | 47 | 3 | 12 | 75.8% |
 | WowRoms | 3 | 0 | 0 | 0 | 100.0% |
-| Ziperto | 0 | 0 | 0 | 17,004 | 0.0% |
+| Ziperto | 0 | 11,763 | 0 | 5,241 | 69.2% |
 
 ## Consoles
 
 | Console | Direct | Matched | Review | Missing | Coverage |
 |---|---:|---:|---:|---:|---:|
-| atari-2600 | 566 | 201 | 0 | 2 | 99.7% |
+| atari-2600 | 566 | 203 | 0 | 0 | 100.0% |
 | atari-5200 | 97 | 0 | 0 | 0 | 100.0% |
 | atari-7800 | 44 | 0 | 0 | 1 | 97.8% |
-| microsoft-xbox | 934 | 3 | 1 | 4 | 99.5% |
-| microsoft-xbox360 | 1,133 | 9 | 0 | 61 | 94.9% |
-| nintendo-3ds | 493 | 872 | 31 | 3,370 | 28.6% |
-| nintendo-ds | 2,008 | 2,624 | 129 | 1,328 | 76.1% |
-| nintendo-gb | 529 | 704 | 25 | 369 | 75.8% |
-| nintendo-gba | 888 | 1,230 | 73 | 1,165 | 63.1% |
-| nintendo-gbc | 316 | 464 | 19 | 596 | 55.9% |
-| nintendo-gc | 537 | 596 | 34 | 181 | 84.1% |
-| nintendo-n64 | 245 | 347 | 21 | 466 | 54.9% |
-| nintendo-nes | 1,012 | 1,406 | 108 | 1,280 | 63.5% |
+| microsoft-xbox | 934 | 5 | 1 | 2 | 99.7% |
+| microsoft-xbox360 | 1,133 | 23 | 0 | 47 | 96.1% |
+| nintendo-3ds | 493 | 2,454 | 31 | 1,788 | 61.8% |
+| nintendo-ds | 2,008 | 2,872 | 129 | 1,080 | 80.1% |
+| nintendo-gb | 529 | 890 | 25 | 183 | 87.2% |
+| nintendo-gba | 888 | 1,537 | 73 | 858 | 72.3% |
+| nintendo-gbc | 316 | 787 | 19 | 273 | 79.1% |
+| nintendo-gc | 537 | 642 | 34 | 135 | 87.5% |
+| nintendo-n64 | 245 | 529 | 21 | 284 | 71.7% |
+| nintendo-nes | 1,012 | 1,627 | 108 | 1,059 | 69.3% |
 | nintendo-pokemini | 11 | 0 | 0 | 0 | 100.0% |
-| nintendo-snes | 574 | 1,294 | 235 | 814 | 64.0% |
-| nintendo-switch | 1,328 | 0 | 0 | 13,969 | 8.7% |
-| nintendo-wii | 1,227 | 1,330 | 52 | 963 | 71.6% |
-| nintendo-wiiu | 650 | 2 | 0 | 385 | 62.9% |
+| nintendo-snes | 574 | 1,564 | 235 | 544 | 73.3% |
+| nintendo-switch | 1,328 | 10,283 | 0 | 3,686 | 75.9% |
+| nintendo-wii | 1,227 | 1,791 | 52 | 502 | 84.5% |
+| nintendo-wiiu | 650 | 285 | 0 | 102 | 90.2% |
 | sega-32x | 4 | 0 | 0 | 0 | 100.0% |
 | sega-cd | 122 | 0 | 0 | 1 | 99.2% |
-| sega-dreamcast | 163 | 316 | 77 | 106 | 72.4% |
+| sega-dreamcast | 163 | 366 | 77 | 56 | 79.9% |
 | sega-gamegear | 87 | 0 | 0 | 0 | 100.0% |
-| sega-megadrive | 438 | 785 | 67 | 429 | 71.1% |
-| sega-saturn | 225 | 1 | 0 | 25 | 90.0% |
-| sony-ps1 | 1,371 | 1,169 | 259 | 760 | 71.4% |
-| sony-ps2 | 1,907 | 51 | 8 | 59 | 96.7% |
-| sony-ps3 | 1,103 | 3,828 | 3 | 9,916 | 33.2% |
-| sony-ps4 | 233 | 3 | 0 | 2,763 | 7.9% |
-| sony-ps5 | 1,654 | 1 | 0 | 863 | 65.7% |
-| sony-psp | 494 | 2,038 | 28 | 4,895 | 34.0% |
+| sega-megadrive | 438 | 988 | 67 | 226 | 83.0% |
+| sega-saturn | 225 | 4 | 0 | 22 | 91.2% |
+| sony-ps1 | 1,371 | 1,322 | 259 | 607 | 75.7% |
+| sony-ps2 | 1,907 | 62 | 8 | 48 | 97.2% |
+| sony-ps3 | 1,103 | 5,714 | 3 | 8,030 | 45.9% |
+| sony-ps4 | 233 | 2,275 | 0 | 491 | 83.6% |
+| sony-ps5 | 1,654 | 771 | 0 | 93 | 96.3% |
+| sony-psp | 494 | 3,929 | 28 | 3,004 | 59.3% |
 
 ## Providers
 
+- igdb-exact-platform-title: 21,649
 - libretro-exact: 40
 - libretro-unique: 5,584
 - same-console-title: 13,650

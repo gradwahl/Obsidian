@@ -83,6 +83,32 @@ CONSOLE_SUFFIX = {
     "nintendo-3ds": re.compile(r"\s+(?:3DS CIA|3DS)$", re.I),
 }
 
+# Match whole distribution suffixes only, on their actual console. Unknown
+# tokens (DLC, UNDUB, translations, hacks, editions) prevent removal.
+REGION_GROUP = r"\((?:USA|EUR|EU|JPN|JP)(?:/(?:USA|EUR|EU|JPN|JP))*\)"
+PACKAGING_SUFFIX = {
+    "nintendo-3ds": re.compile(
+        r"\s+(?:(?:\[Decrypted\]|Decrypted)\s+)?3DS\s+"
+        r"(?:(?:CIA|ROM|Legit|Decrypted|\[Decrypted\]|&|eShop|\(eShop\)|"
+        r"Region Free|\(Region Free\)|\[RF\]|\(NEW3DS ONLY\)|\(Updated\)|" +
+        REGION_GROUP + r")\s*)+$", re.I),
+    "nintendo-wiiu": re.compile(
+        r"\s+(?:for\s+)?WII\s+U\s+ISO\s*"
+        r"(?:(?:\(Loadiine\)|\(UPDATE(?:\s+v\d+)?\)|" +
+        REGION_GROUP + r")\s*)*$", re.I),
+}
+PRODUCT_SUFFIX = {
+    "sony-psp": re.compile(r"\s*\((?:ULUS|ULES|ULJM|ULJS|UCUS|UCES|UCJS|NPJH|NPUH|NPEH)-?\d{5}\)$", re.I),
+    "sony-ps3": re.compile(r"\s*\((?:BLUS|BLES|BLAS|BLJM|BCUS|BCES|BCAS|BCJS|NPUB|NPEB|NPJB)-?\d{5}\)$", re.I),
+}
+
+
+def match_name(title):
+    """Canonicalise a trailing English article without dropping title words."""
+    title = re.sub(r"^(.+?),\s*(The|An|A)(?=:|$)(.*)$", r"\2 \1\3",
+                   str(title or "").strip(), flags=re.I)
+    return normalize(title)
+
 
 def search_title(platform, title):
     """Drop only known trailing source metadata; preserve game identity."""
@@ -94,6 +120,12 @@ def search_title(platform, title):
     # Do not strip DLC labels or editions; DLC needs manual identification.
     for _ in range(12):
         previous = value
+        packaging = PACKAGING_SUFFIX.get(platform)
+        if packaging:
+            value = packaging.sub("", value)
+        product = PRODUCT_SUFFIX.get(platform)
+        if product:
+            value = product.sub("", value)
         value = re.sub(r"\s*\((?:eShop|update)\)\s*$", "", value, flags=re.I)
         value = re.sub(r"\s*\[(?:Update|eShop)\]\s*$", "", value, flags=re.I)
         value = PATCH_VERSION.sub("", value)
@@ -154,10 +186,10 @@ def select_match(platform, title, candidates, platform_id):
     """Require unambiguous exact cleaned name, same IGDB platform, cover."""
     if not platform_id:
         return {"status": "skipped-platform"}
-    expected = normalize(search_title(platform, title))
+    expected = match_name(search_title(platform, title))
     candidates_with_cover = []
     for game in candidates:
-        if not isinstance(game, dict) or normalize(game.get("name")) != expected:
+        if not isinstance(game, dict) or match_name(game.get("name")) != expected:
             continue
         if platform_id not in (game.get("platforms") or []):
             continue
@@ -377,14 +409,14 @@ def scan_bulk(client, names, cache, console_ids, *, refresh=False, progress=None
             if progress else None))
         index = {}
         for row in rows:
-            index.setdefault(normalize(row["name"]), []).append(row)
+            index.setdefault(match_name(row["name"]), []).append(row)
         statuses = Counter()
         for key, title in targets:
             clean = search_title(platform, title)
             if len(clean) < 3 or re.search(r"\[(?:DLC|Addon|Add-on)\]", clean, re.I):
                 statuses["skipped-metadata"] += 1
                 continue
-            result = select_match(platform, clean, index.get(normalize(clean), []), pid)
+            result = select_match(platform, clean, index.get(match_name(clean), []), pid)
             statuses[result["status"]] += 1
             if result["status"] == "matched":
                 entries[key] = {**result, "searchedTitle": clean}

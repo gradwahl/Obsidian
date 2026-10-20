@@ -151,8 +151,19 @@ remove **only trailing source distribution metadata**: `PS4`/`PS5` suffixes
 for the matching console, region/language tags (such as `[EU] [EN]`),
 bracketed update versions (such as `[1.05]`), and eShop/update markers.
 Sequels, subtitles, `Deluxe Edition` and `Console Edition` remain part of
-the actual game name. Exact cleaned-title AND matching-console checks are
+the actual game name. The importer also recognises complete 3DS distribution
+suffixes such as `Decrypted 3DS (EUR/USA) ROM` and `3DS (USA) CIA (eShop)`,
+Wii U suffixes such as `WII U ISO (Loadiine) (UPDATE v16) (USA)`, and
+parenthesised PSP/PS3 product IDs for the matching console. Unknown packaging
+tokens, DLC labels, translations, UNDUBs and modified-game names remain distinct.
+Trailing English articles are reordered for comparison (`Addams Family, The`
+matches `The Addams Family`); articles, subtitles and edition words are retained,
+and conflicting cover images still require review. Original export keys stay
+unchanged. Exact cleaned-title AND matching-console checks are
 still mandatory before any cover is accepted.
+
+The [remaining-artwork audit](docs/artwork_matching_audit.md) records the latest
+offline matching improvements, coverage gains and unresolved source/provider gaps.
 
 **If you already completed a batch before this title-cleanup improvement**,
 rerun the *same* command. Previously cached `not-found` and `review` entries
