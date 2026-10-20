@@ -14,6 +14,14 @@ static const char *FONT_CANDIDATES_BOLD[] = {
     "/data/homebrew/wolodrive/assets/font_bold.ttf",
     "/data/homebrew/wolodrive/assets/font_cjk.ttc",
     "/data/homebrew/wolodrive/assets/font.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
     "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
     "/system/common/font/SST-Bold.otf",
     "/system/common/font/SST-Japanese-Bold.otf",
@@ -28,13 +36,6 @@ static const char *FONT_CANDIDATES_BOLD[] = {
     "/mnt/c/Windows/Fonts/arialbd.ttf",
     "/mnt/c/Windows/Fonts/msyhbd.ttc",
     "/mnt/c/Windows/Fonts/msyh.ttc",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-    "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
-    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
     NULL
 };
 
@@ -45,6 +46,14 @@ static const char *FONT_CANDIDATES_REGULAR[] = {
     "/data/homebrew/wolodrive/assets/font.ttf",
     "/data/homebrew/wolodrive/assets/font_cjk.ttc",
     "/data/homebrew/wolodrive/assets/font_bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
     "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
     "/system/common/font/SST-Medium.otf",
     "/system/common/font/SST-Japanese-Medium.otf",
@@ -57,13 +66,6 @@ static const char *FONT_CANDIDATES_REGULAR[] = {
     "/mnt/c/Windows/Fonts/segoeui.ttf",
     "/mnt/c/Windows/Fonts/arial.ttf",
     "/mnt/c/Windows/Fonts/msyh.ttc",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/TTF/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
-    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
     NULL
 };
 
@@ -134,9 +136,69 @@ static const SDL_Rect LANGUAGE_BUTTON = {0, 24, SIDEBAR_EXPANDED_W, 90};
 static const SDL_Rect LANGUAGE_MENU = {14, 122, SIDEBAR_EXPANDED_W - 28, LANG_COUNT * 44 + 16};
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static const SDL_Rect DESCRIPTION_BUTTON = {CONTENT_X, 478, 330, 42};
-static const SDL_Rect HERO_PLAY_BUTTON = {CONTENT_X + 344, 478, 206, 42};
-static const SDL_Rect HERO_INFO_BUTTON = {CONTENT_X + 562, 478, 236, 42};
-static const SDL_Rect HOME_SHOW_ALL_BUTTON = {CONTENT_X, 524, 560, 44};
+static const SDL_Rect HERO_PLAY_BUTTON = {CONTENT_X, 478, 206, 42};
+static const SDL_Rect HERO_INFO_BUTTON = {CONTENT_X + 222, 478, 236, 42};
+static const SDL_Rect HOME_SHOW_ALL_BUTTON = {SCREEN_WIDTH - 248, 524, 200, 34};
+static void get_hero_button_rects(WolodriveApp *app, GameItem *hero,
+                                  SDL_Rect *play_rect, SDL_Rect *info_rect, SDL_Rect *toggle_rect) {
+    int y = 478, h = 44;
+    int current_x = CONTENT_X;
+    TTF_Font *font = app->font_small ? app->font_small : app->font_body;
+
+    char play_label[128] = {0};
+    if (hero) snprintf(play_label, sizeof(play_label), "▶  %s", action_label(app, hero));
+    int play_w = 210;
+    if (font && play_label[0]) {
+        int tw = 0, th = 0;
+        TTF_SizeUTF8(font, play_label, &tw, &th);
+        if (tw > 0) play_w = tw + 36;
+    }
+    if (play_w < 160) play_w = 160;
+    if (play_rect) *play_rect = (SDL_Rect){current_x, y, play_w, h};
+    current_x += play_w + 16;
+
+    char info_label[128] = {0};
+    if (hero) snprintf(info_label, sizeof(info_label), "ℹ  %s", TR(app, TXT_MORE_INFO));
+    int info_w = 230;
+    if (font && info_label[0]) {
+        int tw = 0, th = 0;
+        TTF_SizeUTF8(font, info_label, &tw, &th);
+        if (tw > 0) info_w = tw + 36;
+    }
+    if (info_w < 180) info_w = 180;
+    if (info_rect) *info_rect = (SDL_Rect){current_x, y, info_w, h};
+    current_x += info_w + 16;
+
+    if (toggle_rect) {
+        if (hero && hero->description_id == TEXT_COUNT) {
+            TextId label_id = app->show_original_description ? TXT_TRANSLATED_DESCRIPTION : TXT_ORIGINAL_DESCRIPTION;
+            const char *label_str = TR(app, label_id);
+            int toggle_w = 240;
+            if (font && label_str && label_str[0]) {
+                int tw = 0, th = 0;
+                TTF_SizeUTF8(font, label_str, &tw, &th);
+                if (tw > 0) toggle_w = tw + 32;
+            }
+            *toggle_rect = (SDL_Rect){current_x, y, toggle_w, h};
+        } else {
+            *toggle_rect = (SDL_Rect){0, 0, 0, 0};
+        }
+    }
+}
+
+static SDL_Rect get_show_all_button_rect(WolodriveApp *app, int header_y) {
+    char show_all_label[96];
+    snprintf(show_all_label, sizeof(show_all_label), "%s ›", TR(app, TXT_SHOW_ALL));
+    int show_all_w = 200;
+    if (app->font_micro) {
+        int tw = 0, th = 0;
+        TTF_SizeUTF8(app->font_micro, show_all_label, &tw, &th);
+        if (tw > 0) show_all_w = tw + 32;
+    }
+    int show_all_x = SCREEN_WIDTH - 48 - show_all_w;
+    return (SDL_Rect){show_all_x, header_y, show_all_w, 34};
+}
+
 enum { LIBRARY_COLUMNS = 4, LIBRARY_PAGE_SIZE = 8, LIBRARY_TILE = 320,
        LIBRARY_GAP = 30, LIBRARY_GRID_Y = 220 };
 static const SDL_Rect LIBRARY_BACK_BUTTON = {CONTENT_X, 24, 180, 50};
@@ -994,20 +1056,29 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_search_input(app, ev)) return;
     if (handle_library_input(app, ev)) return;
 
-    /* Przyciski akcji w sekcji Hero ([Play/Pobierz] oraz [Więcej informacji]) */
+    /* Przyciski akcji w sekcji Hero ([Play/Pobierz], [Więcej informacji], [Przełącznik opisu]) */
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT &&
         app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS &&
         !app->home_grid_expanded) {
         GameItem *hero_item = get_focused_item(app);
-        if (hero_item && contains_point(HERO_PLAY_BUTTON, ev->button.x, ev->button.y)) {
-            app->sidebar_focus = false;
-            sys_trigger_action(app, hero_item);
-            return;
-        }
-        if (hero_item && contains_point(HERO_INFO_BUTTON, ev->button.x, ev->button.y)) {
-            app->sidebar_focus = false;
-            ui_open_game(app, hero_item);
-            return;
+        if (hero_item) {
+            SDL_Rect play_b, info_b, toggle_b;
+            get_hero_button_rects(app, hero_item, &play_b, &info_b, &toggle_b);
+            if (contains_point(play_b, ev->button.x, ev->button.y)) {
+                app->sidebar_focus = false;
+                sys_trigger_action(app, hero_item);
+                return;
+            }
+            if (contains_point(info_b, ev->button.x, ev->button.y)) {
+                app->sidebar_focus = false;
+                ui_open_game(app, hero_item);
+                return;
+            }
+            if (toggle_b.w > 0 && contains_point(toggle_b, ev->button.x, ev->button.y)) {
+                app->show_original_description = !app->show_original_description;
+                app->description_scroll = 0;
+                return;
+            }
         }
     }
 
@@ -1040,9 +1111,8 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
             int row_y = CARDS_Y + cat * HOME_ROW_STRIDE - (int)app->home_vertical_scroll;
             int header_y = row_y - 44;
             if (header_y < HERO_HEIGHT - 40 || header_y > SCREEN_HEIGHT) continue;
-            SDL_Rect title_hit = {CONTENT_X, header_y, 560, 38};
-            SDL_Rect show_all_hit = {HOME_SHOW_ALL_BUTTON.x, header_y + 2,
-                                     HOME_SHOW_ALL_BUTTON.w, HOME_SHOW_ALL_BUTTON.h};
+            SDL_Rect title_hit = {CONTENT_X, header_y, 350, 38};
+            SDL_Rect show_all_hit = get_show_all_button_rect(app, header_y);
             if (contains_point(title_hit, mx, my) || contains_point(show_all_hit, mx, my)) {
                 app->sidebar_focus = false;
                 app->home_cat_index = cat;
@@ -1557,34 +1627,35 @@ static void render_hero_banner(WolodriveApp *app) {
         }
     }
 
-    /* Nowoczesne przyciski akcji w stylu Netflix Smart TV: [Play/Pobierz] oraz [Więcej informacji] */
-    fill_rect(r, HERO_PLAY_BUTTON.x, HERO_PLAY_BUTTON.y, HERO_PLAY_BUTTON.w, HERO_PLAY_BUTTON.h,
-              229, 9, 20, 255);
-    draw_border(r, HERO_PLAY_BUTTON.x, HERO_PLAY_BUTTON.y, HERO_PLAY_BUTTON.w, HERO_PLAY_BUTTON.h,
-                2, 255, 255, 255, 220);
+    /* Dynamiczne przyciski akcji w stylu Netflix Smart TV wyrównane do marginesu CONTENT_X */
+    SDL_Rect play_rect, info_rect, toggle_rect;
+    get_hero_button_rects(app, hero, &play_rect, &info_rect, &toggle_rect);
+
+    /* Przycisk 1: Play / Pobierz / Zainstaluj */
+    fill_rect(r, play_rect.x, play_rect.y, play_rect.w, play_rect.h, 229, 9, 20, 255);
+    draw_border(r, play_rect.x, play_rect.y, play_rect.w, play_rect.h, 2, 255, 255, 255, 220);
     char play_label[128];
     snprintf(play_label, sizeof(play_label), "▶  %s", action_label(app, hero));
     draw_fitted_text(app, app->font_small, play_label,
-                     (SDL_Rect){HERO_PLAY_BUTTON.x + 14, HERO_PLAY_BUTTON.y + 8,
-                                HERO_PLAY_BUTTON.w - 28, HERO_PLAY_BUTTON.h - 16},
-                     white, HERO_PLAY_BUTTON, true);
+                     (SDL_Rect){play_rect.x + 14, play_rect.y + 8, play_rect.w - 28, play_rect.h - 16},
+                     white, play_rect, true);
 
-    fill_rect(r, HERO_INFO_BUTTON.x, HERO_INFO_BUTTON.y, HERO_INFO_BUTTON.w, HERO_INFO_BUTTON.h,
-              42, 42, 52, 235);
-    draw_border(r, HERO_INFO_BUTTON.x, HERO_INFO_BUTTON.y, HERO_INFO_BUTTON.w, HERO_INFO_BUTTON.h,
-                1, 165, 165, 178, 200);
+    /* Przycisk 2: Więcej informacji */
+    fill_rect(r, info_rect.x, info_rect.y, info_rect.w, info_rect.h, 42, 42, 52, 235);
+    draw_border(r, info_rect.x, info_rect.y, info_rect.w, info_rect.h, 1, 165, 165, 178, 200);
     char info_label[128];
     snprintf(info_label, sizeof(info_label), "ℹ  %s", TR(app, TXT_MORE_INFO));
     draw_fitted_text(app, app->font_small, info_label,
-                     (SDL_Rect){HERO_INFO_BUTTON.x + 14, HERO_INFO_BUTTON.y + 8,
-                                HERO_INFO_BUTTON.w - 28, HERO_INFO_BUTTON.h - 16},
-                     white, HERO_INFO_BUTTON, true);
+                     (SDL_Rect){info_rect.x + 14, info_rect.y + 8, info_rect.w - 28, info_rect.h - 16},
+                     white, info_rect, true);
 
-    if (hero->description_id == TEXT_COUNT) {
-        fill_rect(r, DESCRIPTION_BUTTON.x, DESCRIPTION_BUTTON.y, DESCRIPTION_BUTTON.w, DESCRIPTION_BUTTON.h, 35, 35, 43, 255);
+    /* Przycisk 3: Przełącznik opisu */
+    if (toggle_rect.w > 0) {
+        fill_rect(r, toggle_rect.x, toggle_rect.y, toggle_rect.w, toggle_rect.h, 35, 35, 43, 255);
+        draw_border(r, toggle_rect.x, toggle_rect.y, toggle_rect.w, toggle_rect.h, 1, 120, 120, 130, 200);
         TextId label = app->show_original_description ? TXT_TRANSLATED_DESCRIPTION : TXT_ORIGINAL_DESCRIPTION;
-        draw_single_line(app, app->font_small, TR(app, label), DESCRIPTION_BUTTON.x + 12,
-                         DESCRIPTION_BUTTON.y + 10, white, DESCRIPTION_BUTTON);
+        draw_single_line(app, app->font_small, TR(app, label), toggle_rect.x + 12,
+                         toggle_rect.y + 10, white, toggle_rect);
     }
 }
 
@@ -1685,8 +1756,8 @@ static void render_carousels(WolodriveApp *app) {
             return;
         }
 
-        SDL_Rect home_clip = {RAIL_WIDTH + 12, CARDS_Y - 56,
-                              SCREEN_WIDTH - RAIL_WIDTH - 12, SCREEN_HEIGHT - (CARDS_Y - 56) - 62};
+        SDL_Rect home_clip = {RAIL_WIDTH + 12, CARDS_Y - 50,
+                              SCREEN_WIDTH - RAIL_WIDTH - 24, 950 - (CARDS_Y - 50)};
         SDL_RenderSetClipRect(r, &home_clip);
         for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
             CarouselRow *cat_row = &app->home_categories[cat];
@@ -1701,8 +1772,7 @@ static void render_carousels(WolodriveApp *app) {
                       CONTENT_X, header_y, is_active_cat ? white : muted, 0);
 
             /* Przycisk "Pokaż wszystko" przy nagłówku kategorii */
-            SDL_Rect show_all = {HOME_SHOW_ALL_BUTTON.x, header_y + 2,
-                                 HOME_SHOW_ALL_BUTTON.w, HOME_SHOW_ALL_BUTTON.h};
+            SDL_Rect show_all = get_show_all_button_rect(app, header_y);
             fill_rect(r, show_all.x, show_all.y, show_all.w, show_all.h,
                       is_active_cat ? 34 : 22, is_active_cat ? 34 : 22, is_active_cat ? 44 : 28, 235);
             draw_border(r, show_all.x, show_all.y, show_all.w, show_all.h,
@@ -1740,8 +1810,8 @@ static void render_carousels(WolodriveApp *app) {
     if (!row->item_count) {
         return;
     }
-    SDL_Rect clip = {RAIL_WIDTH + 20, CARDS_Y - 14, SCREEN_WIDTH - RAIL_WIDTH - 20,
-                     CARD_HEIGHT + CARD_TITLE + CARD_FOOTER + 28};
+    SDL_Rect clip = {RAIL_WIDTH + 20, CARDS_Y - 14, SCREEN_WIDTH - RAIL_WIDTH - 32,
+                     950 - (CARDS_Y - 14)};
     SDL_RenderSetClipRect(r, &clip);
     for (int col = 0; col < row->item_count; col++) {
         SDL_Rect card = card_target(app, col);
@@ -1938,8 +2008,13 @@ static void render_language_control(WolodriveApp *app) {
 }
 
 static void render_top_bar(WolodriveApp *app) {
+    SDL_Renderer *r = app->renderer;
     SDL_Color red = {229, 9, 20, 255};
     SDL_Color muted = {155, 155, 155, 255};
+
+    /* Pełny, nieprzezroczysty ciemny pas tła stopki (Y=950 do dołu ekranu) zasłaniający kafelki */
+    fill_rect(r, 0, 950, SCREEN_WIDTH, 130, 8, 8, 10, 250);
+    fill_rect(r, 0, 950, SCREEN_WIDTH, 1, 35, 35, 45, 255);
     draw_text(app, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
     if (app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS) {
         draw_text(app, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
