@@ -261,7 +261,7 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
 
 static SDL_Rect sidebar_target(int row) {
     int y_offset = 148;
-    int row_h = 92;
+    int row_h = 62;
     int pos;
     if (row == VIEW_SEARCH) pos = 0;
     else if (row == VIEW_SETTINGS) pos = VIEW_DOWNLOADS + 2;
@@ -1982,8 +1982,7 @@ static void render_sidebar(WolodriveApp *app) {
     if (sb_w < SIDEBAR_COLLAPSED_W) sb_w = SIDEBAR_COLLAPSED_W;
     if (sb_w > SIDEBAR_EXPANDED_W) sb_w = SIDEBAR_EXPANDED_W;
 
-    /* Lekkie przyciemnienie reszty interfejsu, gdy pasek boczny jest rozwinięty */
-    if (app->sidebar_expand > 0.02f && app->active_row != VIEW_SETTINGS) {
+    if (app->sidebar_expand > 0.02f) {
         Uint8 dim_alpha = (Uint8)(115.0f * app->sidebar_expand);
         fill_rect(r, sb_w, 0, SCREEN_WIDTH - sb_w, SCREEN_HEIGHT, 0, 0, 0, dim_alpha);
     }
@@ -1991,18 +1990,14 @@ static void render_sidebar(WolodriveApp *app) {
     fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 12, 12, 12, 250);
     fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
 
-    /* Ograniczenie rysowania do bieżącej szerokości paska (płynne odsłanianie) */
     SDL_Rect sb_clip = {0, 0, sb_w, SCREEN_HEIGHT};
     SDL_Rect prev_clip;
     bool was_clipped = SDL_RenderIsClipEnabled(r);
     SDL_RenderGetClipRect(r, &prev_clip);
     SDL_RenderSetClipRect(r, &sb_clip);
 
-    /* Nowy logotyp marki: stylizowane czerwone P centralnie pod globusem a nad lupą (bez kwadratu tła) */
     int brand_y = 82;
-    if (app->active_row != VIEW_SETTINGS) {
     TTF_Font *p_font = app->font_logo ? app->font_logo : app->font_row_title;
-    /* Cień 3D oraz dynamiczny akcent pod literą P */
     draw_text(app, p_font, "P", 33, brand_y + 2, (SDL_Color){90, 0, 5, 220}, 0);
     draw_text(app, p_font, "P", 31, brand_y, (SDL_Color){229, 9, 20, 255}, 0);
     fill_rect(r, 29, brand_y + 38, 24, 3, 229, 9, 20, 255);
@@ -2016,98 +2011,104 @@ static void render_sidebar(WolodriveApp *app) {
         }
     }
 
-    }
-
     for (int row = 0; row < TOTAL_ROWS; row++) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
 
-        Uint8 ir = selected ? 245 : 165;
-        Uint8 ig = selected ? 245 : 165;
-        Uint8 ib = selected ? 245 : 170;
+        Uint8 ir = selected ? 255 : 215;
+        Uint8 ig = selected ? 35  : 32;
+        Uint8 ib = selected ? 45  : 40;
+        Uint8 ia = selected ? 255 : 235;
 
-        int x = 28, y = target.y + (target.h-30)/2;
+        int x = 28, y = target.y + 17;
         if (selected) {
-            fill_rect(r, 0, target.y, sb_w - 1, target.h, 26, 26, 26, 255);
-            fill_rect(r, 0, target.y, 5, target.h, 229, 9, 20, 255);
+            fill_rect(r, 0, target.y, sb_w - 1, target.h, 38, 12, 16, 255);
+            fill_rect(r, 0, target.y, 5, target.h, 255, 30, 40, 255);
             if (app->sidebar_focus)
                 draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 255, 60, 60, 255);
         }
 
-        /* Thin grey/white outline icons matching the web sidebar. */
-        SDL_SetRenderDrawColor(r, ir, ig, ib, 255);
         if (row == VIEW_SEARCH) {
-            int px = x+20, py = y+12;
-            for (int k=1; k<=24; k++) {
-                float angle = (float)k*6.283185307f/24.0f;
-                int nx=x+10+(int)lroundf(cosf(angle)*10.0f);
-                int ny=y+12+(int)lroundf(sinf(angle)*10.0f);
-                SDL_RenderDrawLine(r,px,py,nx,ny);
-                SDL_RenderDrawLine(r,px+1,py,nx+1,ny);
-                px=nx; py=ny;
-            }
-            SDL_RenderDrawLine(r,x+18,y+21,x+28,y+30);
-            SDL_RenderDrawLine(r,x+19,y+21,x+29,y+30);
+            fill_rect(r, x + 5, y, 12, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 5, y + 19, 12, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 5, 3, 12, ir, ig, ib, ia);
+            fill_rect(r, x + 19, y + 5, 3, 12, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 2, 4, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 16, y + 2, 4, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 16, 4, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 16, y + 16, 4, 4, ir, ig, ib, ia);
+            for (int h = 0; h < 9; h++) fill_rect(r, x + 18 + h, y + 18 + h, 4, 4, ir, ig, ib, ia);
         } else if (row == VIEW_HOME) {
-            SDL_RenderDrawLine(r,x,y+14,x+14,y+2);
-            SDL_RenderDrawLine(r,x+14,y+2,x+28,y+14);
-            SDL_RenderDrawLine(r,x+4,y+13,x+4,y+29);
-            SDL_RenderDrawLine(r,x+24,y+13,x+24,y+29);
-            SDL_RenderDrawLine(r,x+4,y+29,x+24,y+29);
-            draw_border(r,x+10,y+20,8,9,2,ir,ig,ib,255);
+            fill_rect(r, x + 20, y + 1, 4, 8, ir, ig, ib, ia);
+            for (int h = 0; h < 12; h++) {
+                fill_rect(r, x + 13 - h, y + h, 4, 3, ir, ig, ib, ia);
+                fill_rect(r, x + 13 + h, y + h, 4, 3, ir, ig, ib, ia);
+            }
+            fill_rect(r, x - 1, y + 11, 30, 3, ir, ig, ib, ia);
+            draw_border(r, x + 2, y + 12, 24, 16, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 11, y + 18, 6, 10, ir, ig, ib, ia);
         } else if (row == VIEW_GAMES) {
-            draw_border(r,x,y+8,29,19,2,ir,ig,ib,255);
-            fill_rect(r,x+6,y+12,2,11,ir,ig,ib,255);
-            fill_rect(r,x+2,y+16,10,2,ir,ig,ib,255);
-            fill_rect(r,x+20,y+14,3,3,ir,ig,ib,255);
-            fill_rect(r,x+24,y+19,3,3,ir,ig,ib,255);
+            draw_border(r, x - 2, y + 3, 32, 18, 3, ir, ig, ib, ia);
+            fill_rect(r, x - 2, y + 20, 8, 6, ir, ig, ib, ia);
+            fill_rect(r, x + 22, y + 20, 8, 6, ir, ig, ib, ia);
+            fill_rect(r, x + 3, y + 10, 9, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 6, y + 7, 3, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 7, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 13, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 18, y + 10, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 24, y + 10, 3, 3, ir, ig, ib, ia);
         } else if (row == VIEW_EMULATORS) {
-            draw_border(r,x+1,y+8,27,20,2,ir,ig,ib,255);
-            SDL_RenderDrawLine(r,x+9,y+2,x+14,y+8);
-            SDL_RenderDrawLine(r,x+20,y+2,x+14,y+8);
+            for (int h = 0; h < 6; h++) {
+                fill_rect(r, x + 9 - h, y + 5 - h, 3, 2, ir, ig, ib, ia);
+                fill_rect(r, x + 17 + h, y + 5 - h, 3, 2, ir, ig, ib, ia);
+            }
+            draw_border(r, x, y + 6, 28, 18, 3, ir, ig, ib, ia);
+            draw_border(r, x + 4, y + 10, 15, 10, 2, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 11, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 16, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 6, y + 25, 16, 3, ir, ig, ib, ia);
         } else if (row == VIEW_FILES) {
-            SDL_RenderDrawLine(r,x+1,y+6,x+12,y+6);
-            SDL_RenderDrawLine(r,x+12,y+6,x+16,y+11);
-            draw_border(r,x+1,y+11,27,18,2,ir,ig,ib,255);
+            fill_rect(r, x, y + 1, 12, 5, ir, ig, ib, ia);
+            draw_border(r, x, y + 5, 28, 21, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 11, 24, 3, ir, ig, ib, ia);
         } else if (row == VIEW_PAYLOADS) {
-            draw_border(r,x+5,y+5,20,20,2,ir,ig,ib,255);
-            draw_border(r,x+10,y+10,10,10,2,ir,ig,ib,255);
-            for(int p=8;p<=20;p+=6) {
-                SDL_RenderDrawLine(r,x+p,y,x+p,y+5);
-                SDL_RenderDrawLine(r,x+p,y+25,x+p,y+30);
-                SDL_RenderDrawLine(r,x,y+p,x+5,y+p);
-                SDL_RenderDrawLine(r,x+25,y+p,x+30,y+p);
+            draw_border(r, x + 4, y + 4, 20, 20, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 10, y + 10, 8, 8, ir, ig, ib, ia);
+            for (int pin = 0; pin < 3; pin++) {
+                int off = 7 + pin * 6;
+                fill_rect(r, x + off, y, 3, 5, ir, ig, ib, ia);
+                fill_rect(r, x + off, y + 23, 3, 5, ir, ig, ib, ia);
+                fill_rect(r, x, y + off, 5, 3, ir, ig, ib, ia);
+                fill_rect(r, x + 23, y + off, 5, 3, ir, ig, ib, ia);
             }
         } else if (row == VIEW_DOWNLOADS) {
-            SDL_RenderDrawLine(r,x+14,y,x+14,y+20);
-            SDL_RenderDrawLine(r,x+7,y+14,x+14,y+21);
-            SDL_RenderDrawLine(r,x+14,y+21,x+21,y+14);
-            SDL_RenderDrawLine(r,x+2,y+25,x+2,y+29);
-            SDL_RenderDrawLine(r,x+2,y+29,x+27,y+29);
-            SDL_RenderDrawLine(r,x+27,y+29,x+27,y+25);
+            fill_rect(r, x + 11, y, 6, 14, ir, ig, ib, ia);
+            for (int h = 0; h < 8; h++)
+                fill_rect(r, x + 14 - (7 - h) * 2, y + 12 + h, (7 - h) * 4 + 1, 2, ir, ig, ib, ia);
+            fill_rect(r, x, y + 23, 28, 4, ir, ig, ib, ia);
+            fill_rect(r, x, y + 19, 3, 7, ir, ig, ib, ia);
+            fill_rect(r, x + 25, y + 19, 3, 7, ir, ig, ib, ia);
         } else if (row == VIEW_SETTINGS) {
-            for (int n=0;n<3;n++) {
-                int px=x+4+n*10, yy=y+10+n*3;
-                SDL_RenderDrawLine(r,px,y,px,yy);
-                SDL_RenderDrawLine(r,px,yy+6,px,y+30);
-                draw_border(r,px-3,yy,7,7,2,ir,ig,ib,255);
-            }
+            fill_rect(r, x, y + 3, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 13, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 23, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 5, y, 6, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 17, y + 10, 6, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 9, y + 20, 6, 9, ir, ig, ib, ia);
         }
 
-        /* Renderowanie podpisu zakładki (tekst obok ikony) */
         if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
             Uint8 text_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
             if (text_alpha > 0) {
                 const char *label_text = sidebar_item_title(app, row);
                 if (label_text && label_text[0] != '\0') {
                     TTF_Font *font = app->font_small ? app->font_small : app->font_body;
-                    SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){165, 165, 170, 255};
+                    SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){225, 140, 145, 255};
                     UiTextEntry *entry = cached_text(app, font, label_text, text_color, 0);
                     if (entry && entry->texture) {
                         int text_x = 84;
                         int text_y = target.y + (target.h - entry->h) / 2;
                         SDL_Rect dst = {text_x, text_y, entry->w, entry->h};
-
                         SDL_SetTextureBlendMode(entry->texture, SDL_BLENDMODE_BLEND);
                         SDL_SetTextureAlphaMod(entry->texture, text_alpha);
                         SDL_RenderCopy(r, entry->texture, NULL, &dst);
@@ -2125,9 +2126,9 @@ static void render_language_control(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     int sb_w = (int)lroundf(app->sidebar_width);
     if (sb_w < SIDEBAR_COLLAPSED_W) sb_w = SIDEBAR_COLLAPSED_W;
-    Uint8 ir = app->language_menu_open ? 255 : 220;
-    Uint8 ig = app->language_menu_open ? 255 : 220;
-    Uint8 ib = app->language_menu_open ? 255 : 220;
+    Uint8 ir = app->language_menu_open ? 255 : 215;
+    Uint8 ig = app->language_menu_open ? 35  : 32;
+    Uint8 ib = app->language_menu_open ? 45  : 40;
     Uint8 ia = 255;
 
     if (app->language_menu_open) {
@@ -2136,7 +2137,6 @@ static void render_language_control(WolodriveApp *app) {
         fill_rect(r, 0, LANGUAGE_BUTTON.y, 5, LANGUAGE_BUTTON.h, 255, 30, 40, 255);
     }
 
-    /* Pogrubiony czerwony globus wycentrowany w osi ikon (cx = 42) */
     int cx = 42, cy = LANGUAGE_BUTTON.y + 42;
     SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(r, ir, ig, ib, ia);
@@ -2144,13 +2144,9 @@ static void render_language_control(WolodriveApp *app) {
     for (int dy = -15; dy <= 15; dy++) {
         for (int dx = -15; dx <= 15; dx++) {
             float d = sqrtf((float)(dx * dx + dy * dy));
-            if (d >= 12.5f && d <= 15.5f) {
-                SDL_RenderDrawPoint(r, cx + dx, cy + dy);
-            }
+            if (d >= 12.5f && d <= 15.5f) SDL_RenderDrawPoint(r, cx + dx, cy + dy);
             float md = sqrtf((float)(dx * dx) * 4.2f + (float)(dy * dy));
-            if (md >= 12.3f && md <= 15.5f) {
-                SDL_RenderDrawPoint(r, cx + dx, cy + dy);
-            }
+            if (md >= 12.3f && md <= 15.5f) SDL_RenderDrawPoint(r, cx + dx, cy + dy);
         }
     }
     fill_rect(r, cx - 14, cy - 1, 29, 3, ir, ig, ib, ia);
@@ -2181,38 +2177,30 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_Color white = {245, 245, 245, 255};
     SDL_Color muted = {165, 165, 175, 255};
 
-    /* Smukła, elegancka stopka (60px wysokości od Y=1020 do 1080) */
     fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 10, 10, 14, 248);
     fill_rect(r, 0, 1020, SCREEN_WIDTH, 2, 229, 9, 20, 255);
 
-    /* Keybindy z bezpiecznymi odstępami (brak nakładania się tekstów) */
     int cur_x = CONTENT_X;
     if (app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS) {
-        int w1 = draw_text(app, app->font_micro, "[←→↑↓] Nawigacja   [X] Wybierz", cur_x, 1041, muted, 0);
-        cur_x += (w1 > 0 ? w1 + 28 : 310);
-
+        int w1 = draw_text(app, app->font_micro, "[←→↑↓] Nawigacja  [X] Wybierz", cur_x, 1041, muted, 0);
+        cur_x += (w1 > 0 ? w1 + 20 : 260);
         int w2 = draw_text(app, app->font_micro, TR(app, TXT_BACK_HINT), cur_x, 1041, muted, 0);
-        cur_x += (w2 > 0 ? w2 + 28 : 165);
-
+        cur_x += (w2 > 0 ? w2 + 20 : 140);
         int w3 = draw_text(app, app->font_micro, TR(app, TXT_REFRESH_HINT), cur_x, 1041, muted, 0);
-        cur_x += (w3 > 0 ? w3 + 32 : 210);
+        cur_x += (w3 > 0 ? w3 + 24 : 180);
     }
 
-    /* Status katalogów pośrodku paska */
     char sync_info[256];
     SDL_LockMutex(app->catalog_mutex);
     switch (app->sync_status_id) {
         case TXT_SYNC_SUBCATALOG:
-            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_SUBCATALOG),
-                     app->sync_current, app->sync_total);
+            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_SUBCATALOG), app->sync_current, app->sync_total);
             break;
         case TXT_SYNC_COVER:
-            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_COVER),
-                     app->sync_title, app->sync_current, app->sync_total);
+            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_COVER), app->sync_title, app->sync_current, app->sync_total);
             break;
         case TXT_SYNC_DONE:
-            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_DONE),
-                     app->catalog_count, app->sync_sources);
+            snprintf(sync_info, sizeof(sync_info), TR(app, TXT_SYNC_DONE), app->catalog_count, app->sync_sources);
             break;
         default:
             snprintf(sync_info, sizeof(sync_info), "%s", TR(app, app->sync_status_id));
@@ -2220,35 +2208,29 @@ static void render_top_bar(WolodriveApp *app) {
     }
     SDL_UnlockMutex(app->catalog_mutex);
 
-    /* Zamiana ewentualnego prefiksu Pegasus-DL na Katalogi w locie */
     char clean_sync[256];
-    if (strncmp(sync_info, "Pegasus-DL", 10) == 0) {
+    if (strncmp(sync_info, "Pegasus-DL", 10) == 0)
         snprintf(clean_sync, sizeof(clean_sync), "Katalogi%s", sync_info + 10);
-    } else {
+    else
         snprintf(clean_sync, sizeof(clean_sync), "%s", sync_info);
-    }
+
     draw_single_line(app, app->font_micro, clean_sync, cur_x, 1041, (SDL_Color){210, 210, 215, 255},
-                     (SDL_Rect){cur_x, 1036, 1280 - cur_x, 28});
+                     (SDL_Rect){cur_x, 1036, 1210 - cur_x, 28});
 
     render_language_control(app);
 
-    /* Telemetria: pełne pole bez ucinania GPU: null */
     char telemetry[256];
 #ifdef __PS5__
     snprintf(telemetry, sizeof(telemetry), "data: %.0fGB | ext0: %.0fGB | CPU: %.0f°C | GPU: %.0f°C",
-             app->stats.data_free_gb, app->stats.ext0_free_gb,
-             app->stats.cpu_temp_c, app->stats.gpu_temp_c);
+             app->stats.data_free_gb, app->stats.ext0_free_gb, app->stats.cpu_temp_c, app->stats.gpu_temp_c);
 #else
     snprintf(telemetry, sizeof(telemetry), "data: null | ext0: null | CPU: null | GPU: null");
 #endif
+    draw_single_line(app, app->font_micro, telemetry, 1225, 1041, muted, (SDL_Rect){1225, 1036, 520, 28});
 
-    draw_single_line(app, app->font_micro, telemetry, 1300, 1041, muted,
-                     (SDL_Rect){1300, 1036, 470, 28});
-
-    /* Logo PolDrive w prawym rogu stopki */
     {
-        int fp_w = draw_text(app, app->font_small, "P", SCREEN_WIDTH - 128, 1038, red, 0);
-        draw_text(app, app->font_small, "olDrive", SCREEN_WIDTH - 128 + (fp_w > 0 ? fp_w + 1 : 14), 1038, white, 0);
+        int fp_w = draw_text(app, app->font_small, "P", SCREEN_WIDTH - 135, 1039, red, 0);
+        draw_text(app, app->font_small, "olDrive", SCREEN_WIDTH - 135 + (fp_w > 0 ? fp_w + 1 : 14), 1039, white, 0);
     }
 }
 
