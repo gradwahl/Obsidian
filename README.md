@@ -2,7 +2,537 @@
 
 SDL2 homebrew catalog interface for Linux and PS5.
 
+### Artwork matching and box-art cache
+
+Wolodrive's box-art enrichment uses three conservative stages: first-party
+artwork URLs already present in the source, an exact **same-console and title**
+match from another source, and [Libretro Named_Boxarts](https://github.com/libretro-thumbnails/libretro-thumbnails)
+using exact or uniquely normalised filename matches. Unknown console
+matches, ambiguous editions, and multiple regional covers are *not* guessed.
+Libretro serves scans organised by console; those covers are not automatically
+licensed for redistribution. Respect its service and copyright requirements.
+
+The current results are in
+[`docs/artwork_coverage.md`](docs/artwork_coverage.md). The report counts
+links, **not verified images**. Artwork manifests are imported separately
+in the React preview and read as an optional URL overlay by the native
+catalogue loader. The existing asynchronous artwork cache loads images only
+when a card is visible, and manual local art always wins.
+
+Supplied image URLs can fail even when they return HTTP 200: Axekin's image
+host currently returns an HTML bot challenge for the PS1 examples tested.
+Wolodrive prepares independent IGDB/Libretro fallbacks for supplied covers and
+for matching rows that inherit those source URLs. Healthy supplied art retains
+its priority; a load/decode failure advances to the independent cover in cards,
+heroes and details, in both the web and native renderer. It does not attempt
+to solve or bypass a source challenge. Missing or ambiguous alternatives still
+show a placeholder. Coverage counts above remain metadata-link counts.
+
+To include entries that already have source artwork when building IGDB fallbacks:
+
+```bash
+python3 scripts/igdb_artwork.py --bulk --aliases --fallbacks
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+Use `python` on native Windows. Canonical/alias catalogue caches and previous
+successful matches are reused. No credentials are needed for the enrichment
+step. The JSON manifest marks supplied-art alternatives with `fallbackOnly`
+and inherited-art alternatives with `fallback`. The native TSV retains its
+three required columns and accepts an optional fourth independent fallback URL;
+deploy the refreshed TSV alongside the rebuilt native executable. Local PNG,
+JPG and WebP overrides keep their existing priority.
+
+#### LaunchBox missing-cover import
+
+LaunchBox is an additional source for entries still missing artwork after the
+supplied-art, same-console, Libretro and IGDB stages. No account or API key is
+required. Run these commands from the repository on Linux or Windows/WSL:
+
+```bash
+python3 scripts/launchbox_artwork.py --download
+```
+
+On native Windows use `python` instead of `python3`. The standard-library-only
+importer saves LaunchBox's public `Metadata.zip` (about 104 MiB compressed) in
+`.cache/wolodrive-artwork/launchbox-Metadata.zip`, streams its XML locally, writes
+`assets/artwork/launchbox-covers.json`, and runs offline enrichment to update the
+shared JSON/TSV overlays and coverage report. `--download` saves the merged
+LaunchBox front covers in `assets/covers` using the native URL-hash filenames;
+valid cached images are reused. Results and failures are recorded in
+`assets/covers/launchbox-downloads.json`. Omit `--download` to update metadata only.
+Use `--offline` to reuse the saved archive without contacting the metadata host,
+or `--refresh` to download a new archive. Image downloads still require networking
+when `--offline --download` is used. At most three images download concurrently
+by default (`--workers 1` through `4`). Interrupted downloads can be rerun.
+
+Matching requires one distinct LaunchBox game on the exact console, using its
+canonical name or an official alternate name. The importer reuses the existing
+source-packaging cleanup, retains non-Latin letters, and preserves edition/DLC
+words. Only **Box - Front** images are accepted. Explicit source region tags
+require a matching cover region; conflicting multi-region tags are withheld.
+For titles without region tags, front scans are selected deterministically in
+World, North America, Europe, unspecified, then other-region order. Multiple
+game identities and existing review entries remain withheld. Existing approved
+artwork takes priority. Downloads verify image signatures; successful downloads
+alone do not prove that every title/image match is visually correct.
+
+Subsequent `python3 scripts/enrich_artwork.py --offline` runs retain LaunchBox
+matches through its separate export. Rebuild the web/static preview after
+updating the overlay; deploy the refreshed TSV and local images for native use.
+Downloaded caches are local files; the importer and metadata overlays are the
+reproducible source of this artwork. Native Windows application build/launch
+verification remains separate from Windows importer verification.
+
+#### GameTDB IDs, source cleanup and artwork review
+
+Public PlayStation product identifiers are retained as `productId` and
+`productRegion` in TSV snapshots. To enrich existing rows without replacing
+their titles, IDs or catalogue membership:
+
+```bash
+python3 scripts/cleanup_artwork_sources.py
+python3 scripts/import_tsv_sources.py --restore-product-ids
+python3 scripts/gametdb_artwork.py
+```
+
+Use `python` on native Windows. The restoration reads configured public TSV
+feeds into memory and writes only the public product ID/region for an exact
+existing identity and title. Conflicting metadata is withheld; package links,
+RAPs, license data and binary hashes are not copied. Future full TSV imports
+retain those same public fields. Cleanup applies exact reviewed corrections
+from `config/source_title_corrections.json` and removes one confirmed navigation
+row; suspicious repeated titles without proof of identity remain unchanged.
+
+The GameTDB importer caches the public PS3 and Switch database archives in
+`.cache/wolodrive-artwork`. A product ID must exist on the exact console; when
+no ID is supplied, only one exact cleaned/localised title-to-product match is
+accepted. Demo, trial, DLC, edition, bundle and modified-release labels prevent
+an ID from silently borrowing a differently named base-game cover. Only flat
+front-cover routes for the same product ID are tried. Successful image responses
+enter `assets/artwork/gametdb-covers.json`; missing/failed images do not count as
+new coverage. Existing artwork and withheld review entries keep their priority.
+`--offline` makes no network requests, reusing the metadata/export and valid
+local images. `--refresh` downloads current databases. Download diagnostics go
+to `.cache/wolodrive-artwork/gametdb-downloads.json`.
+
+Enrichment also writes every withheld entry, its reason, and all candidate URLs
+to `assets/artwork/review-queue.json`. Prepare local comparison sheets with:
+
+```bash
+python3 -m pip install Pillow
+python3 scripts/review_artwork.py --download
+```
+
+Pillow is needed only for this saved-image report. The importer itself uses the
+Python standard library on both platforms. The default output is
+`.cache/wolodrive-artwork/review/index.html`, with numbered JPEG contact sheets
+and download/render diagnostics alongside it. The HTML shows all original
+titles and source-page links and embeds only local images. The sheets compare
+source title, console, record ID, provider and regional filename information;
+unavailable candidates are marked. Fonts prefer Yu Gothic on Windows or
+Noto Sans CJK on Linux, falling back to Arial/DejaVu Sans when installed. Install
+`noto-fonts-cjk` (Arch) or `fonts-noto-cjk` (Debian/Ubuntu) for Japanese/Chinese
+labels, or pass `--font /path/to/unicode-font.ttf`. The HTML retains full Unicode
+text for manual inspection even when a sheet font lacks a particular glyph.
+Run without `--download` to rebuild the report using only cached images.
+Preparing the report does not approve candidates or modify the artwork overlay.
+No graphical application or browser automation is required.
+
+#### DLPSGame PS3 artwork
+
+The public [DLPSGame PS3 category](https://dlpsgame.com/category/ps3/) is an
+additional artwork provider, separate from the existing DLPS catalogue source.
+Run `python3 scripts/dlpsgame_artwork.py` on Linux/WSL or
+`python scripts/dlpsgame_artwork.py` on Windows. No account is required.
+
+The importer verifies every page of WordPress category 64 (PS3), keeps only
+post ID, title, console, source-page URL and an allowlisted primary image URL,
+and downloads matching artwork into `assets/covers`. Post bodies are parsed
+in memory; game links, license data and raw HTML are not saved. The site cache
+is `.cache/wolodrive-artwork/dlpsgame-ps3.json`; use `--refresh` to rebuild it or
+`--offline` for a run that makes no requests. Incomplete pagination preserves
+the previous cache/export. At most two metadata and three image requests run
+concurrently. A completed image must pass the shared downloader's signature
+check before entering `assets/artwork/dlpsgame-covers.json`.
+
+Matching requires a single exact cleaned title on a PS3-category post and an
+uncovered PS3 catalogue entry. This provider's trailing `PSN` storefront label
+is removed for comparison; HD, DLC, demo, mod and named-edition words remain.
+Multiple posts with the same cleaned name are withheld. Existing artwork and
+the review queue retain their priority. Subsequent enrichment runs retain
+the separate export; rebuilding the static preview incorporates the changes.
+
+Some source images are custom covers and logos, rather than official scans.
+Five specific covers found questionable during saved-image inspection are
+withheld by exact post/image URL in `config/dlpsgame_artwork_exclusions.json`.
+They cannot re-enter through a cached export on a later run. Matching a title
+does not establish that all artwork posted by a third party is correct.
+
+The [PS1 artwork delivery report](docs/ps1_artwork_delivery.md) records the
+confirmed cause, seven tested covers and remaining verification limits.
+
+To refresh matches after indexing titles:
+
+```bash
+python scripts/enrich_artwork.py --workers 4
+python -m unittest discover -s tests -p test_enrich_artwork.py
+npm run build:static
+```
+
+The importer downloads **directory listings only**, caches them in
+`.cache/wolodrive-artwork/`, and does **not download cover images** by default.
+To opt into caching at most ten unique matched images locally:
+
+```bash
+python scripts/enrich_artwork.py --offline --download 10
+```
+
+This uses the existing URL-keyed image cache at `assets/covers/`. Keep
+downloaded cover bytes out of Git; the manifests consist only of source
+IDs, image URLs and confidence. An optional **IGDB** importer can match modern games by exact cleaned
+title **and verified console**. It runs locally with a Twitch client ID and
+secret read from temporary process environment variables. No access token or
+secret is saved or embedded in the web preview. It uses the IGDB API for
+non-commercial projects under the provider's terms. Image URLs are saved, but
+no image bytes are distributed.
+
+To download all cover links currently known to this checkout, including supplied
+source art, approved matches and IGDB alternatives, independent fallbacks and
+native catalogue covers:
+
+```bash
+python3 scripts/download_artwork.py --local --workers 8
+```
+
+Use `python` on native Windows. The default destination is this repository's
+`assets/covers` folder; `--output` can select another path. URLs are deduplicated
+and valid existing images are reused. Files use the native app's URL-hashed
+`.art` cache names but contain ordinary PNG, JPEG, WebP or AVIF bytes. Failed requests
+and HTML/error responses are recorded instead of saved as covers. Uncached
+Axekin `/uploads/games/` links are recorded as blocked because that route
+returned bot-check HTML; independent alternatives are downloaded separately.
+
+`assets/covers/artwork-progress.jsonl` records completed URLs during the run;
+`assets/covers/artwork-index.json` records final results and source/game mappings.
+Rerun the same command after an interruption to reuse downloaded files and retry
+ordinary failures. Run one downloader per destination at a time. Downloaded files
+and these local indexes are ignored by Git. This bulk step fills the native
+cache; it does not yet make the web preview use that cache or publish the files
+to GitHub. No application build is required just to fill the cache.
+
+**Security:** If a Twitch Client Secret was pasted into a chat, regenerate
+it in the Twitch Developer Console before proceeding. Never add the new
+secret to Git, a tracked configuration, a screenshot, or a command-line
+argument.
+
+From Windows PowerShell (in the Wolodrive repository):
+
+```powershell
+$env:IGDB_CLIENT_ID = Read-Host 'Twitch Client ID'
+$private = Read-Host 'New Twitch Client Secret' -AsSecureString
+$env:IGDB_CLIENT_SECRET = [System.Net.NetworkCredential]::new('', $private).Password
+python scripts/igdb_artwork.py --dry-run
+python scripts/igdb_artwork.py --max-queries 100
+python scripts/enrich_artwork.py --offline
+npm run build:static
+Remove-Item Env:IGDB_CLIENT_SECRET
+Remove-Item Env:IGDB_CLIENT_ID
+```
+
+From a Linux/WSL Bash terminal:
+
+```bash
+read -rp 'Twitch Client ID: ' IGDB_CLIENT_ID
+read -rsp 'New Twitch Client Secret: ' IGDB_CLIENT_SECRET; echo
+export IGDB_CLIENT_ID IGDB_CLIENT_SECRET
+python3 scripts/igdb_artwork.py --max-queries 100
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+unset IGDB_CLIENT_SECRET IGDB_CLIENT_ID
+```
+
+For thousands of missing covers, use **bulk catalogue matching** instead of
+searching each title. With the same credentials set above, run on Linux/WSL:
+
+```bash
+python3 scripts/igdb_artwork.py --bulk
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+On native Windows PowerShell, use `python` in place of `python3` for both
+scripts; the `npm` command is unchanged. Add
+`--platforms nintendo-switch,sony-ps4,sony-ps5` to the bulk command to limit
+the consoles, or omit it to process all supported consoles with uncovered titles.
+`--bulk --dry-run` lists uncovered titles without credentials or API requests.
+
+Bulk mode requests each console's game names, platform IDs and cover links
+in pages of **500 games**, then matches all uncovered titles locally using the
+same exact cleaned-title, matching-console and unambiguous-cover checks.
+It rechecks previously unsuccessful title searches as well. The normal
+`--max-queries`, `--batch-size` and `--workers` settings do not limit bulk
+matching; catalogue pages are fetched sequentially with the shared rate limiter.
+No individual title searches or image downloads run in bulk mode.
+
+To match regional and alternative titles from IGDB's official
+[alternative names](https://api-docs.igdb.com/#alternative-name), run:
+
+```bash
+python3 scripts/igdb_artwork.py --bulk --aliases
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+Use `python` instead of `python3` on native Windows. This fetches 500 games per
+page with expanded alternative names and their descriptions into a separate
+`.cache/wolodrive-artwork/igdb-catalogues-aliases/` directory. Existing canonical
+catalogues are retained; `--refresh-catalogue` is not needed for the first alias
+run. Interrupted alias downloads resume, and complete alias catalogues are
+reused. Add `--refresh-catalogue` later to fetch updated aliases.
+
+Aliases are opt-in with `--bulk --aliases`; ordinary bulk/title searches retain
+canonical-name matching. Both canonical and alternative names are checked
+together on the correct console. If an alias also identifies another game,
+the result requires review even if only one game has artwork or both share an
+image. Working/development/prototype titles, acronyms/abbreviations, executable
+filenames and explicitly incorrect/misspelled aliases are excluded by their
+IGDB descriptions; alternative-name comparison keys shorter than three
+characters are excluded. The existing title normalisation still applies;
+this does not introduce fuzzy matching, transliteration or substring matching.
+Sequels, editions and DLC labels are not removed from source titles.
+
+Alias successes are exported as `igdb-exact-platform-alias` with the same
+confidence threshold and source/platform/title identity checks. Earlier
+successful matches are preserved; alias collisions do not revoke existing
+approved covers. Enrichment reports the two IGDB providers separately and
+keeps the normal direct-art, same-console and Libretro priorities. No new
+negative title-search results are cached from alias misses. `--max-queries 0`
+also preserves both kinds of successful match when rebuilding an export.
+This path is verified with offline API fixtures on Windows and Linux under
+WSL; a live alias fetch and coverage gains require local IGDB credentials.
+
+Pages are checkpointed in ignored local files under
+`.cache/wolodrive-artwork/igdb-catalogues/`. An interrupted download resumes
+after its last saved game ID; matching waits until that console's catalogue
+is complete so a later duplicate cannot be missed. Completed catalogues are
+reused on later runs. To fetch changed names or covers, run
+`python3 scripts/igdb_artwork.py --bulk --refresh-catalogue` (Windows: `python`).
+This restarts catalogue downloads for selected consoles that still need matching;
+existing successful artwork results remain intact. Do not run bulk and search
+importers concurrently against the same cache.
+
+Successful matches are saved and exported after each console. Unresolved or
+ambiguous titles do not become new negative search-cache entries: the existing
+individual search mode remains available for the remainder. Previously cached
+unsuccessful searches retain their normal retry policy below. Bulk mode reduces
+request counts, but cannot guarantee a cover for every catalogue entry. Its
+live API speed and coverage must be checked with local credentials.
+
+The individual search mode uses **IGDB Multi-Query** to search up to 10 games per
+HTTP request. By default, 3 concurrent workers share a thread-safe global
+request limiter of approximately **3 HTTP requests/second** (below IGDB's
+4-request/second and 8 concurrent-request limits). This gives a theoretical
+maximum of ~30 game searches/second, with actual speed dependent on IGDB
+latency, retries and server load. Both Windows and Linux use Python's
+built-in networking and thread pool, with no new dependencies.
+
+Run a batch with the existing local environment credentials:
+
+```bash
+python3 scripts/igdb_artwork.py --max-queries 1000 --batch-size 10 --workers 3 --platforms nintendo-switch,sony-ps4,sony-ps5
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+Use `--batch-size 1 --workers 1` for troubleshooting or smaller requests.
+The importer checkpoints each successfully completed Multi-Query group;
+**never run two importer processes against the same cache simultaneously**.
+If interrupted, completed batches remain resumable. IGDB may omit a named
+Multi-Query result block if a title has no hits. When this happens, the importer
+**verifies only the omitted searches individually** with the regular games
+endpoint (same global request limit) before treating them as `not-found`.
+A failed verification or malformed Multi-Query response prevents that batch
+from being cached. The summary reports how many individual verifications were
+needed. Extra requests for absent names may reduce the speed gain on batches
+with many missing titles. Existing cached results and exported IGDB covers
+remain intact. Never put IGDB credentials in Git or command arguments.
+
+It searches missing
+titles only, deduplicates by console/title and resumes via ignored local
+cache `.cache/wolodrive-artwork/igdb-results.json`. IGDB queries now
+remove **only trailing source distribution metadata**: `PS4`/`PS5` suffixes
+for the matching console, region/language tags (such as `[EU] [EN]`),
+bracketed update versions (such as `[1.05]`), and eShop/update markers.
+Sequels, subtitles, `Deluxe Edition` and `Console Edition` remain part of
+the actual game name. The importer also recognises complete 3DS distribution
+suffixes such as `Decrypted 3DS (EUR/USA) ROM` and `3DS (USA) CIA (eShop)`,
+Wii U suffixes such as `WII U ISO (Loadiine) (UPDATE v16) (USA)`, and
+parenthesised PSP/PS3 product IDs for the matching console. Unknown packaging
+tokens, DLC labels, translations, UNDUBs and modified-game names remain distinct.
+Trailing English articles are reordered for comparison (`Addams Family, The`
+matches `The Addams Family`); articles, subtitles and edition words are retained,
+and conflicting cover images still require review. Original export keys stay
+unchanged. Exact cleaned-title AND matching-console checks are
+still mandatory before any cover is accepted. With `--bulk --aliases`, an exact
+official alternative name can also qualify under the collision rules above.
+
+The [remaining-artwork audit](docs/artwork_matching_audit.md) records the latest
+offline matching improvements, coverage gains and unresolved source/provider gaps.
+The [source-title cleanup report](docs/artwork_source_cleanup.md) records the
+subsequent pass. Recognised packaging metadata now also includes combined
+region/language lists, parenthesised Switch NSP/XCI formats, trailing eShop/RF
+labels, 3DS Gateway/Sky3DS+ packaging, PS3 `full game`/`Downloadable Game` labels
+and PSP `(Minis)` service labels. The importer selects one link title instead
+of joining title attributes, image labels and visible text, and excludes
+comment-navigation links. Reviewed concatenated-title fixes in
+`config/source_title_corrections.json` require the exact source, console, URL
+and old title, and preserve record IDs. Unknown variants still require review.
+
+**If you already completed a batch before this title-cleanup improvement**,
+rerun the *same* command. Previously cached `not-found` and `review` entries
+are automatically retried **once when the cleaned query changes**. Previously
+matched entries are retained, so do not delete the cache or use
+`--retry-unmatched` just to apply this update. `--dry-run` shows how many
+old searches qualify for retry without using credentials. Some entries may
+still be missing if IGDB only lists a different edition or doesn't list that
+title for its actual console.
+
+The output
+`assets/artwork/igdb-covers.json` contains approved cover image links, not
+credentials. Repeat `--max-queries 500` batches or use
+`--platforms nintendo-switch,sony-ps4,sony-ps5` to prioritise consoles.
+Rerun `enrich_artwork.py --offline` after each batch; that merges IGDB into
+the existing React and native manifests. Successful IGDB matches are
+**cumulative across batches**, even after those titles have been merged into
+the main artwork manifest and disappear from the missing-title queue.
+If you need to regenerate the IGDB export from its locally saved results,
+use `python3 scripts/igdb_artwork.py --max-queries 0`; this performs
+**no network requests and requires no credentials**. Then rerun enrichment and
+`npm run build:static`. Review uncertain titles rather than automatically
+attaching unrelated artwork. The live API connection is not verified until
+you configure fresh local credentials.
+
+The native Linux/Windows/PS5 catalogue reads
+`assets/artwork/cover-matches.tsv` alongside the snapshots. On PS5 copy it
+to `/data/homebrew/wolodrive/artwork/cover-matches.tsv`. The web preview
+loads `assets/artwork/cover-matches.json` as a separate deferred chunk;
+it contains no image bytes. Native Windows runtime and PS5 deployment remain
+unverified until tested on their respective platforms.
+
+### Full public catalogue coverage
+
+A source-by-source completeness audit is maintained in
+[`docs/source_index_coverage.md`](docs/source_index_coverage.md).
+In addition to Axekin, the static web preview now loads complete public
+WordPress indexes (SuperPSX, DownloadGamePSP, Ziperto), TSV indexes
+(NoPayStation, PSN-Content), Archive.org public collections (AlvRo and
+maelly_pooh) and RomsTime's public game sitemap. GFS and RomHeaven are fully
+indexed in the main `additional.json` snapshot using
+`python scripts/import_sources.py --limit 64 --full-small`.
+
+**Platform compatibility:** these new full indexes only retain Games/Roms
+consoles, excluding Vita, PC games and unsupported categories. The website
+sources use category/sitemap/platform labels, not guessed console names.
+Full website indexes are deferred chunks in the React preview. The **native
+app is still bounded** by a 26,000-entry in-memory catalogue and only uses the
+smaller snapshots for these additional sources; bringing every new item into
+the native app requires a compact or disk-backed catalogue, not merely a
+larger fixed array. The audit lists six sources whose enumeration remains
+unverified. No package downloads or license material are stored.
+
+### Additional public website catalogs (metadata only)
+
+The curated `config/additional_sources.json` file registers 17 website feeds and
+indexes: the 15 requested external sites, plus the existing NoPayStation and
+PSN-Content sources. Their public **game titles, platforms, artwork URLs and
+source page links** are imported into `assets/catalogs/additional.json`.
+No game archives, packages, license keys or direct download-host URLs are
+downloaded or copied into that snapshot.
+
+Update the snapshots from the repository root:
+
+```bash
+# Normal refresh: the 16 other sources are still capped per source.
+python scripts/import_sources.py --limit 64
+# Full Axekin rebuild: visit every /games page and filter to Games/Roms consoles.
+python scripts/import_sources.py --limit 64 --full-axekin
+python -m unittest discover -s tests -p test_import_sources.py
+```
+
+The normal importer fetches a bounded index per source (up to 400 entries each);
+Axekin is the exception. With `--full-axekin`, all 840 pages are verified and
+only titles explicitly tagged with a console in `src/libraryData.ts` and
+`src/library.c` are kept. `config/axekin_platforms.json` maps Axekin's
+platform slugs to the existing Games/Roms consoles; unsupported platforms
+(including PlayStation Vita, which isn't in Games/Roms) are excluded. Games
+with multiple supported consoles get one entry in each appropriate console.
+As of the October 2026 crawl, 20,073 entries matched out of 20,993 games
+across 840 pages; 920 had no supported console. The full catalogue is stored
+in `assets/catalogs/axekin.json` (about 5.7 MB) rather than in the smaller
+`additional.json` source snapshot. A failed or incomplete full crawl does not
+overwrite the last successful full snapshot. A normal refresh preserves the
+separate Axekin index and never reintroduces its first 64 titles as duplicates.
+
+Other previously empty sites use specialized public metadata adapters:
+
+- **Axekin** reads the paginated `/games` Inertia page-data attribute. Its
+  publicly displayed titles, console associations and cover URLs are imported,
+  never the `downloadLinks` field embedded alongside them.
+- **RomHeaven** reads `/data/switch.csv`, the same public metadata feed its
+  Switch page reads. Individual title pages use the site's filename-derived
+  slugs; file-host payload URLs are excluded.
+- **Retro Game Champion** reads the server-rendered console-gallery labels at
+  `/games`. These are explicitly named **system collections**, not purported
+  individual game dumps. Its first rendered gallery batch may omit more systems.
+- **Archive.org / maelly_pooh** resolves the public uploader identifier from
+  metadata of one known item, then queries that uploader's indexed items.
+  The public uploader email is never written to the configuration or snapshot.
+
+A failed refresh retains the last bounded snapshot and marks it stale instead
+of silently clearing entries; inaccessible or unsupported indexes may remain
+empty. Review each source's `status` and `note` fields. Importing metadata does
+not validate that a package is available, safe or legally redistributable.
+
+**Home** now displays games from all sources enabled in Settings, including
+undated, website-only indexes. When several sources are enabled, the carousel
+rotates among them instead of being filled by one dated Pegasus-DL feed.
+Within each source, genuinely dated additions appear newest first; records
+without a date retain the index's own order (not a claimed release date).
+Disabling a source or the `catalog` format removes those entries from Home.
+An Axekin-only source filter therefore displays Axekin listings only, once its
+metadata has loaded. An empty selection shows the filtered-empty message.
+
+The **React preview** bundles the small snapshot and loads the full Axekin
+index as a **separate deferred chunk**. Rebuild with `npm run build:static`
+after importing to update both. Only nearby cards are rendered in large console
+carousels, and Search uses indexed title keys instead of pairwise comparisons.
+Entries are searchable and selectable by source; platform metadata places each
+matched entry under its Games/Roms console. Select the **Catalog metadata
+(website only)** format filter to control these separately from installable
+exFAT/FFPKG/PKG entries. Game details link to the source site's public listing
+page; none of these metadata entries contain downloadable packages.
+
+The **native Linux app** loads both local snapshots alongside Pegasus sources
+when catalog synchronization runs. With a full Axekin index, its catalogue
+capacity is 26,000 entries (including other sources), and console carousels can
+navigate beyond 128 titles with Left/Right keyboard or D-pad navigation. The larger fixed
+catalogue increases native memory usage; PS5 runtime behaviour is not verified.
+Keep `assets/catalogs/additional.json` and `assets/catalogs/axekin.json`
+in the repository. On **PS5**, copy *both* snapshots to:
+`/data/homebrew/wolodrive/catalogs/additional.json` and
+`/data/homebrew/wolodrive/catalogs/axekin.json` before synchronization.
+This native source loader has been compiled and regression-tested on Linux;
+PS5 SDK builds and on-device memory/performance remain unverified.
+
 ## React web preview
+
+Catalog sources: DLPS Catalog, Pippo .exFAT, PFS Catalog, and ZER0GAME Catalog.
+The broken evoX-CoreOS source is excluded from native catalog discovery, the
+artwork downloader, and React's manifest source count, even if upstream lists it.
+React still uses its bundled catalog; fetching the manifest does not import the
+remote catalogs into the browser.
 
 This branch also includes the React browser interface from `experimental`, alongside
 the SDL2 app. The native application continues to use `make` and the C sources;

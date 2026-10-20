@@ -121,15 +121,15 @@
     "ru": "Новые игры в каталоге"
   },
   "TXT_NO_LATEST_GAMES": {
-    "en": "No dated game entries yet. Refresh the catalog to load the latest additions.",
-    "pl": "Brak gier z datą dodania. Odśwież katalog, aby wczytać najnowsze gry.",
-    "es": "Aún no hay juegos con fecha. Actualiza el catálogo para cargar las novedades.",
-    "fr": "Aucun jeu daté pour le moment. Actualisez le catalogue pour charger les nouveautés.",
-    "nl": "Nog geen games met een datum. Vernieuw de catalogus om de nieuwste games te laden.",
-    "de": "Noch keine Spiele mit Datum. Aktualisiere den Katalog, um die neuesten Spiele zu laden.",
-    "it": "Nessun gioco con data. Aggiorna il catalogo per caricare le novità.",
-    "zh": "暂无带日期的游戏条目。请刷新目录以加载最新游戏。",
-    "ru": "Пока нет игр с датой добавления. Обновите каталог, чтобы загрузить новинки."
+    "en": "No games from enabled sources. Change your filters or refresh the catalog.",
+    "pl": "Brak gier z włączonych źródeł. Zmień filtry lub odśwież katalog.",
+    "es": "No hay juegos de las fuentes habilitadas. Cambia los filtros o actualiza el catálogo.",
+    "fr": "Aucun jeu provenant des sources activées. Modifiez les filtres ou actualisez le catalogue.",
+    "nl": "Geen games uit ingeschakelde bronnen. Pas de filters aan of vernieuw de catalogus.",
+    "de": "Keine Spiele aus aktivierten Quellen. Ändere die Filter oder aktualisiere den Katalog.",
+    "it": "Nessun gioco dalle fonti abilitate. Modifica i filtri o aggiorna il catalogo.",
+    "zh": "启用的来源中没有游戏。请调整筛选条件或刷新目录。",
+    "ru": "Нет игр из включённых источников. Измените фильтры или обновите каталог."
   },
   "TXT_NAV_HOME": {
     "en": "Home",

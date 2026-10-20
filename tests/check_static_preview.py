@@ -21,6 +21,7 @@ def main():
     artwork = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "assets"], cwd=ROOT
     ).decode().strip("\0").split("\0")
+    artwork = [name for name in artwork if not name.replace("\\", "/").startswith(("assets/catalogs/", "assets/artwork/"))]
     for name in artwork:
         assert (PREVIEW / name).read_bytes() == (ROOT / name).read_bytes(), name
     assert not list(PREVIEW.rglob("*.tsx")), "Preview must contain compiled code"
@@ -38,6 +39,21 @@ def main():
             links = re.findall(r'(?:src|href)="(/[^\"]+)"', html)
             assert any(link.endswith(".js") for link in links)
             assert any(link.endswith(".css") for link in links)
+            # Verify every full source index is delivered as a separate JS chunk.
+            full_sources = (
+                "axekin", "superpsx", "downloadgamepsp", "ziperto",
+                "nopaystation", "psn-content", "alvro", "maelly-pooh", "romstime"
+            )
+            assert not (PREVIEW / "assets/catalogs").exists(), "No duplicate raw catalog JSON in preview"
+            for source in full_sources:
+                chunks = list((PREVIEW / "assets").glob(source + "-*.js"))
+                assert len(chunks) == 1, f"Missing/duplicated full index: {source}"
+                links.extend("/assets/" + chunk.name for chunk in chunks)
+            artwork_chunks = list((PREVIEW / "assets").glob("cover-matches-*.js"))
+            assert len(artwork_chunks) == 1, "Artwork override manifest must be lazy-loaded"
+            assert not (PREVIEW / "assets/artwork/cover-matches.json").exists()
+            assert not (PREVIEW / "assets/artwork/cover-matches.tsv").exists()
+            links.extend("/assets/" + chunk.name for chunk in artwork_chunks)
             for name in sorted(set(links + ["/" + path for path in artwork])):
                 with urllib.request.urlopen(base + name) as response:
                     assert response.read() == (PREVIEW / name.lstrip("/")).read_bytes(), name

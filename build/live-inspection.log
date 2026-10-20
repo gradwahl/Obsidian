@@ -1,0 +1,91 @@
+[New LWP 254601 (id 2)]
+[New LWP 254600 (id 3)]
+[New LWP 254592 (id 4)]
+[New LWP 254591 (id 5)]
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.archlinux.org>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+[Switching to thread 1 (Thread 0x7b906154e800 (LWP 254590))]
+0x00007b9057cb14fb in ?? () from /usr/lib/libSDL3.so.0
+Selected 28 scroll 6496
+Texture bytes 11959516
+0 https://image.api.playstation.com/vulcan/ap/rnd/202504/1707/5838807383baec8d94aaad989ca3f7c654e1efc2a1da66c2.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 126460
+1 https://image.api.playstation.com/vulcan/img/rnd/202104/0510/kqFKzYXgYrUH0Ytg9ehjazY9.png?w=260:soft texture False surface False busy False priority 100 used 124179 failed False disk_checked 124188
+2 https://image.api.playstation.com/vulcan/ap/rnd/202302/2802/7e8081b6fe6c07c724b389099ffa21072f2ef814c890190a.png?w=260 texture True surface False busy False priority 100 used 124256 failed False disk_checked 118302
+3 https://image.api.playstation.com/vulcan/ap/rnd/202603/1901/a7fb5876c0ac23dc8bab1b17da341790ab11b0954f1d8572.png?w=260 texture True surface False busy False priority 80 used 123835 failed False disk_checked 121514
+4 https://image.api.playstation.com/vulcan/ap/rnd/202412/1710/f8ba4f92fab279fbb9514e315e7ddcbf78d0643e95b2e337.png?w=260:soft texture True surface False busy False priority 100 used 119517 failed False disk_checked 119345
+5 https://image.api.playstation.com/vulcan/ap/rnd/202505/2009/936e8ddd93d816ad2a81b40269ae8bf0e42d1771b0e5db79.png?w=260:soft texture True surface False busy False priority 100 used 120582 failed False disk_checked 120119
+6 https://image.api.playstation.com/gs2-sec/appkgo/prod/CUSA18004_00/2/i_2bd4d604346796d42a3a43418137fb7897e03db7353b9fb7a793282f0c8943ef/i/icon0.png?w=260 texture True surface False busy False priority 80 used 124023 failed False disk_checked 120188
+7 https://image.api.playstation.com/vulcan/ap/rnd/202606/0514/ce9a6b7632e0f12a14a33b2b08fb43da30f15b5378cedaed.png?w=260 texture True surface False busy False priority 80 used 124036 failed False disk_checked 119954
+8 https://image.api.playstation.com/vulcan/ap/rnd/202505/2009/936e8ddd93d816ad2a81b40269ae8bf0e42d1771b0e5db79.png?w=260 texture True surface False busy False priority 80 used 124034 failed False disk_checked 120099
+9 https://image.api.playstation.com/gs2-sec/appkgo/prod/CUSA18004_00/2/i_2bd4d604346796d42a3a43418137fb7897e03db7353b9fb7a793282f0c8943ef/i/icon0.png?w=260:soft texture True surface False busy False priority 100 used 120754 failed False disk_checked 120622
+10 https://image.api.playstation.com/vulcan/ap/rnd/202302/2802/7e8081b6fe6c07c724b389099ffa21072f2ef814c890190a.png?w=260:soft texture True surface False busy False priority 100 used 124203 failed False disk_checked 118254
+11 https://image.api.playstation.com/vulcan/ap/rnd/202203/1614/mdVkGjAllj9HD6qiM6gVwsts.png?w=260 texture False surface False busy False priority 80 used 124495 failed False disk_checked 126501
+12 https://image.api.playstation.com/vulcan/ap/rnd/202509/1811/77e47ca2fefab2e622a12b5b689603f9dec5aaeecd8eacd7.png?w=260 texture False surface False busy False priority 80 used 124386 failed True disk_checked 124176
+13 https://image.api.playstation.com/vulcan/ap/rnd/202509/1811/66d18359e973f40e48c05b6459c1cfb2929d73694bfcb32e.png?w=260 texture True surface False busy False priority 100 used 124386 failed False disk_checked 124183
+14 https://image.api.playstation.com/vulcan/ap/rnd/202310/3018/578c25e83d7fe754a625ae6910d84e4ce12d420f9771beb1.png?w=260 texture True surface False busy False priority 100 used 124303 failed False disk_checked 118376
+15 https://image.api.playstation.com/vulcan/img/rnd/202112/0209/eTNAclmYfZEjX0OGqdl0CL0k.png?w=260:soft texture True surface False busy False priority 100 used 124365 failed False disk_checked 117704
+16 https://image.api.playstation.com/vulcan/ap/rnd/202108/1213/jQITReCsnpS5ATrg2jrHF2w5.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 126477
+17 https://image.api.playstation.com/vulcan/ap/rnd/202412/1710/f8ba4f92fab279fbb9514e315e7ddcbf78d0643e95b2e337.png?w=260 texture True surface False busy False priority 80 used 124102 failed False disk_checked 119306
+18 https://image.api.playstation.com/vulcan/ap/rnd/202108/1607/czGau6hOvx9iQYOOkACdxqDl.png?w=260:soft texture False surface False busy False priority 100 used 118175 failed False disk_checked 118202
+19 https://image.api.playstation.com/vulcan/ap/rnd/202509/1706/c38f789d742f4247906888b3d195b8440937bf66bef6de91.png?w=260 texture True surface False busy False priority 80 used 118020 failed False disk_checked 116451
+20 https://image.api.playstation.com/vulcan/ap/rnd/202404/1808/f347c5c35efbb644f58d03f9b6a478625b052340ca216850.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 126471
+21 https://image.api.playstation.com/vulcan/ap/rnd/202606/0218/c79d2df71166c94b212ec45d070938ded570acb357b00d8f.png?w=260 texture True surface False busy False priority 80 used 118019 failed False disk_checked 115918
+22 https://image.api.playstation.com/vulcan/ap/rnd/202606/3010/5c0e8aba2cd653c7b9a35e7b64b6983ea1150aefd0350005.png?w=260 texture False surface True busy False priority 10 used 292469 failed False disk_checked 126506
+23 https://image.api.playstation.com/vulcan/ap/rnd/202311/2009/bbd6d0062ee2a3aae28cd2e477a076fb8c525e9cb6314cbb.png?w=260 texture True surface False busy False priority 80 used 124155 failed False disk_checked 118336
+24 https://image.api.playstation.com/vulcan/ap/rnd/202602/0404/cec873df23665ab9d2102de16ef6aaddefa60c4a60314775.png?w=260 texture True surface False busy False priority 100 used 292469 failed False disk_checked 125853
+25 https://image.api.playstation.com/vulcan/ap/rnd/202506/2406/1aa1badf590e91360c963cf8b421208002b397dbcb6c9e5b.png?w=260 texture True surface False busy False priority 80 used 124097 failed False disk_checked 119761
+26 https://image.api.playstation.com/gs2-sec/appkgo/prod/CUSA23117_00/1/i_53d220042acde764fa467d9693920597c2348f478dcb2659d39ea9bf65837495/i/icon0.png?w=260:soft texture True surface False busy False priority 100 used 124077 failed False disk_checked 119581
+27 https://image.api.playstation.com/vulcan/ap/rnd/202602/0404/cec873df23665ab9d2102de16ef6aaddefa60c4a60314775.png?w=260:soft texture True surface False busy False priority 100 used 292469 failed False disk_checked 125867
+28 https://image.api.playstation.com/vulcan/ap/rnd/202601/2022/453e716b436cd900afc665fa90ec127e7b38ae4ddf127c53.png?w=260 texture True surface False busy False priority 100 used 124350 failed False disk_checked 118412
+29 https://image.api.playstation.com/vulcan/ap/rnd/202205/1711/OMuwkb08ac0MQxLGFpHXGIbX.png?w=260 texture True surface False busy False priority 80 used 124431 failed False disk_checked 118039
+30 https://image.api.playstation.com/vulcan/img/rnd/202104/0510/kqFKzYXgYrUH0Ytg9ehjazY9.png?w=260 texture True surface False busy False priority 100 used 124256 failed False disk_checked 118393
+31 https://image.api.playstation.com/vulcan/ap/rnd/202406/2123/c261a0f006b6c663003a793fcccd2903ffc77732d283ea49.png?w=260:soft texture True surface False busy False priority 100 used 123931 failed False disk_checked 120805
+32 https://image.api.playstation.com/vulcan/ap/rnd/202511/2015/2bd7c98745e0f06a75d6faeec67e4c1d38f097a206d39a63.png?w=260 texture True surface False busy False priority 80 used 118019 failed False disk_checked 116426
+33 https://image.api.playstation.com/vulcan/ap/rnd/202508/1815/96fbe904b245c74b7cbd85f2ed33c1b3d2e60186ce56b51a.png?w=260 texture False surface False busy False priority 80 used 118020 failed True disk_checked 116460
+34 https://image.api.playstation.com/vulcan/ap/rnd/202509/1811/66d18359e973f40e48c05b6459c1cfb2929d73694bfcb32e.png?w=260:soft texture False surface False busy False priority 100 used 124329 failed False disk_checked 0
+35 https://image.api.playstation.com/vulcan/ap/rnd/202606/0514/ce9a6b7632e0f12a14a33b2b08fb43da30f15b5378cedaed.png?w=260:soft texture True surface False busy False priority 100 used 120079 failed False disk_checked 119969
+36 https://image.api.playstation.com/vulcan/ap/rnd/202311/2009/bbd6d0062ee2a3aae28cd2e477a076fb8c525e9cb6314cbb.png?w=260:soft texture True surface False busy False priority 100 used 119283 failed False disk_checked 118351
+37 https://image.api.playstation.com/vulcan/ap/rnd/202412/2415/20a4ac05ee2de01aeada79687bb5f344ad0f1aeea72152c8.png?w=260 texture False surface False busy False priority 100 used 124463 failed False disk_checked 126190
+38 https://image.api.playstation.com/vulcan/ap/rnd/202501/1417/ce6098b30ec69997c517996a333292b701f8a879ab89193e.png?w=260:soft texture False surface False busy False priority 100 used 123846 failed False disk_checked 123860
+39 https://image.api.playstation.com/vulcan/ap/rnd/202404/1808/f347c5c35efbb644f58d03f9b6a478625b052340ca216850.png?w=260:soft texture False surface False busy False priority 100 used 124478 failed False disk_checked 125889
+40 https://image.api.playstation.com/vulcan/ap/rnd/202510/2815/700a1331c6df2182e0e42ff907b749c4fd6975570a90e874.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 126490
+41 https://image.api.playstation.com/vulcan/ap/rnd/202407/2505/34cb80e4a067cf254409922546821d594f431178fb715c92.png?w=260 texture True surface False busy False priority 80 used 118021 failed False disk_checked 116464
+42 https://image.api.playstation.com/vulcan/ap/rnd/202303/3019/745a10e0cce7d70b2c5e87343e41f9a82402094d882ec9b3.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 128460
+43 https://image.api.playstation.com/vulcan/img/rnd/202112/0209/eTNAclmYfZEjX0OGqdl0CL0k.png?w=260 texture True surface False busy False priority 80 used 124430 failed False disk_checked 116524
+44 https://image.api.playstation.com/vulcan/ap/rnd/202311/0815/433083a8a679a86eb7a78d0a3c4f90a4e95dc3bca4c1c6ce.png?w=260 texture True surface False busy False priority 80 used 124021 failed False disk_checked 120799
+45 https://image.api.playstation.com/vulcan/ap/rnd/202603/1901/a7fb5876c0ac23dc8bab1b17da341790ab11b0954f1d8572.png?w=260:soft texture True surface False busy False priority 100 used 123419 failed False disk_checked 121984
+46 https://image.api.playstation.com/vulcan/ap/rnd/202512/1908/6ce298e9b23333630dfbc1c1c647f2f8335ed24d08a4a544.png?w=260 texture True surface False busy False priority 80 used 124022 failed False disk_checked 120617
+47 https://image.api.playstation.com/vulcan/ap/rnd/202501/1417/ce6098b30ec69997c517996a333292b701f8a879ab89193e.png?w=260 texture True surface False busy False priority 100 used 123904 failed False disk_checked 120966
+48 https://image.api.playstation.com/vulcan/ap/rnd/202512/1908/6ce298e9b23333630dfbc1c1c647f2f8335ed24d08a4a544.png?w=260:soft texture True surface False busy False priority 100 used 121092 failed False disk_checked 120980
+49 https://image.api.playstation.com/vulcan/ap/rnd/202406/2123/c261a0f006b6c663003a793fcccd2903ffc77732d283ea49.png?w=260 texture True surface False busy False priority 80 used 124022 failed False disk_checked 120211
+50 https://image.api.playstation.com/vulcan/ap/rnd/202601/2022/453e716b436cd900afc665fa90ec127e7b38ae4ddf127c53.png?w=260:soft texture False surface False busy False priority 100 used 124282 failed False disk_checked 0
+51 https://image.api.playstation.com/vulcan/ap/rnd/202610/0213/2a446965c0e8537af78302782417b0353a73ff1b19ebfeb4.png?w=260 texture True surface False busy False priority 80 used 118022 failed False disk_checked 116469
+52 https://image.api.playstation.com/vulcan/ap/rnd/202310/3018/578c25e83d7fe754a625ae6910d84e4ce12d420f9771beb1.png?w=260:soft texture False surface False busy False priority 100 used 124233 failed False disk_checked 124247
+53 https://image.api.playstation.com/gs2-sec/appkgo/prod/CUSA23445_00/2/i_645e0d50f2e7590987cc145f7dd97271044ff7216e2ae8fa23f9d4b9e10a9d8e/i/icon0.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 126494
+54 https://image.api.playstation.com/vulcan/ap/rnd/202108/1607/czGau6hOvx9iQYOOkACdxqDl.png?w=260 texture True surface False busy False priority 80 used 292469 failed False disk_checked 118143
+55 https://image.api.playstation.com/gs2-sec/appkgo/prod/CUSA23117_00/1/i_53d220042acde764fa467d9693920597c2348f478dcb2659d39ea9bf65837495/i/icon0.png?w=260 texture True surface False busy False priority 100 used 124098 failed False disk_checked 119542
+56 https://image.api.playstation.com/vulcan/ap/rnd/202412/2415/20a4ac05ee2de01aeada79687bb5f344ad0f1aeea72152c8.png?w=260:soft texture False surface False busy False priority 100 used 124412 failed False disk_checked 0
+57 https://image.api.playstation.com/vulcan/ap/rnd/202504/0212/20c0c83fa588e0cb240362718248e2c27a6d2fdf90016e27.png?w=260:soft texture True surface False busy False priority 100 used 123817 failed False disk_checked 121758
+58 https://image.api.playstation.com/vulcan/ap/rnd/202504/0212/20c0c83fa588e0cb240362718248e2c27a6d2fdf90016e27.png?w=260 texture True surface False busy False priority 100 used 123873 failed False disk_checked 121138
+59 https://image.api.playstation.com/vulcan/ap/rnd/202506/2406/1aa1badf590e91360c963cf8b421208002b397dbcb6c9e5b.png?w=260:soft texture True surface False busy False priority 100 used 119929 failed False disk_checked 119827
+60 https://image.api.playstation.com/vulcan/ap/rnd/202606/0319/ade29beabeee19397b478452ce70b913aeb69cec536366b3.png?w=260 texture True surface False busy False priority 80 used 118021 failed False disk_checked 116480
+61 https://image.api.playstation.com/vulcan/ap/rnd/202311/0815/433083a8a679a86eb7a78d0a3c4f90a4e95dc3bca4c1c6ce.png?w=260:soft texture True surface False busy False priority 100 used 123884 failed False disk_checked 121142
+62 https://image.api.playstation.com/vulcan/ap/rnd/202606/3010/5c0e8aba2cd653c7b9a35e7b64b6983ea1150aefd0350005.png?w=260:soft texture False surface False busy False priority 100 used 124446 failed False disk_checked 126246
+63 https://image.api.playstation.com/vulcan/ap/rnd/202205/1711/OMuwkb08ac0MQxLGFpHXGIbX.png?w=260:soft texture False surface False busy False priority 100 used 118101 failed False disk_checked 118112
+NEARBY 26 STEINSGATE REBOOT https://image.api.playstation.com/vulcan/ap/rnd/202606/3010/5c0e8aba2cd653c7b9a35e7b64b6983ea1150aefd0350005.png?w=260
+NEARBY 27 Shogun Showdown https://image.api.playstation.com/vulcan/ap/rnd/202404/1808/f347c5c35efbb644f58d03f9b6a478625b052340ca216850.png?w=260
+NEARBY 28 TEKKEN DARK RESURRECTION https://image.api.playstation.com/vulcan/ap/rnd/202602/0404/cec873df23665ab9d2102de16ef6aaddefa60c4a60314775.png?w=260
+NEARBY 29 TOEM https://image.api.playstation.com/vulcan/ap/rnd/202108/1213/jQITReCsnpS5ATrg2jrHF2w5.png?w=260
+NEARBY 30 Tennis World Tour 2 Complete Edition https://image.api.playstation.com/gs2-sec/appkgo/prod/CUSA23445_00/2/i_645e0d50f2e7590987cc145f7dd97271044ff7216e2ae8fa23f9d4b9e10a9d8e/i/icon0.png?w=260
+NEARBY 31 The Long Dark https://image.api.playstation.com/vulcan/ap/rnd/202303/3019/745a10e0cce7d70b2c5e87343e41f9a82402094d882ec9b3.png?w=260
+NEARBY 32 Crusader Kings III https://image.api.playstation.com/vulcan/ap/rnd/202108/1607/czGau6hOvx9iQYOOkACdxqDl.png?w=260
+NEARBY 33 Demon Slayer Kimetsu no Yaiba The Hinokami Chronicles 2 https://image.api.playstation.com/vulcan/ap/rnd/202504/1707/5838807383baec8d94aaad989ca3f7c654e1efc2a1da66c2.png?w=260
+NEARBY 34 Echoes of The End https://image.api.playstation.com/vulcan/ap/rnd/202510/2815/700a1331c6df2182e0e42ff907b749c4fd6975570a90e874.png?w=260
+NEARBY 35 Firefighting Simulator Ignite https://image.api.playstation.com/vulcan/ap/rnd/202502/1911/44718863baaf28732bac7f9914aa06a1d7251364d3393f0d.png?w=260
+[Inferior 1 (process 254590) detached]

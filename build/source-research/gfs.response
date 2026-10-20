@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GFS Catalog — PS5 Game Package Catalog</title>
+    <meta
+      name="description"
+      content="GFS Catalog is a centralized catalog of PS5 game packages, organized and indexed across multiple supported formats for easy browsing and discovery."
+    />
+    <meta name="theme-color" content="#0b0e14" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GFS Catalog" />
+    <meta property="og:title" content="GFS Catalog — PS5 Game Package Catalog" />
+    <meta
+      property="og:description"
+      content="GFS Catalog is a centralized catalog of PS5 game packages, organized and indexed across multiple supported formats for easy browsing and discovery."
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GFS Catalog — PS5 Game Package Catalog" />
+    <meta
+      name="twitter:description"
+      content="GFS Catalog is a centralized catalog of PS5 game packages, organized and indexed across multiple supported formats for easy browsing and discovery."
+    />
+    <script type="module" crossorigin src="/assets/index-BHT1SQle.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dv7n7Dm1.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

@@ -64,6 +64,14 @@ static Uint64 artwork_hash(const char *url) {
     return hash;
 }
 
+static const char *artwork_url(const GameItem *item, bool backdrop) {
+    if (backdrop) return item->backdrop_url[0] ? item->backdrop_url :
+        item->landscape_url[0] ? item->landscape_url : item->cover_url[0] ? item->cover_url :
+        item->icon_url[0] ? item->icon_url : item->cover_fallback_url;
+    return item->boxart_url[0] ? item->boxart_url : item->cover_url[0] ? item->cover_url :
+        item->icon_url[0] ? item->icon_url : item->landscape_url[0] ? item->landscape_url : item->cover_fallback_url;
+}
+
 static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *request) {
     const char *role = backdrop ? "backdrop" : "box";
     /* Only safe title IDs can select local overrides. */
@@ -87,13 +95,7 @@ static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *
             }
         }
     }
-    const char *url;
-    if (backdrop) url = item->backdrop_url[0] ? item->backdrop_url :
-                        item->landscape_url[0] ? item->landscape_url :
-                        item->cover_url[0] ? item->cover_url : item->icon_url;
-    else url = item->boxart_url[0] ? item->boxart_url :
-               item->cover_url[0] ? item->cover_url :
-               item->icon_url[0] ? item->icon_url : item->landscape_url;
+    const char *url = artwork_url(item, backdrop);
     if (strncmp(url,"local:",6) == 0) {
         request->local = true;
         SDL_strlcpy(request->path,url+6,sizeof(request->path));
@@ -101,7 +103,8 @@ static void artwork_location(const GameItem *item, bool backdrop, ArtworkEntry *
             snprintf(request->key,sizeof(request->key),"%s:%lld:%lld",request->path,(long long)st.st_mtime,(long long)st.st_size);
         return;
     }
-    request->complete_box = !backdrop && item->boxart_url[0];
+    request->complete_box = !backdrop && (item->boxart_url[0] ||
+        (item->cover_fallback_url[0] && !strcmp(url, item->cover_fallback_url)));
     request->soft = backdrop && !item->backdrop_url[0] && !item->landscape_url[0];
     SDL_strlcpy(request->url, url, sizeof(request->url));
     if (!url[0]) { request->key[0] = 0; return; }
@@ -306,13 +309,11 @@ static ArtworkEntry *artwork_request(WolodriveApp *app, const GameItem *item, bo
         if (!cache->download_thread) { artwork_destroy(app); return NULL; }
     }
     struct ArtworkCache *cache = app->artwork;
-    const char *url = backdrop ? (snapshot.backdrop_url[0] ? snapshot.backdrop_url :
-        snapshot.landscape_url[0] ? snapshot.landscape_url : snapshot.cover_url[0] ? snapshot.cover_url : snapshot.icon_url) :
-        (snapshot.boxart_url[0] ? snapshot.boxart_url : snapshot.cover_url[0] ? snapshot.cover_url :
-         snapshot.icon_url[0] ? snapshot.icon_url : snapshot.landscape_url);
+    const char *url = artwork_url(&snapshot, backdrop);
     char input[768];
     snprintf(input, sizeof(input), "%s:%d:%d:%d:%s", snapshot.id_code, backdrop,
-             !backdrop && snapshot.boxart_url[0] != 0,
+             !backdrop && (snapshot.boxart_url[0] ||
+                 (snapshot.cover_fallback_url[0] && !strcmp(url, snapshot.cover_fallback_url))),
              backdrop && !snapshot.backdrop_url[0] && !snapshot.landscape_url[0], url);
     Uint32 now = SDL_GetTicks();
     ArtworkLocation *location = NULL, *oldest_location = &cache->locations[0];
@@ -360,19 +361,27 @@ SDL_Texture *artwork_get(WolodriveApp *app, const GameItem *item, bool backdrop,
     if (!entry) return NULL;
     struct ArtworkCache *cache = app->artwork;
     SDL_LockMutex(cache->mutex);
-    if (entry->failed && !entry->surface && !entry->texture) {
+    GameItem fallback;
+    bool copied = false;
+    int attempts = 0;
+    while (entry->failed && !entry->surface && !entry->texture) {
+        if (++attempts > 8) { SDL_UnlockMutex(cache->mutex); return NULL; }
         bool local = entry->local;
+        char failed_url[512];
+        SDL_strlcpy(failed_url, entry->url, sizeof(failed_url));
         SDL_UnlockMutex(cache->mutex);
-        GameItem fallback;
-        if (app->catalog_mutex) SDL_LockMutex(app->catalog_mutex);
-        fallback = *item;
-        if (app->catalog_mutex) SDL_UnlockMutex(app->catalog_mutex);
+        if (!copied) {
+            if (app->catalog_mutex) SDL_LockMutex(app->catalog_mutex);
+            fallback = *item;
+            if (app->catalog_mutex) SDL_UnlockMutex(app->catalog_mutex);
+            copied = true;
+        }
         fallback.id_code[0] = 0;
         if (!local) {
-            if (backdrop) fallback.backdrop_url[0] = fallback.landscape_url[0] = 0;
-            else if (fallback.boxart_url[0]) fallback.boxart_url[0] = 0;
-            else if (fallback.cover_url[0]) fallback.cover_url[0] = 0;
-            else fallback.icon_url[0] = 0;
+            char *urls[] = {fallback.boxart_url, fallback.cover_url, fallback.icon_url,
+                           fallback.landscape_url, fallback.backdrop_url, fallback.cover_fallback_url};
+            for (size_t i = 0; i < sizeof(urls)/sizeof(urls[0]); i++)
+                if (!strcmp(urls[i], failed_url)) urls[i][0] = 0;
         }
         entry = artwork_request(app, &fallback, backdrop, priority);
         if (!entry) return NULL;

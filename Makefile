@@ -53,6 +53,14 @@ test:
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc tests/test_screenshots.c src/text.c -o build/test_screenshots \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
 	python3 -m unittest discover -s tests -p test_download_artwork.py
+	python3 -m unittest discover -s tests -p test_import_sources.py
+	python3 -m unittest discover -s tests -p test_full_sources.py
+	python3 -m unittest discover -s tests -p test_enrich_artwork.py
+	python3 -m unittest discover -s tests -p test_launchbox_artwork.py
+	python3 -m unittest discover -s tests -p test_gametdb_artwork.py
+	python3 -m unittest discover -s tests -p test_dlpsgame_artwork.py
+	python3 -m unittest discover -s tests -p test_review_artwork.py
+	python3 -m unittest discover -s tests -p "test_igdb*.py"
 	python3 tests/run_tests.py
 
 .PHONY: build-windows windows

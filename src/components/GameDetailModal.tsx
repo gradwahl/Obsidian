@@ -4,6 +4,7 @@ import { t } from '../translations';
 import { X, ExternalLink } from 'lucide-react';
 import { isSameGame } from '../catalog';
 import { CoverArt } from './GameCard';
+import { nextCoverSource } from '../artworkMatches';
 
 interface GameDetailModalProps {
   game: GameItem;
@@ -32,6 +33,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [showOriginalDesc, setShowOriginalDesc] = useState(false);
   const [entryPage, setEntryPage] = useState(0);
+  const [failedSources, setFailedSources] = useState<string[]>([]);
   useEffect(() => { setEntryPage(0); setActiveTab('install'); setSelectedScreenshot(null); }, [game]);
 
   const neighborCatalog = neighborGames || catalog;
@@ -51,7 +53,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
   const screenshots = game.screenshot_urls || [];
   const entryCount = activeTab === 'install' ? relatedPackages.length : activeTab === 'dlc' ? relatedDLC.length : screenshots.length;
-  const coverSrc = game.cover_local_path || game.cover_url || '';
+  const coverSrc = nextCoverSource(game, failedSources, true);
 
   let descText = game.description;
   if (game.description_id && !showOriginalDesc) {
@@ -69,7 +71,8 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
         <div className="tv-detail-header">
           {coverSrc && (
             <img
-              src={game.backdrop_url || coverSrc}
+              src={coverSrc}
+              onError={() => setFailedSources(values => [...values, coverSrc])}
               alt=""
               className="w-full h-full object-cover opacity-25 filter blur-xs scale-105"
             />
@@ -171,7 +174,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       <CoverArt className="tv-package-cover" game={pkg} />
                       <span className="tv-package-name">{activeTab === 'dlc' ? pkg.title : pkg.source_name}</span>
                       <span className="tv-package-meta">{pkg.id_code} | {pkg.format.toUpperCase()} | {pkg.version}</span>
-                      <span className="tv-package-action">{t(language, activeTab === 'dlc' ? 'TXT_GAME_DETAILS' : pkg.format === 'exfat' ? 'TXT_MOUNT' : 'TXT_DOWNLOAD')}</span>
+                      <span className="tv-package-action">{pkg.format === 'catalog' ? 'WEBSITE ONLY' : t(language, activeTab === 'dlc' ? 'TXT_GAME_DETAILS' : pkg.format === 'exfat' ? 'TXT_MOUNT' : 'TXT_DOWNLOAD')}</span>
                     </button>
                   ))}
                 </div>}
@@ -252,7 +255,13 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 </div>
                 <div className="p-3 rounded bg-[#18181f] border border-[#22222c]">
                   <div className="text-[#7c7c88] text-[10px] uppercase font-bold">TARGET PATH</div>
-                  <div className="text-white font-mono text-[11px] mt-0.5 truncate">{game.install_path}</div>
+                  {game.format === 'catalog' ? (
+                    <div className="text-white text-[11px] mt-0.5">
+                      No installer — public catalog listing only
+                      {game.source_url && <a href={game.source_url} target="_blank" rel="noopener noreferrer"
+                        className="block mt-1 text-[#aaaaff] underline">Open source page ↗</a>}
+                    </div>
+                  ) : <div className="text-white font-mono text-[11px] mt-0.5 truncate">{game.install_path}</div>}
                 </div>
               </div>
             </div>

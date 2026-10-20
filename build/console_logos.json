@@ -1,0 +1,8 @@
+{
+"sony-ps1":"playstation_flat", "sony-ps2":"playstation2_flat", "sony-ps3":"playstation3_flat", "sony-ps4":"playstation4_flat", "sony-ps5":"playstation5_flat", "sony-psp":"playstation_psp", "sony-vita":"playstation_vita",
+"microsoft-xbox":"xbox_original", "microsoft-xbox360":"xbox_360", "microsoft-xboxone":"xbox_one", "microsoft-series":"xbox_series",
+"sega-master":"sega_master_system", "sega-megadrive":"sega_megadrive", "sega-gamegear":"sega_gamegear", "sega-cd":"sega_cd", "sega-32x":"sega_32x", "sega-saturn":"sega_saturn", "sega-dreamcast":"sega_dreamcast",
+"nintendo-nes":"nintendo_nes", "nintendo-snes":"nintendo_snes", "nintendo-n64":"nintendo_64", "nintendo-gamecube":"nintendo_gamecube", "nintendo-wii":"nintendo_wii", "nintendo-wiiu":"nintendo_wiiu", "nintendo-switch":"nintendo_switch", "nintendo-switch2":"COMMONS", "nintendo-gameboy":"nintendo_gameboy", "nintendo-gbc":"nintendo_gameboy_color", "nintendo-gba":"nintendo_gameboy_advance", "nintendo-ds":"nintendo_ds", "nintendo-3ds":"nintendo_3ds", "nintendo-virtualboy":"nintendo_virtualboy",
+"atari-2600":"atari_2600", "atari-5200":"atari_5200", "atari-7800":"atari_7800", "atari-lynx":"atari_lynx", "atari-jaguar":"atari_jaguar",
+"snk-neogeo":"snk_neogeo", "snk-cd":"snk_neogeo_cd", "snk-pocket":"snk_neogeo_pocket", "snk-pocketcolor":"snk_neogeo_pocket_color"
+}

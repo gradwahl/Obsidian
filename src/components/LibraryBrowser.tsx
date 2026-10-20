@@ -19,8 +19,11 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
   const [selected, setSelected] = useState(0);
   const [focused, setFocused] = useState(0);
   const title = t(language, isEmulatorsView ? 'TXT_NAV_EMULATORS' : 'TXT_NAV_GAMES');
-  const gamesFor = (system: LibraryConsole) => isEmulatorsView || !system.title_id_prefix ? []
-    : catalog.filter(item => matchesFilters(item, filters) && item.id_code.toUpperCase().startsWith(system.title_id_prefix!));
+  const gamesFor = (system: LibraryConsole) => isEmulatorsView || (!system.title_id_prefix && !system.platform_id) ? []
+    : catalog.filter(item => matchesFilters(item, filters) && (
+      (system.title_id_prefix && item.id_code.toUpperCase().startsWith(system.title_id_prefix)) ||
+      (system.platform_id && item.platform === system.platform_id)
+    ));
   const back = () => { if (console) setConsole(null); else setCompany(null); setPage(0); setSelected(0); setFocused(0); };
   const items = company ? company.consoles : COMPANIES;
   const pages = Math.ceil(items.length / 8);
@@ -32,7 +35,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
   if (console) return <div className="tv-library-games">
     <HomeView games={gamesFor(console)} language={language} title={console.name} showDate={false}
       emptyMessage={t(language, isEmulatorsView ? 'TXT_EMULATOR_NOT_CONNECTED'
-        : console.title_id_prefix ? 'TXT_NO_PACKAGES' : 'TXT_CONSOLE_NOT_CONNECTED')}
+        : (console.title_id_prefix || console.platform_id) ? 'TXT_NO_PACKAGES' : 'TXT_CONSOLE_NOT_CONNECTED')}
       selected={selected} sidebarFocused={false} onSelect={setSelected} onOpen={onOpenGame}
       onRefresh={onRefresh} syncInProgress={syncInProgress} />
     {breadcrumb}

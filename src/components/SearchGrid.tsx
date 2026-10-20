@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
-import { normalizeTitleKey, isSameGame, matchesFilters } from '../catalog';
+import { normalizeTitleKey, searchPlatform, matchesFilters } from '../catalog';
 import { GameCard } from './GameCard';
 import { ChevronLeft, ChevronRight, Delete, CornerDownLeft } from 'lucide-react';
 
@@ -38,11 +38,13 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
 
     // Group same games across source formats
     const unique: GameItem[] = [];
+    const seen = new Set<string>();
     for (const item of filtered) {
-      const exists = unique.some((existing) => isSameGame(existing, item));
-      if (!exists) {
-        unique.push(item);
-      }
+      const titleKey = normalizeTitleKey(item.title);
+      const key = titleKey ? `${searchPlatform(item)}:${item.is_game}:${item.is_dlc}:${titleKey}` : item.id_code;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
     }
     return unique;
   }, [catalog, query, filters]);

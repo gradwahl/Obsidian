@@ -1,0 +1,37 @@
+[
+  {
+    "id": "superpsx",
+    "name": "SuperPSX",
+    "url": "https://www.superpsx.com/",
+    "categories": {
+      "33": "sony-ps3",
+      "46": "sony-ps4",
+      "3660": "sony-ps5",
+      "3667": "sony-ps2",
+      "3671": "sony-ps4"
+    }
+  },
+  {
+    "id": "downloadgamepsp",
+    "name": "DownloadGamePSP",
+    "url": "https://downloadgamepsp.org/",
+    "categories": {
+      "63": "sony-psp"
+    }
+  },
+  {
+    "id": "ziperto",
+    "name": "Ziperto",
+    "url": "https://www.ziperto.com/",
+    "categories": {
+      "6": "nintendo-3ds",
+      "20": "nintendo-3ds",
+      "22": "nintendo-wiiu",
+      "60": "nintendo-3ds",
+      "365": "nintendo-3ds",
+      "366": "nintendo-3ds",
+      "3296": "nintendo-switch",
+      "3534": "nintendo-switch"
+    }
+  }
+]

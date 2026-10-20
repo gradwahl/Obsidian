@@ -23,7 +23,9 @@ def artwork_server():
             requests.append(self.path)
             if self.path == '/stall':
                 time.sleep(2)
-            if self.path == '/bad-until-import' or (self.path == '/retry' and requests.count('/retry') == 1):
+            if self.path in ('/challenge', '/bad-source'):
+                body = b'<html><title>Making sure you are not a bot</title></html>'
+            elif self.path == '/bad-until-import' or (self.path == '/retry' and requests.count('/retry') == 1):
                 body = b'not an image' * 100
             else:
                 dimensions = (80, 120) if self.path == '/good' else (160, 90)

@@ -5,5 +5,10 @@ __pycache__/
 assets/covers/*.art
 assets/covers/*.tmp
 assets/covers/artwork-index.json
-assets/artwork/
+assets/covers/artwork-progress.jsonl
+assets/artwork/*
+!assets/artwork/cover-matches.json
+!assets/artwork/cover-matches.tsv
+!assets/artwork/igdb-covers.json
+.cache/wolodrive-artwork/
 assets/screenshots/

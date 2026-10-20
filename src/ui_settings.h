@@ -3,17 +3,19 @@
 enum { SETTINGS_SOURCE_PAGE = 7 };
 static int settings_sources(WolodriveApp *app, const char **names) {
     int count = 0;
-    for (int i = 0; i < app->catalog_count + app->filters.source_count; i++) {
-        const char *name = i < app->catalog_count ? app->catalog[i].source_name : app->filters.sources[i-app->catalog_count];
+    for (int i = 0; i < app->catalog_count + app->filters.source_count + app->catalog_source_count; i++) {
+        const char *name = i < app->catalog_count ? app->catalog[i].source_name :
+            i < app->catalog_count + app->filters.source_count ? app->filters.sources[i-app->catalog_count] :
+            app->catalog_source_names[i-app->catalog_count-app->filters.source_count];
         if (!name[0]) continue;
         bool duplicate = false;
         for (int j = 0; j < count; j++) if (SDL_strcasecmp(name, names[j]) == 0) { duplicate = true; break; }
-        if (!duplicate) names[count++] = name;
+        if (!duplicate && count < MAX_CATALOG_ITEMS*2) names[count++] = name;
     }
     return count;
 }
 static SDL_Rect settings_target(int column, int visible_row) {
-    return (SDL_Rect){CONTENT_X+30+column*860, column && visible_row == 4 ? 720 : 280+visible_row*70,
+    return (SDL_Rect){CONTENT_X+30+column*860, column && visible_row == 5 ? 720 : 280+visible_row*70,
                       column ? 590 : 820, 60};
 }
 static void settings_changed(WolodriveApp *app) {
@@ -24,8 +26,8 @@ static void settings_toggle(WolodriveApp *app) {
     SDL_LockMutex(app->catalog_mutex);
     if (app->settings_column == 1) {
         int row = app->settings_selection;
-        if (row == 4) memset(&app->filters, 0, sizeof(app->filters));
-        else if (row == 0) app->filters.disabled_formats = app->filters.disabled_formats == 0 ? 7 : 0;
+        if (row == 5) memset(&app->filters, 0, sizeof(app->filters));
+        else if (row == 0) app->filters.disabled_formats = app->filters.disabled_formats == 0 ? 15 : 0;
         else app->filters.disabled_formats ^= 1u << (row-1);
     } else if (app->settings_selection == 0) {
         app->filters.sources_limited = !app->filters.sources_limited;
@@ -63,11 +65,11 @@ static bool handle_settings_input(WolodriveApp *app, const SDL_Event *ev) {
     SDL_LockMutex(app->catalog_mutex);
     int count = settings_sources(app, names);
     SDL_UnlockMutex(app->catalog_mutex);
-    app->settings_selection = SDL_min(app->settings_selection, app->settings_column ? 4 : count);
+    app->settings_selection = SDL_min(app->settings_selection, app->settings_column ? 5 : count);
     int start = app->settings_selection > 0 ? (app->settings_selection-1)/SETTINGS_SOURCE_PAGE*SETTINGS_SOURCE_PAGE : 0;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
         for (int col = 0; col < 2; col++) {
-            int last = col ? 4 : SDL_min(SETTINGS_SOURCE_PAGE, count-start);
+            int last = col ? 5 : SDL_min(SETTINGS_SOURCE_PAGE, count-start);
             if (app->settings_column) start = 0;
             for (int row = 0; row <= last; row++) if (contains_point(settings_target(col, row), ev->button.x, ev->button.y)) {
                 app->sidebar_focus = false;
@@ -106,9 +108,9 @@ static bool handle_settings_input(WolodriveApp *app, const SDL_Event *ev) {
         app->settings_selection = SDL_max(0, SDL_min(count, app->settings_selection-ev->wheel.y*direction*3));
     }
     if (action == 1 && app->settings_selection > 0) app->settings_selection--;
-    else if (action == 2 && app->settings_selection < (app->settings_column ? 4 : count)) app->settings_selection++;
+    else if (action == 2 && app->settings_selection < (app->settings_column ? 5 : count)) app->settings_selection++;
     else if (action == 3) settings_toggle(app);
-    else if (action == 4 && app->settings_column == 0) { app->settings_column = 1; app->settings_selection = SDL_min(app->settings_selection, 4); }
+    else if (action == 4 && app->settings_column == 0) { app->settings_column = 1; app->settings_selection = SDL_min(app->settings_selection, 5); }
     else if (action == 5 && app->settings_column == 1) { app->settings_column = 0; app->settings_selection = SDL_min(app->settings_selection, count); }
     else if (action == 5 || action == 6) app->sidebar_focus = true;
     return true;
@@ -146,17 +148,17 @@ static void render_settings(WolodriveApp *app) {
         settings_draw_checkbox(app, settings_target(0,i-start+1), names[i], settings_source_enabled(app,names[i]), false,
             !app->sidebar_focus && !app->settings_column && selected == i+1);
     SDL_UnlockMutex(app->catalog_mutex);
-    for (int row = 0; row < 4; row++) {
+    for (int row = 0; row < 5; row++) {
         const char *label = row ? sys_format_to_string(app, (PackageFormat)(row-1)) : TR(app, TXT_SETTINGS_ALL_FORMATS);
         bool checked = row ? !(app->filters.disabled_formats & (1u << (row-1))) : !app->filters.disabled_formats;
         settings_draw_checkbox(app, settings_target(1,row), label, checked,
-            row == 0 && app->filters.disabled_formats > 0 && app->filters.disabled_formats < 7,
+            row == 0 && app->filters.disabled_formats > 0 && app->filters.disabled_formats < 15,
             !app->sidebar_focus && app->settings_column && app->settings_selection == row);
     }
-    SDL_Rect reset = settings_target(1,4);
+    SDL_Rect reset = settings_target(1,5);
     fill_rect(r, reset.x, reset.y, reset.w, reset.h, 35,35,35,255);
     draw_fitted_text(app, app->font_small, TR(app, TXT_SETTINGS_RESET), reset, white, reset, true);
-    if (!app->sidebar_focus && app->settings_column && app->settings_selection == 4) draw_border(r,reset.x,reset.y,reset.w,reset.h,3,245,245,245,255);
+    if (!app->sidebar_focus && app->settings_column && app->settings_selection == 5) draw_border(r,reset.x,reset.y,reset.w,reset.h,3,245,245,245,255);
     if (count > SETTINGS_SOURCE_PAGE) {
         char page[64]; snprintf(page,sizeof(page),"%d / %d", start/SETTINGS_SOURCE_PAGE+1, (count+SETTINGS_SOURCE_PAGE-1)/SETTINGS_SOURCE_PAGE);
         draw_text(app, app->font_micro, page, CONTENT_X+30, 860, muted, 0);

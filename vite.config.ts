@@ -20,7 +20,9 @@ export default defineConfig({
         const files = execFileSync('git', ['ls-files', '-z', '--', 'assets'], {
           cwd: projectRoot,
           encoding: 'utf8'
-        }).split('\0').filter(Boolean);
+        }).split('\0').filter(Boolean).filter(fileName =>
+          !fileName.replace(/\\/g, '/').startsWith('assets/catalogs/') &&
+          !fileName.replace(/\\/g, '/').startsWith('assets/artwork/'));
         for (const fileName of files) {
           this.emitFile({
             type: 'asset',

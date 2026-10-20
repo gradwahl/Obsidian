@@ -1,0 +1,126 @@
+{
+  "nintendo-pokemon-mini": {
+    "platform": "nintendo-pokemini",
+    "console": "Pokémon Mini"
+  },
+  "nes": {
+    "platform": "nintendo-nes",
+    "console": "NES / Famicom"
+  },
+  "snes": {
+    "platform": "nintendo-snes",
+    "console": "SNES / Super Famicom"
+  },
+  "n64": {
+    "platform": "nintendo-n64",
+    "console": "Nintendo 64"
+  },
+  "gamecube": {
+    "platform": "nintendo-gc",
+    "console": "GameCube"
+  },
+  "wii": {
+    "platform": "nintendo-wii",
+    "console": "Wii"
+  },
+  "wii-u": {
+    "platform": "nintendo-wiiu",
+    "console": "Wii U"
+  },
+  "switch": {
+    "platform": "nintendo-switch",
+    "console": "Nintendo Switch"
+  },
+  "game-boy": {
+    "platform": "nintendo-gb",
+    "console": "Game Boy"
+  },
+  "game-boy-color": {
+    "platform": "nintendo-gbc",
+    "console": "Game Boy Color"
+  },
+  "game-boy-advance": {
+    "platform": "nintendo-gba",
+    "console": "Game Boy Advance"
+  },
+  "nintendo-ds": {
+    "platform": "nintendo-ds",
+    "console": "Nintendo DS"
+  },
+  "nintendo-3ds": {
+    "platform": "nintendo-3ds",
+    "console": "Nintendo 3DS"
+  },
+  "ps1": {
+    "platform": "sony-ps1",
+    "console": "PlayStation 1"
+  },
+  "ps2": {
+    "platform": "sony-ps2",
+    "console": "PlayStation 2"
+  },
+  "ps3": {
+    "platform": "sony-ps3",
+    "console": "PlayStation 3 (experimental)"
+  },
+  "ps4": {
+    "platform": "sony-ps4",
+    "console": "PlayStation 4"
+  },
+  "ps5": {
+    "platform": "sony-ps5",
+    "console": "PlayStation 5"
+  },
+  "psp": {
+    "platform": "sony-psp",
+    "console": "PlayStation Portable (PSP)"
+  },
+  "xbox": {
+    "platform": "microsoft-xbox",
+    "console": "Original Xbox"
+  },
+  "xbox-360": {
+    "platform": "microsoft-xbox360",
+    "console": "Xbox 360 (experimental)"
+  },
+  "atari-2600": {
+    "platform": "atari-2600",
+    "console": "Atari 2600"
+  },
+  "atari-5200": {
+    "platform": "atari-5200",
+    "console": "Atari 5200"
+  },
+  "atari-7800": {
+    "platform": "atari-7800",
+    "console": "Atari 7800"
+  },
+  "genesis": {
+    "platform": "sega-megadrive",
+    "console": "Mega Drive / Genesis"
+  },
+  "saturn": {
+    "platform": "sega-saturn",
+    "console": "Sega Saturn"
+  },
+  "dreamcast": {
+    "platform": "sega-dreamcast",
+    "console": "Dreamcast"
+  },
+  "game-gear": {
+    "platform": "sega-gamegear",
+    "console": "Game Gear"
+  },
+  "sega-cd": {
+    "platform": "sega-cd",
+    "console": "Mega-CD / Sega CD"
+  },
+  "sega-master-system": {
+    "platform": "sega-master",
+    "console": "Master System"
+  },
+  "sega-32x": {
+    "platform": "sega-32x",
+    "console": "Sega 32X"
+  }
+}

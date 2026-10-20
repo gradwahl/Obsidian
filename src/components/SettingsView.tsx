@@ -1,6 +1,7 @@
 import React from 'react';
 import { LanguageCode, CatalogFilters, PackageFormat } from '../types';
 import { t } from '../translations';
+import { SOURCE_WEBSITES } from '../catalog';
 import { Check, RotateCcw } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -65,7 +66,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const formats: { id: PackageFormat; label: string }[] = [
     { id: 'exfat', label: '.exfat (ShadowMountPlus)' },
     { id: 'ffpkg', label: t(language, 'TXT_FORMAT_FOLDER') },
-    { id: 'pkg', label: '.pkg (PS4 FPKG)' }
+    { id: 'pkg', label: '.pkg (PS4 FPKG)' },
+    { id: 'catalog', label: 'Catalog metadata (website only)' }
   ];
 
   const allFormatsChecked = filters.disabled_formats.length === 0;
@@ -76,7 +78,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (allFormatsChecked) {
       onChangeFilters({
         ...filters,
-        disabled_formats: ['exfat', 'ffpkg', 'pkg']
+        disabled_formats: ['exfat', 'ffpkg', 'pkg', 'catalog']
       });
     } else {
       onChangeFilters({
@@ -173,6 +175,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span className="text-xs font-medium text-[#c8c8d2] truncate">
                     {source}
                   </span>
+                  {SOURCE_WEBSITES[source] && (
+                    <a href={SOURCE_WEBSITES[source]} onClick={e => e.stopPropagation()}
+                      target="_blank" rel="noopener noreferrer" aria-label={`Open ${source} website`}
+                      className="ml-auto text-[11px] text-[#9d9df0] hover:text-white shrink-0">
+                      Website ↗
+                    </a>
+                  )}
                 </div>
               );
             })}

@@ -1,0 +1,20 @@
+{
+  "nintendo-ds": "nintendo-ds",
+  "nes": "nintendo-nes",
+  "playstation-portable": "sony-psp",
+  "game-boy-advance": "nintendo-gba",
+  "snes": "nintendo-snes",
+  "wii": "nintendo-wii",
+  "nintendo-3ds": "nintendo-3ds",
+  "sega-genesis": "sega-megadrive",
+  "game-boy": "nintendo-gb",
+  "game-boy-color": "nintendo-gbc",
+  "nintendo-64": "nintendo-n64",
+  "gamecube": "nintendo-gc",
+  "sega-dreamcast": "sega-dreamcast",
+  "playstation": "sony-ps1",
+  "atari-2600": "atari-2600",
+  "xbox-360": "microsoft-xbox360",
+  "playstation-2": "sony-ps2",
+  "wii-u": "nintendo-wiiu"
+}

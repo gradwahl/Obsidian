@@ -453,7 +453,7 @@ static void test_settings(WolodriveApp *app) {
     settings_toggle(app); /* Partial -> all. */
     assert(!app->filters.disabled_formats);
     settings_toggle(app); /* All -> none, never silently reset to All. */
-    assert(app->filters.disabled_formats == 7 && !app->search_count);
+    assert(app->filters.disabled_formats == 15 && !app->search_count);
     SDL_Event event;
     SDL_zero(event);
     event.type = SDL_KEYDOWN;
@@ -462,18 +462,18 @@ static void test_settings(WolodriveApp *app) {
     assert(app->settings_selection == 1);
     event.key.keysym.sym = SDLK_SPACE;
     ui_handle_input(app, &event);
-    assert(app->filters.disabled_formats == 6 && settings_accepts_item(app, alpha));
+    assert(app->filters.disabled_formats == 14 && settings_accepts_item(app, alpha));
     event.type = SDL_CONTROLLERBUTTONDOWN;
     event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
     ui_handle_input(app, &event);
     event.cbutton.button = SDL_CONTROLLER_BUTTON_A;
     ui_handle_input(app, &event);
-    assert(app->filters.disabled_formats == 4 && settings_accepts_item(app, beta));
+    assert(app->filters.disabled_formats == 12 && settings_accepts_item(app, beta));
     /* Multiple source names and mixed formats round-trip, including Unicode. */
     SDL_strlcpy(app->filters.sources[1], "A source\n中文", 64);
     assert(settings_save(app));
     memset(&app->filters, 0, sizeof(app->filters));
-    assert(settings_load(app) && app->filters.disabled_formats == 4 && app->filters.source_count == 2);
+    assert(settings_load(app) && app->filters.disabled_formats == 12 && app->filters.source_count == 2);
     assert(strcmp(app->filters.sources[1], "A source\n中文") == 0);
     /* Existing single-select preferences migrate without changing their meaning. */
     FILE *legacy = fopen(app->settings_path, "wb");
@@ -509,8 +509,8 @@ static void test_settings(WolodriveApp *app) {
     char clicked_source[64]; SDL_strlcpy(clicked_source, names[8], 64);
     ui_handle_input(app, &event);
     assert(settings_source_enabled(app, clicked_source));
-    event.button.x = settings_target(1, 4).x+25;
-    event.button.y = settings_target(1, 4).y+25;
+    event.button.x = settings_target(1, 5).x+25;
+    event.button.y = settings_target(1, 5).y+25;
     ui_handle_input(app, &event);
     assert(!settings_filters_active(app) && app->search_count == 1);
     ui_render(app);
@@ -981,7 +981,7 @@ static void test_latest_catalog_games(void) {
     assert(parse_catalog_json(app, json, "First source", NULL, NULL, 0) == 6);
     ui_rebuild_carousels(app);
     CarouselRow *home = &app->rows[VIEW_HOME];
-    assert(home->item_count == 2 && app->rows[VIEW_GAMES].item_count == 6);
+    assert(home->item_count == 4 && app->rows[VIEW_GAMES].item_count == 6);
     assert(strcmp(home->items[0]->title, "New game") == 0);
     assert(strcmp(home->items[1]->title, "Older game") == 0);
     home->selected_col = 1;
@@ -992,7 +992,7 @@ static void test_latest_catalog_games(void) {
         "{\"titleId\":\"NEWEST\",\"title\":\"Newest game\",\"category\":\"game\",\"createdAt\":\"2026-10-19T00:00:00Z\"}]}";
     assert(parse_catalog_json(app, later, "Later source", NULL, NULL, 0) == 2);
     ui_rebuild_carousels(app);
-    assert(home->item_count == 3 && strcmp(home->items[0]->title, "Newest game") == 0);
+    assert(home->item_count == 5 && strcmp(home->items[0]->title, "Newest game") == 0);
     assert(home->items[home->selected_col] == selected);
     assert(home->items[1]->catalog_added_at == 20261018211429ULL);
 
@@ -1010,16 +1010,32 @@ static void test_latest_catalog_games(void) {
     ui_rebuild_carousels(app);
     assert(home->item_count == MAX_ITEMS_PER_ROW);
     assert(home->items[0] == &app->catalog[300]);
-    for (int i = 1; i < home->item_count; i++) {
-        assert(home->items[i - 1]->catalog_added_at >= home->items[i]->catalog_added_at);
+    bool saw_first = false, saw_later = false, saw_undated_source = false;
+    for (int i = 0; i < home->item_count; i++) {
+        saw_first |= strcmp(home->items[i]->source_name, "First source") == 0;
+        saw_later |= strcmp(home->items[i]->source_name, "Later source") == 0;
+        saw_undated_source |= home->items[i]->source_name[0] == '\0';
     }
-    /* Missing dates never turn seed order into a supposed latest-release feed. */
+    assert(saw_first && saw_later && saw_undated_source);
+    /* A source-filtered, undated Home still displays its games in feed order.
+       No false timestamps are synthesized or shown as release dates. */
     for (int i = 0; i < app->catalog_count; i++) app->catalog[i].catalog_added_at = 0;
+    app->filters.sources_limited = true;
+    app->filters.source_count = 1;
+    SDL_strlcpy(app->filters.sources[0], "First source", sizeof(app->filters.sources[0]));
     ui_rebuild_carousels(app);
-    assert(home->item_count == 0 && home->selected_col == 0);
+    assert(home->item_count == 4);
+    for (int i = 0; i < home->item_count; i++)
+        assert(strcmp(home->items[i]->source_name, "First source") == 0);
+    SDL_strlcpy(app->filters.sources[0], "Unknown source", sizeof(app->filters.sources[0]));
+    ui_rebuild_carousels(app);
+    assert(home->item_count == 0);
+    app->filters.sources_limited = false;
+    ui_rebuild_carousels(app);
+    assert(home->item_count == MAX_ITEMS_PER_ROW);
     SDL_DestroyMutex(app->catalog_mutex);
     free(app);
-    puts("Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection passed.");
+    puts("Home: dated source order, undated fallback, fair sources, enabled-only filters and selection passed.");
 }
 
 static void test_vsync_request(void) {
@@ -1149,9 +1165,155 @@ static void test_text_cache(void) {
     puts("Text cache: reuse, UTF-8, wrapping, fonts, colors, translation changes, bounded eviction and cleanup passed.");
 }
 
+static void test_removed_catalog_source(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    char urls[24][512];
+    int count = 0;
+    const char *manifest = "{\"sources\":["
+        "{\"id\":\"evox-coreos\",\"url\":\"https://example.test/broken-id.json\"},"
+        "{\"name\":\"evoX-CoreOS\",\"url\":\"https://example.test/broken-name.json\"},"
+        "{\"catalogUrl\":\"https://example.test/evoX-CoreOS/catalog.json\"},"
+        "{\"id\":\"dlps\",\"url\":\"https://example.test/dlps.json\"},"
+        "{\"id\":\"pippo\",\"url\":\"https://example.test/pippo.json\"},"
+        "{\"id\":\"pfs\",\"url\":\"https://example.test/pfs.json\"},"
+        "{\"id\":\"zer0\",\"url\":\"https://example.test/zer0.json\"}]}";
+    parse_catalog_json(app, manifest, "Test", urls, &count, 24);
+    assert(count == 4);
+    assert(app->catalog_count == 0); /* Source metadata must not become game/source rows. */
+    const char *allowed[] = {"dlps", "pippo", "pfs", "zer0"};
+    for (int i = 0; i < count; i++) {
+        char expected[128];
+        snprintf(expected, sizeof(expected), "https://example.test/%s.json", allowed[i]);
+        assert(strcmp(urls[i], expected) == 0);
+    }
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Removed evoX-CoreOS references are excluded; all four remaining sources are retained.");
+}
+
+static void test_additional_source_snapshot(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    int sources = 0;
+    int added = load_additional_catalog(app, &sources);
+    assert(sources == 17);
+    assert(added >= 100);
+    assert(app->catalog_source_count == sources);
+    assert(app->catalog_count > 100);
+    bool psp_present = false, named_source = false, ps1_fallback = false, inherited_fallback = false;
+    int axekin_count = 0, enriched_covers = 0;
+    for (int i = 0; i < app->catalog_count; i++) {
+        GameItem *item = &app->catalog[i];
+        if (!strcmp(item->id_code, "EXT-5fe80be2c82547bd45cc")) {
+            assert(item->cover_url[0] && item->cover_fallback_url[0]);
+            assert(strcmp(item->cover_url, item->cover_fallback_url));
+            ps1_fallback = true;
+        }
+        if (!strcmp(item->id_code, "EXT-acd556adb52df12e771f")) {
+            assert(item->boxart_url[0] && item->cover_fallback_url[0]);
+            assert(strcmp(item->boxart_url, item->cover_fallback_url));
+            inherited_fallback = true; /* Four-column TSV row. */
+        }
+        assert(item->format == FMT_CATALOG);
+        assert(!item->download_url[0] && !item->install_path[0]);
+        if (strcmp(item->platform, "sony-psp") == 0) psp_present = true;
+        if (strcmp(item->source_name, "Vimm's Lair") == 0) named_source = true;
+        if (strcmp(item->source_name, "Axekin") == 0) {
+            axekin_count++;
+            if (item->boxart_url[0]) enriched_covers++;
+            assert(strcmp(item->platform, "sony-psvita") != 0);
+            bool library_match = false;
+            for (int co = 0; co < library_company_count(); co++) {
+                const LibraryCompany *company = library_company_at(co);
+                for (int ci = 0; ci < company->console_count; ci++)
+                    if (library_console_matches_platform(&company->consoles[ci], item->platform))
+                        library_match = true;
+            }
+            assert(library_match);
+        }
+    }
+    assert(psp_present && named_source && ps1_fallback && inherited_fallback);
+    assert(axekin_count > 18000);
+    assert(enriched_covers > 0); /* Local overlay resolves box art. */
+    int previous_count = app->catalog_count;
+    assert(load_additional_catalog(app, &sources) == 0);
+    assert(app->catalog_count == previous_count && sources == 17);
+    /* A source-only Home includes the real 20k Axekin metadata entries. */
+    app->filters.sources_limited = true;
+    app->filters.source_count = 1;
+    SDL_strlcpy(app->filters.sources[0], "Axekin", sizeof(app->filters.sources[0]));
+    GameItem *home_items[MAX_ITEMS_PER_ROW];
+    int home_count = catalog_latest_games_locked(app, home_items, MAX_ITEMS_PER_ROW);
+    assert(home_count == MAX_ITEMS_PER_ROW);
+    for (int i = 0; i < home_count; i++) {
+        assert(strcmp(home_items[i]->source_name, "Axekin") == 0);
+        assert(home_items[i]->catalog_added_at == 0);
+    }
+    app->filters.sources_limited = false;
+    home_count = catalog_latest_games_locked(app, home_items, MAX_ITEMS_PER_ROW);
+    bool saw_axekin = false, saw_other = false;
+    for (int i = 0; i < home_count; i++) {
+        saw_axekin |= strcmp(home_items[i]->source_name, "Axekin") == 0;
+        saw_other |= strcmp(home_items[i]->source_name, "Axekin") != 0;
+    }
+    assert(saw_axekin && saw_other);
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Additional public metadata snapshot: source labels, imported games, console match and non-installable state passed.");
+}
+
+static void test_library_game_paging(void) {
+    WolodriveApp *app = calloc(1, sizeof(*app));
+    assert(app);
+    app->catalog_mutex = SDL_CreateMutex();
+    assert(app->catalog_mutex);
+    SDL_AtomicSet(&app->language, LANG_EN);
+    app->active_row = VIEW_GAMES;
+    app->library_depth = LIBRARY_GAMES;
+    app->library_company = 0; /* Sony */
+    app->library_console_selection = 3; /* PlayStation 4 */
+    for (int i = 0; i < 260; i++) {
+        GameItem *item = &app->catalog[i];
+        snprintf(item->id_code, sizeof(item->id_code), "CUSA%05d", i);
+        snprintf(item->title, sizeof(item->title), "Paged game %d", i);
+        item->is_game = true;
+    }
+    app->catalog_count = 260;
+    ui_rebuild_carousels(app);
+    CarouselRow *row = &app->rows[VIEW_GAMES];
+    assert(row->item_count == MAX_ITEMS_PER_ROW);
+    assert(strcmp(row->items[0]->title, "Paged game 0") == 0);
+    SDL_Event event; SDL_zero(event);
+    event.type = SDL_KEYDOWN;
+    event.key.keysym.sym = SDLK_RIGHT;
+    row->selected_col = MAX_ITEMS_PER_ROW - 1;
+    assert(handle_library_input(app, &event));
+    assert(app->library_game_offset == 128 && row->item_count == 128);
+    assert(strcmp(row->items[0]->title, "Paged game 128") == 0);
+    row->selected_col = MAX_ITEMS_PER_ROW - 1;
+    assert(handle_library_input(app, &event));
+    assert(app->library_game_offset == 256 && row->item_count == 4);
+    assert(strcmp(row->items[0]->title, "Paged game 256") == 0);
+    row->selected_col = 0;
+    event.key.keysym.sym = SDLK_LEFT;
+    assert(handle_library_input(app, &event));
+    assert(app->library_game_offset == 128 && row->selected_col == 127);
+    SDL_DestroyMutex(app->catalog_mutex);
+    free(app);
+    puts("Native Games/Roms pagination reaches past the 128-item carousel limit.");
+}
+
 int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
     test_description_text();
+    test_removed_catalog_source();
+    test_additional_source_snapshot();
+    test_library_game_paging();
     test_artwork_metadata();
     test_truthful_catalog_state();
     test_native_artwork_bounds();

@@ -53,7 +53,7 @@
 #define COLOR_MUTED_G           148
 #define COLOR_MUTED_B           156
 
-#define MAX_CATALOG_ITEMS       4096
+#define MAX_CATALOG_ITEMS       26000 /* Full filtered Axekin index plus other sources. */
 #define MAX_ITEMS_PER_ROW       128
 typedef enum {
     VIEW_HOME,
@@ -83,7 +83,8 @@ typedef enum {
 typedef enum {
     FMT_EXFAT = 0,
     FMT_FFPKG = 1,
-    FMT_PKG   = 2
+    FMT_PKG   = 2,
+    FMT_CATALOG = 3  /* Website metadata only; not an installable package. */
 } PackageFormat;
 
 typedef enum {
@@ -94,6 +95,7 @@ typedef enum {
 
 typedef struct {
     char id_code[32];           /* np. PPSA08338 lub CUSA30410 */
+    char platform[48];          /* Optional metadata-only platform identifier. */
     char title[128];            /* Tytuł gry */
     char version[32];           /* Wersja np. 01.00 */
     char source_name[64];       /* Nazwa katalogu źródłowego Pegasus-DL */
@@ -113,6 +115,7 @@ typedef struct {
     char download_url[512];     /* Bezpośredni link do pakietu z katalogu JSON */
     char boxart_url[512];      /* Complete portrait front cover, including platform strip. */
     char cover_url[512];       /* Portrait cover/icon fallback. */
+    char cover_fallback_url[512]; /* Independent provider if supplied art fails. */
     char icon_url[512];        /* Square game icon. */
     char landscape_url[512];   /* Wide card artwork, kept separate from the cover. */
     char backdrop_url[512];    /* Wide hero/background artwork. */
@@ -196,6 +199,10 @@ typedef struct {
     SDL_mutex *catalog_mutex;
     GameItem catalog[MAX_CATALOG_ITEMS];
     int catalog_count;
+    char catalog_source_names[40][64]; /* Include sources with empty/offline indexes. */
+    int catalog_source_count;
+    bool additional_catalog_loaded; /* Avoid re-reading immutable local snapshots. */
+    bool axekin_catalog_loaded; /* Prevent duplicate bulk imports on refresh. */
     bool catalog_dirty;         /* Sygnał od wątku tła do przebudowania karuzel */
     bool sync_in_progress;      /* Czy trwa synchronizacja z Pegasus-DL */
     TextId sync_status_id;
@@ -215,6 +222,7 @@ typedef struct {
     int library_company_selection;
     int library_company;
     int library_console_selection;
+    int library_game_offset; /* 128-title pages within a Games/Roms console. */
     bool sidebar_focus;
     bool sidebar_hovered;
     float sidebar_expand;

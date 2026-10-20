@@ -1,0 +1,28 @@
+Reading catalog: http://127.0.0.1:61830/sources.json
+Reading catalog: http://127.0.0.1:61830/catalog.json
+Found 2 unique artwork URLs. Destination: C:\Users\Callum\AppData\Local\Temp\tmpflqxb_po\artwork folder
+1/2: {'cached': 0, 'downloaded': 1, 'failed': 0}
+2/2: {'cached': 0, 'downloaded': 2, 'failed': 0}
+Finished: {'cached': 0, 'downloaded': 2, 'failed': 0}. Index: C:\Users\Callum\AppData\Local\Temp\tmpflqxb_po\artwork folder\artwork-index.json
+Reading catalog: http://127.0.0.1:61830/sources.json
+Reading catalog: http://127.0.0.1:61830/catalog.json
+Found 2 unique artwork URLs. Destination: C:\Users\Callum\AppData\Local\Temp\tmpflqxb_po\artwork folder
+1/2: {'cached': 1, 'downloaded': 0, 'failed': 0}
+2/2: {'cached': 2, 'downloaded': 0, 'failed': 0}
+Finished: {'cached': 2, 'downloaded': 0, 'failed': 0}. Index: C:\Users\Callum\AppData\Local\Temp\tmpflqxb_po\artwork folder\artwork-index.json
+Reading catalog: http://127.0.0.1:61830/sources.json
+Reading catalog: http://127.0.0.1:61830/catalog.json
+Found 2 unique artwork URLs. Destination: C:\Users\Callum\AppData\Local\Temp\tmpflqxb_po\artwork folder
+1/2: {'cached': 1, 'downloaded': 0, 'failed': 0}
+2/2: {'cached': 1, 'downloaded': 1, 'failed': 0}
+Finished: {'cached': 1, 'downloaded': 1, 'failed': 0}. Index: C:\Users\Callum\AppData\Local\Temp\tmpflqxb_po\artwork folder\artwork-index.json
+Reading catalog: http://127.0.0.1:61830/removed-sources.json
+Reading catalog: http://127.0.0.1:61830/dlps.json
+Reading catalog: http://127.0.0.1:61830/pippo.json
+Reading catalog: http://127.0.0.1:61830/pfs.json
+Reading catalog: http://127.0.0.1:61830/zer0.json
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.731s
+
+OK

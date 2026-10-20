@@ -15,7 +15,7 @@ export type SidebarView =
   | 'search'
   | 'settings';
 
-export type PackageFormat = 'exfat' | 'ffpkg' | 'pkg';
+export type PackageFormat = 'exfat' | 'ffpkg' | 'pkg' | 'catalog';
 export type PackageState = 'available' | 'downloading' | 'installed';
 
 export type HomeCategoryId = 'ps5' | 'ps4' | 'popular' | 'newest' | 'top_rated';
@@ -37,7 +37,10 @@ export interface GameItem {
   description_id?: string;
   install_path: string;
   download_url?: string;
+  source_url?: string; // Informational website page; not an installer.
+  platform?: string;
   cover_url?: string;
+  cover_fallback_url?: string;
   cover_local_path?: string;
   boxart_url?: string;
   backdrop_url?: string;
@@ -53,6 +56,7 @@ export interface GameItem {
 export interface LibraryConsole {
   name: string;
   title_id_prefix: string | null;
+  platform_id?: string; // Metadata-only catalog entries for this console.
   artwork_path: string | null;
   logo_path: string | null;
 }
