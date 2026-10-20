@@ -3,7 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/statvfs.h>
+#endif
 #include <sys/stat.h>
 
 #ifdef __PS5__
@@ -74,6 +78,16 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...) {
 }
 
 static void query_mount_space(const char *path, float *free_gb, float *total_gb, float fallback_free, float fallback_total) {
+#ifdef _WIN32
+    ULARGE_INTEGER free_bytes_avail, total_bytes, total_free_bytes;
+    if (GetDiskFreeSpaceExA(path, &free_bytes_avail, &total_bytes, &total_free_bytes)) {
+        *total_gb = (float)((double)total_bytes.QuadPart / (1024.0 * 1024.0 * 1024.0));
+        *free_gb  = (float)((double)free_bytes_avail.QuadPart / (1024.0 * 1024.0 * 1024.0));
+    } else {
+        *free_gb  = fallback_free;
+        *total_gb = fallback_total;
+    }
+#else
     struct statvfs vfs;
     if (statvfs(path, &vfs) == 0 && vfs.f_blocks > 0) {
         double total = (double)vfs.f_blocks * (double)vfs.f_frsize / (1024.0 * 1024.0 * 1024.0);
@@ -84,6 +98,7 @@ static void query_mount_space(const char *path, float *free_gb, float *total_gb,
         *free_gb  = fallback_free;
         *total_gb = fallback_total;
     }
+#endif
 }
 
 void sys_update_stats(SystemStats *stats) {
@@ -96,6 +111,13 @@ void sys_update_stats(SystemStats *stats) {
     if (sceKernelGetSocSensorTemperature(0, &gpu_t) == 0) stats->gpu_temp_c = gpu_t;
     stats->network_online = true;
     snprintf(stats->ip_address, sizeof(stats->ip_address), "PS5 13.60 ONLINE");
+#elif defined(_WIN32)
+    query_mount_space("C:\\", &stats->data_free_gb, &stats->data_total_gb, 245.8f, 512.0f);
+    query_mount_space("D:\\", &stats->ext0_free_gb, &stats->ext0_total_gb, 1420.6f, 2000.0f);
+    stats->cpu_temp_c = 48;
+    stats->gpu_temp_c = 52;
+    stats->network_online = true;
+    snprintf(stats->ip_address, sizeof(stats->ip_address), "WINDOWS x64");
 #else
     query_mount_space("/", &stats->data_free_gb, &stats->data_total_gb, 245.8f, 512.0f);
     stats->ext0_free_gb  = 1420.6f;
@@ -114,7 +136,7 @@ void sys_update_stats(SystemStats *stats) {
         stats->gpu_temp_c = 58;
     }
     stats->network_online = true;
-    snprintf(stats->ip_address, sizeof(stats->ip_address), "LINUX MINT x64");
+    snprintf(stats->ip_address, sizeof(stats->ip_address), "LINUX x64");
 #endif
 }
 

@@ -138,7 +138,7 @@ export function HomeView({
         <div className="tv-categories-viewport">
           <div
             className="tv-categories-stack"
-            style={{ transform: `translateY(-${activeCategoryIndex * 432}px)` }}
+            style={{ transform: `translateY(-${activeCategoryIndex * 442}px)` }}
           >
             {categories!.map((cat, catIdx) => {
               const isCatActive = catIdx === activeCategoryIndex;

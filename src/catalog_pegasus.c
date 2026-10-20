@@ -195,14 +195,14 @@ static void generate_color_from_id(const char *id, uint8_t *r, uint8_t *g, uint8
 
 static PackageFormat detect_package_format(const char *id_code, const char *dl_url, const char *fmt_str) {
     if (fmt_str && fmt_str[0]) {
-        if (strcasestr(fmt_str, "exfat")) return FMT_EXFAT;
-        if (strcasestr(fmt_str, "ffpkg")) return FMT_FFPKG;
-        if (strcasestr(fmt_str, "pkg"))   return FMT_PKG;
+        if (SDL_strcasestr(fmt_str, "exfat")) return FMT_EXFAT;
+        if (SDL_strcasestr(fmt_str, "ffpkg")) return FMT_FFPKG;
+        if (SDL_strcasestr(fmt_str, "pkg"))   return FMT_PKG;
     }
     if (dl_url && dl_url[0]) {
-        if (strcasestr(dl_url, ".exfat")) return FMT_EXFAT;
-        if (strcasestr(dl_url, ".ffpkg")) return FMT_FFPKG;
-        if (strcasestr(dl_url, ".pkg"))   return FMT_PKG;
+        if (SDL_strcasestr(dl_url, ".exfat")) return FMT_EXFAT;
+        if (SDL_strcasestr(dl_url, ".ffpkg")) return FMT_FFPKG;
+        if (SDL_strcasestr(dl_url, ".pkg"))   return FMT_PKG;
     }
     if (id_code && strncasecmp(id_code, "CUSA", 4) == 0) {
         return FMT_PKG;
@@ -326,9 +326,9 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     /* Sprawdź czy gra o tym samym ID lub tytule już istnieje – jeśli tak, zaktualizuj dane */
     GameItem *target = NULL;
     for (int i = 0; i < app->catalog_count; i++) {
-        if (strcasecmp(app->catalog[i].title, title) == 0 &&
-            strcasecmp(app->catalog[i].source_name, catalog_name && catalog_name[0] ? catalog_name : "Pegasus-DL") == 0 &&
-            strcasecmp(app->catalog[i].id_code, id_code && id_code[0] ? id_code : "PPSA00001") == 0 &&
+        if (SDL_strcasecmp(app->catalog[i].title, title) == 0 &&
+            SDL_strcasecmp(app->catalog[i].source_name, catalog_name && catalog_name[0] ? catalog_name : "Pegasus-DL") == 0 &&
+            SDL_strcasecmp(app->catalog[i].id_code, id_code && id_code[0] ? id_code : "PPSA00001") == 0 &&
             app->catalog[i].format == fmt) {
             target = &app->catalog[i];
             break;
@@ -350,8 +350,8 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     snprintf(target->title, sizeof(target->title), "%s", title);
     snprintf(target->version, sizeof(target->version), "%s", (version && version[0]) ? version : "1.00");
     snprintf(target->source_name, sizeof(target->source_name), "%s", (catalog_name && catalog_name[0]) ? catalog_name : "Pegasus-DL");
-    if (category && category[0]) target->is_game = strcasecmp(category, "game") == 0;
-    if (category && category[0]) target->is_dlc = strcasecmp(category, "dlc") == 0;
+    if (category && category[0]) target->is_game = SDL_strcasecmp(category, "game") == 0;
+    if (category && category[0]) target->is_dlc = SDL_strcasecmp(category, "dlc") == 0;
     char parent[32] = {0};
     if (json_extract_string(object_start, object_end, "baseTitleId", parent, sizeof(parent)) ||
         json_extract_string(object_start, object_end, "parentTitleId", parent, sizeof(parent)))
@@ -524,7 +524,7 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
                 }
             }
             if (strncmp(sub_url, "http", 4) == 0 &&
-                (strcasestr(sub_url, ".json") != NULL || (!has_id && !has_cover))) {
+                (SDL_strcasestr(sub_url, ".json") != NULL || (!has_id && !has_cover))) {
                 bool dup = false;
                 for (int k = 0; k < *subcatalog_count; k++) {
                     if (strcmp(subcatalog_urls[k], sub_url) == 0) {
@@ -540,7 +540,7 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
         }
 
         /* Jeżeli obiekt opisuje grę/pakiet w katalogu Pegasus-DL */
-        if (has_title && (has_id || has_cover || (has_dl && strcasestr(dl_url, ".json") == NULL))) {
+        if (has_title && (has_id || has_cover || (has_dl && SDL_strcasestr(dl_url, ".json") == NULL))) {
             json_extract_string(obj_start, obj_end, "version", version, sizeof(version));
             json_extract_string(obj_start, obj_end, "description", desc, sizeof(desc));
             json_extract_string(obj_start, obj_end, "format", fmt_str, sizeof(fmt_str));

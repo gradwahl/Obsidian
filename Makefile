@@ -55,6 +55,16 @@ test:
 	python3 -m unittest discover -s tests -p test_download_artwork.py
 	python3 tests/run_tests.py
 
+.PHONY: build-windows windows
+build-windows:
+	@mkdir -p build assets/covers
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c 	    -o build/wolodrive.exe 	     	    -lm -lpthread
+	@echo "[WOLODRIVE] Zbudowano natywna binarke Windows: build/wolodrive.exe"
+
+windows: build-windows
+	@echo "[WOLODRIVE] Uruchamianie Wolodrive 2.0 (Windows)..."
+	./build/wolodrive.exe
+
 ps5:
 	@mkdir -p build
 	@if [ ! -d "${PS5_PAYLOAD_SDK}" ]; then \

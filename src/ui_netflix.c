@@ -10,46 +10,114 @@
 static const char *FONT_CANDIDATES_BOLD[] = {
     "assets/font_bold.ttf",
     "assets/font_cjk.ttc",
+    "assets/font.ttf",
     "/data/homebrew/wolodrive/assets/font_bold.ttf",
     "/data/homebrew/wolodrive/assets/font_cjk.ttc",
+    "/data/homebrew/wolodrive/assets/font.ttf",
+    "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
+    "/system/common/font/SST-Bold.otf",
+    "/system/common/font/SST-Japanese-Bold.otf",
+    "/system/common/font/SST-Medium.otf",
+    "C:/Windows/Fonts/segoeuib.ttf",
+    "C:/Windows/Fonts/arialbd.ttf",
+    "C:/Windows/Fonts/msyhbd.ttc",
+    "C:/Windows/Fonts/msyh.ttc",
+    "C:/Windows/Fonts/tahomabd.ttf",
+    "C:/Windows/Fonts/calibrib.ttf",
+    "/mnt/c/Windows/Fonts/segoeuib.ttf",
+    "/mnt/c/Windows/Fonts/arialbd.ttf",
+    "/mnt/c/Windows/Fonts/msyhbd.ttc",
+    "/mnt/c/Windows/Fonts/msyh.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
     "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
-    "C:/Windows/Fonts/msyhbd.ttc",
-    "/mnt/c/Windows/Fonts/msyhbd.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
     NULL
 };
 
 static const char *FONT_CANDIDATES_REGULAR[] = {
     "assets/font.ttf",
     "assets/font_cjk.ttc",
+    "assets/font_bold.ttf",
     "/data/homebrew/wolodrive/assets/font.ttf",
     "/data/homebrew/wolodrive/assets/font_cjk.ttc",
+    "/data/homebrew/wolodrive/assets/font_bold.ttf",
+    "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
+    "/system/common/font/SST-Medium.otf",
+    "/system/common/font/SST-Japanese-Medium.otf",
+    "/system/common/font/SST-Light.otf",
+    "C:/Windows/Fonts/segoeui.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+    "C:/Windows/Fonts/msyh.ttc",
+    "C:/Windows/Fonts/tahoma.ttf",
+    "C:/Windows/Fonts/calibri.ttf",
+    "/mnt/c/Windows/Fonts/segoeui.ttf",
+    "/mnt/c/Windows/Fonts/arial.ttf",
+    "/mnt/c/Windows/Fonts/msyh.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-    "C:/Windows/Fonts/msyh.ttc",
-    "/mnt/c/Windows/Fonts/msyh.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/TTF/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-    "/system_ex/app/NPXS40028/psm/Application/resource/font.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
     NULL
 };
 
-static TTF_Font *open_first_available_font(const char **candidates, int ptsize) {
-    /* Prefer one font covering Latin, Cyrillic and Chinese so switching needs no reload. */
-    for (int require_cjk = 1; require_cjk >= 0; require_cjk--) {
-        for (int i = 0; candidates[i] != NULL; i++) {
-            TTF_Font *f = TTF_OpenFont(candidates[i], ptsize);
-            if (!f) continue;
-            if (!require_cjk || (TTF_GlyphIsProvided(f, 0x4e2d) && TTF_GlyphIsProvided(f, 0x042f))) return f;
-            TTF_CloseFont(f);
+static TTF_Font *open_font_with_path_resolution(const char *candidate, int ptsize) {
+    if (!candidate || !candidate[0]) return NULL;
+    TTF_Font *f = TTF_OpenFont(candidate, ptsize);
+    if (f) return f;
+
+    if (candidate[0] != '/' && candidate[1] != ':') {
+        char *base = SDL_GetBasePath();
+        if (base) {
+            char resolved[1024];
+            snprintf(resolved, sizeof(resolved), "%s%s", base, candidate);
+            f = TTF_OpenFont(resolved, ptsize);
+            if (!f) {
+                snprintf(resolved, sizeof(resolved), "%s../%s", base, candidate);
+                f = TTF_OpenFont(resolved, ptsize);
+            }
+            SDL_free(base);
+            if (f) return f;
         }
+    }
+#ifdef _WIN32
+    const char *windir = getenv("WINDIR");
+    if (!windir) windir = getenv("SystemRoot");
+    if (windir && windir[0]) {
+        char resolved[1024];
+        const char *fname = strrchr(candidate, '/');
+        if (!fname) fname = strrchr(candidate, '\');
+        fname = fname ? fname + 1 : candidate;
+        snprintf(resolved, sizeof(resolved), "%s\Fonts\%s", windir, fname);
+        f = TTF_OpenFont(resolved, ptsize);
+        if (f) return f;
+    }
+#endif
+    return NULL;
+}
+
+static TTF_Font *open_first_available_font(const char **candidates, int ptsize) {
+    for (int i = 0; candidates[i] != NULL; i++) {
+        TTF_Font *f = open_font_with_path_resolution(candidates[i], ptsize);
+        if (!f) continue;
+        if (TTF_GlyphIsProvided(f, 0x4e2d) && TTF_GlyphIsProvided(f, 0x042f)) return f;
+        TTF_CloseFont(f);
+    }
+    for (int i = 0; candidates[i] != NULL; i++) {
+        TTF_Font *f = open_font_with_path_resolution(candidates[i], ptsize);
+        if (!f) continue;
+        if (TTF_GlyphIsProvided(f, 0x042f)) return f;
+        TTF_CloseFont(f);
+    }
+    for (int i = 0; candidates[i] != NULL; i++) {
+        TTF_Font *f = open_font_with_path_resolution(candidates[i], ptsize);
+        if (f) return f;
     }
     return NULL;
 }
@@ -482,9 +550,21 @@ bool ui_init(WolodriveApp *app) {
     app->font_small      = open_first_available_font(FONT_CANDIDATES_BOLD, 20);
     app->font_micro      = open_first_available_font(FONT_CANDIDATES_BOLD, 16);
 
-    if (!app->font_logo || !app->font_hero_title || !app->font_row_title ||
-        !app->font_body || !app->font_small || !app->font_micro) {
-        fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
+    TTF_Font *fallback_font = app->font_body ? app->font_body :
+                              app->font_logo ? app->font_logo :
+                              app->font_hero_title ? app->font_hero_title :
+                              app->font_row_title ? app->font_row_title :
+                              app->font_small ? app->font_small : app->font_micro;
+    if (fallback_font) {
+        if (!app->font_logo) app->font_logo = fallback_font;
+        if (!app->font_hero_title) app->font_hero_title = fallback_font;
+        if (!app->font_row_title) app->font_row_title = fallback_font;
+        if (!app->font_body) app->font_body = fallback_font;
+        if (!app->font_small) app->font_small = fallback_font;
+        if (!app->font_micro) app->font_micro = fallback_font;
+    } else {
+        fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s
+", TTF_GetError());
         return false;
     }
     if (!TTF_GlyphIsProvided(app->font_body, 0x4e2d)) {
@@ -842,6 +922,21 @@ static const char *home_category_title(WolodriveApp *app, int cat) {
 }
 
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
+    if (ev->type == SDL_WINDOWEVENT) {
+        if (ev->window.event == SDL_WINDOWEVENT_LEAVE ||
+            ev->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+            app->sidebar_hovered = false;
+            app->description_hovered = false;
+        }
+    }
+    if (ev->type == SDL_KEYDOWN) {
+        if (ev->key.keysym.sym == SDLK_F11 ||
+            ((ev->key.keysym.mod & KMOD_ALT) && ev->key.keysym.sym == SDLK_RETURN)) {
+            Uint32 flags = SDL_GetWindowFlags(app->window);
+            bool is_fullscreen = (flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) != 0;
+            SDL_SetWindowFullscreen(app->window, is_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+        }
+    }
     if (ev->type == SDL_MOUSEMOTION) {
         int mx = ev->motion.x;
         float sb_limit = app->sidebar_width > (float)SIDEBAR_COLLAPSED_W
@@ -1312,28 +1407,29 @@ void ui_update_animations(WolodriveApp *app, float dt) {
                 target_v = (float)(app->home_cat_index * HOME_ROW_STRIDE);
             }
         }
-        app->home_vertical_scroll += (target_v - app->home_vertical_scroll) * fminf(1.0f, 12.0f * dt);
+        app->home_vertical_scroll += (target_v - app->home_vertical_scroll) * (1.0f - expf(-12.0f * dt));
         if (fabsf(target_v - app->home_vertical_scroll) < 0.5f) {
             app->home_vertical_scroll = target_v;
         }
 
         /* Animacja rozszerzenia widoku "Pokaż wszystko" (siatka Grid) */
         float target_grid = app->home_grid_expanded ? 1.0f : 0.0f;
-        app->home_grid_anim += (target_grid - app->home_grid_anim) * fminf(1.0f, 12.0f * dt);
+        app->home_grid_anim += (target_grid - app->home_grid_anim) * (1.0f - expf(-12.0f * dt));
         if (app->home_grid_anim < 0.001f) app->home_grid_anim = 0.0f;
         if (app->home_grid_anim > 0.999f) app->home_grid_anim = 1.0f;
 
         /* Płynne rozsuwanie paska bocznego w prawo po najechaniu / focusie */
         float target_sb = (app->sidebar_hovered || app->sidebar_focus) ? 1.0f : 0.0f;
-        app->sidebar_expand += (target_sb - app->sidebar_expand) * fminf(1.0f, 14.0f * dt);
+        app->sidebar_expand += (target_sb - app->sidebar_expand) * (1.0f - expf(-14.0f * dt));
         if (app->sidebar_expand < 0.001f) app->sidebar_expand = 0.0f;
         if (app->sidebar_expand > 0.999f) app->sidebar_expand = 1.0f;
         app->sidebar_width = (float)SIDEBAR_COLLAPSED_W +
                              ((float)(SIDEBAR_EXPANDED_W - SIDEBAR_COLLAPSED_W) * app->sidebar_expand);
 
-        /* Płynne powiększanie wybranego kafelka (scale up) */
-        app->card_focus_scale += (1.06f - app->card_focus_scale) * fminf(1.0f, 14.0f * dt);
-        if (app->card_focus_scale > 1.059f) app->card_focus_scale = 1.06f;
+        /* Płynne powiększanie wybranego kafelka (scale up / down) */
+        float target_scale = (app->sidebar_focus || app->home_grid_expanded) ? 1.0f : 1.06f;
+        app->card_focus_scale += (target_scale - app->card_focus_scale) * (1.0f - expf(-14.0f * dt));
+        if (fabsf(target_scale - app->card_focus_scale) < 0.002f) app->card_focus_scale = target_scale;
 
         /* Dynamiczna zmiana tła Hero (cross-fade animation) */
         if (app->hero_crossfade < 1.0f) {
@@ -1514,12 +1610,14 @@ static void render_single_card(WolodriveApp *app, GameItem *item, SDL_Rect base_
     draw_rounded_card_corners(r, card.x, card.y, card.w, card.h, 0, 0, 0);
 
     /* Plakietka oceny (IMDb/Metacritic rating) w prawym górnym rogu okładki */
-    char rating_badge[24];
-    snprintf(rating_badge, sizeof(rating_badge), "★ %.1f", item->rating_score);
-    SDL_Rect badge_rect = {card.x + card.w - 68, card.y + 8, 60, 24};
-    fill_rect(r, badge_rect.x, badge_rect.y, badge_rect.w, badge_rect.h, 14, 14, 18, 220);
-    draw_fitted_text(app, app->font_micro, rating_badge, badge_rect,
-                     (SDL_Color){255, 205, 45, 255}, badge_rect, true);
+    if (item->rating_score > 0.0f) {
+        char rating_badge[24];
+        snprintf(rating_badge, sizeof(rating_badge), "★ %.1f", item->rating_score);
+        SDL_Rect badge_rect = {card.x + card.w - 68, card.y + 8, 60, 24};
+        fill_rect(r, badge_rect.x, badge_rect.y, badge_rect.w, badge_rect.h, 14, 14, 18, 220);
+        draw_fitted_text(app, app->font_micro, rating_badge, badge_rect,
+                         (SDL_Color){255, 205, 45, 255}, badge_rect, true);
+    }
 
     SDL_Rect title = {card.x, card.y + card.h, card.w, CARD_TITLE};
     fill_rect(r, title.x, title.y, title.w, title.h, 18, 18, 22, 255);
