@@ -538,51 +538,65 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
 
         if (is_hero) {
             float tex_aspect = (float)width / (float)height;
+
             fill_vertical_gradient(r, x, y, w, h,
-                                   color.r / 3, color.g / 3, color.b / 3, alpha,
+                                   color.r / 4, color.g / 4, color.b / 4, alpha,
                                    10, 10, 14, alpha, 24);
 
+            int zone_x = x + (int)(w * 0.35f);
+            int zone_w = w - (int)(w * 0.35f);
+            int zone_h = h;
+
+            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+            SDL_SetTextureAlphaMod(texture, (Uint8)((240 * alpha) / 255));
+
             if (tex_aspect >= 1.15f) {
-                int backdrop_w = (int)lroundf((float)h * tex_aspect);
-                if (backdrop_w < w) backdrop_w = w;
-                int backdrop_x = x + w - backdrop_w;
-                SDL_Rect dst_rect = {backdrop_x, y, backdrop_w, h};
-
-                SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-                SDL_SetTextureAlphaMod(texture, (Uint8)((235 * alpha) / 255));
-                SDL_RenderCopy(r, texture, NULL, &dst_rect);
-
-                for (int gx = 0; gx < 800; gx++) {
-                    float t = (float)gx / 800.0f;
-                    Uint8 dark_a = (Uint8)((248.0f * (1.0f - t * t)) * alpha / 255.0f);
-                    if (dark_a > 0) fill_rect(r, x + gx, y, 1, h, 10, 10, 14, dark_a);
+                float zone_aspect = (float)zone_w / (float)zone_h;
+                SDL_Rect srcrect;
+                if (tex_aspect > zone_aspect) {
+                    srcrect.h = height;
+                    srcrect.w = (int)lroundf((float)height * zone_aspect);
+                    srcrect.x = (width - srcrect.w) / 2;
+                    srcrect.y = 0;
+                } else {
+                    srcrect.w = width;
+                    srcrect.h = (int)lroundf((float)width / zone_aspect);
+                    srcrect.x = 0;
+                    srcrect.y = (height - srcrect.h) / 2;
                 }
+                SDL_Rect dstrect = {zone_x, y, zone_w, zone_h};
+                SDL_RenderCopy(r, texture, &srcrect, &dstrect);
             } else {
-                int card_h = 440;
-                int card_w = (int)lroundf((float)card_h * tex_aspect);
-                if (card_w > 340) card_w = 340;
-                if (card_w < 200) card_w = 200;
-                int card_x = x + w - card_w - 90;
-                int card_y = y + (h - card_h) / 2 + 10;
-                SDL_Rect card_rect = {card_x, card_y, card_w, card_h};
-
-                fill_rect(r, card_x - 30, card_y - 20, card_w + 60, card_h + 40,
-                          color.r / 2, color.g / 2, color.b / 2, (Uint8)((90 * alpha) / 255));
-
-                draw_drop_shadow(r, card_x, card_y, card_w, card_h, 8, 6, (Uint8)((180 * alpha) / 255));
-
-                SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-                SDL_SetTextureAlphaMod(texture, alpha);
-                SDL_RenderCopy(r, texture, NULL, &card_rect);
-                draw_border(r, card_x, card_y, card_w, card_h, 1, 255, 255, 255, (Uint8)((130 * alpha) / 255));
-                SDL_SetTextureAlphaMod(texture, 255);
-
-                for (int gx = 0; gx < 700; gx++) {
-                    float t = (float)gx / 700.0f;
-                    Uint8 dark_a = (Uint8)((248.0f * (1.0f - t * t)) * alpha / 255.0f);
-                    if (dark_a > 0) fill_rect(r, x + gx, y, 1, h, 10, 10, 14, dark_a);
-                }
+                int art_w = (int)lroundf((float)zone_h * tex_aspect);
+                if (art_w > zone_w) art_w = zone_w;
+                int art_x = zone_x + (zone_w - art_w);
+                SDL_Rect dstrect = {art_x, y, art_w, zone_h};
+                SDL_RenderCopy(r, texture, NULL, &dstrect);
             }
+
+            int fade_w = (zone_x - x) + 600;
+            if (fade_w > w) fade_w = w;
+            for (int gx = 0; gx < fade_w; gx++) {
+                float t = (float)gx / (float)fade_w;
+                float dark_factor = (1.0f - t) * (1.0f - t);
+                Uint8 dark_a = (Uint8)(255.0f * dark_factor * alpha / 255.0f);
+                if (dark_a > 0) fill_rect(r, x + gx, y, 1, h, 10, 10, 14, dark_a);
+            }
+
+            fill_vertical_gradient(r, x, y + h - 160, w, 160,
+                                   10, 10, 14, 0,
+                                   10, 10, 14, (Uint8)alpha, 32);
+
+            fill_vertical_gradient(r, x, y, w, 80,
+                                   10, 10, 14, (Uint8)((140 * alpha) / 255),
+                                   10, 10, 14, 0, 16);
+
+            for (int gx = 0; gx < 80; gx++) {
+                float t = (float)gx / 80.0f;
+                Uint8 dark_a = (Uint8)((180.0f * t) * alpha / 255.0f);
+                if (dark_a > 0) fill_rect(r, x + w - 80 + gx, y, 1, h, 10, 10, 14, dark_a);
+            }
+
             SDL_SetTextureAlphaMod(texture, 255);
             SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
             return;
