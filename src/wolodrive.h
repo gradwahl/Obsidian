@@ -174,6 +174,7 @@ typedef struct {
     CatalogFilters filters;
     int settings_selection;
     int settings_column;
+    int settings_scroll;
     bool language_menu_open;
     int language_menu_index;
     struct ScreenshotService *screenshots;
@@ -260,6 +261,7 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...);
 void sys_update_stats(SystemStats *stats);
 void sys_trigger_action(WolodriveApp *app, GameItem *item);
 void sys_cancel_action(WolodriveApp *app, GameItem *item);
+int sys_import_native_snapshot(WolodriveApp *app);
 bool settings_accepts_item(const WolodriveApp *app, const GameItem *item);
 bool settings_source_enabled(const WolodriveApp *app, const char *source);
 bool settings_filters_active(const WolodriveApp *app);

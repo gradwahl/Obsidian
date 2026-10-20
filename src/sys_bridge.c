@@ -173,6 +173,83 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
 
 }
 
+
+/* Shared, offline React catalogue snapshot compiled into the native Linux/PS5 app. */
+#include "native_catalog_snapshot.h"
+
+static uint32_t native_seed_hash(const GameItem *item) {
+    uint32_t h = 2166136261u;
+    const char *values[] = {item->id_code,item->title};
+    for(int i=0;i<2;i++)
+        for(const unsigned char *p=(const unsigned char *)values[i];*p;p++)
+            h=(h^*p)*16777619u;
+    return h;
+}
+
+/* Idempotent: preserve preexisting items/state and register offline sources. */
+int sys_import_native_snapshot(WolodriveApp *app) {
+    if (!app) return 0;
+    for (size_t i=0;i<NATIVE_SOURCE_COUNT;i++) {
+        bool found=false;
+        for(int j=0;j<app->catalog_source_count;j++)
+            if(SDL_strcasecmp(app->catalog_source_names[j],NATIVE_SOURCE_NAMES[i])==0) {
+                found=true; break;
+            }
+        if(!found && app->catalog_source_count<40)
+            SDL_strlcpy(app->catalog_source_names[app->catalog_source_count++],
+                        NATIVE_SOURCE_NAMES[i],64);
+    }
+
+    int added=0;
+    for(size_t i=0;i<NATIVE_CATALOG_SEED_COUNT && app->catalog_count<MAX_CATALOG_ITEMS;i++) {
+        const NativeCatalogSeed *s=&NATIVE_CATALOG_SEEDS[i];
+        bool duplicate=false;
+        for(int j=0;j<app->catalog_count;j++) {
+            GameItem *it=&app->catalog[j];
+            if(SDL_strcasecmp(it->id_code,s->id)==0 &&
+               SDL_strcasecmp(it->title,s->title)==0 &&
+               SDL_strcasecmp(it->source_name,s->source)==0 &&
+               it->format==(PackageFormat)s->format) {
+                /* A native seed can predate the web snapshot: reconcile its
+                   catalogue timestamp without resetting local installation state. */
+                if(it->catalog_added_at < s->added) it->catalog_added_at=s->added;
+                duplicate=true;
+                break;
+            }
+        }
+        if(duplicate) continue;
+        GameItem *it=&app->catalog[app->catalog_count++];
+        memset(it,0,sizeof(*it));
+        SDL_strlcpy(it->id_code,s->id,sizeof(it->id_code));
+        SDL_strlcpy(it->title,s->title,sizeof(it->title));
+        SDL_strlcpy(it->version,s->version,sizeof(it->version));
+        SDL_strlcpy(it->source_name,s->source,sizeof(it->source_name));
+        SDL_strlcpy(it->description,s->description,sizeof(it->description));
+        SDL_strlcpy(it->cover_url,s->cover,sizeof(it->cover_url));
+        SDL_strlcpy(it->install_path,s->path,sizeof(it->install_path));
+        it->catalog_added_at=s->added;
+        it->size_gb=s->size_gb;
+        it->format=(PackageFormat)s->format;
+        it->is_game=s->is_game!=0;
+        it->is_dlc=s->is_dlc!=0;
+        it->cover_r=s->r;it->cover_g=s->g;it->cover_b=s->b;
+        it->state=STATE_AVAILABLE;
+        it->description_id=it->description[0] ? TEXT_COUNT:TXT_DESCRIPTION_FALLBACK;
+        if(it->catalog_added_at>=10000000000000ULL) {
+            uint64_t date=it->catalog_added_at/1000000ULL;
+            snprintf(it->release_date,sizeof(it->release_date),"%04u-%02u-%02u",
+                     (unsigned)(date/10000ULL),(unsigned)((date/100ULL)%100ULL),
+                     (unsigned)(date%100ULL));
+        }
+        uint32_t hash=native_seed_hash(it);
+        it->download_count=1200+(int)(hash%98000u);
+        it->rating_score=7.2f+(float)(hash%27u)*0.1f;
+        added++;
+    }
+    if(added) app->catalog_dirty=true;
+    return added;
+}
+
 void sys_init(WolodriveApp *app) {
     app->catalog_count = 0;
 #ifdef __PS5__
@@ -253,6 +330,8 @@ void sys_init(WolodriveApp *app) {
         "https://image.api.playstation.com/cdn/EP9000/CUSA00003_00/4b3c01e6b1d4525a1fb42ef213b6dcac867527f32bc8cf43.png",
         31.4f, FMT_PKG, 152, 28, 78, "2014-10-07", 74200, 8.4f);
 
+    /* Share the React catalogue and source list on Linux and PS5, even offline. */
+    sys_import_native_snapshot(app);
     sys_update_stats(&app->stats);
     sys_send_notification(app, TR(app, TXT_STARTED), WOLODRIVE_NAME, WOLODRIVE_VERSION);
 }

@@ -80,7 +80,7 @@ assert.match(completeBox, /src="\/box.jpg"/);
 assert.ok(!completeBox.includes('tv-platform-ps5'), 'Complete box art must retain its original platform branding');
 const missing = render(React.createElement(CoverArt, { game: { ...game, cover_local_path: '' } }));
 assert.ok(!missing.includes('<img'));
-assert.match(missing, /WOLODRIVE/);
+assert.match(missing, /PolDrive/);
 const games = Array.from({ length: 5 }, (_, index) => ({ ...game, id_code: `PPSA0000${index}`, title: `Game ${index}` }));
 const homeProps = { games, language: 'en', selected: 1, sidebarFocused: false, onSelect: noop, onOpen: noop, onRefresh: noop, syncInProgress: false };
 const home = render(React.createElement(NativeViewport, null, React.createElement(HomeView, homeProps)));
@@ -106,13 +106,36 @@ const library = render(React.createElement(LibraryBrowser, { isEmulatorsView: fa
   language: 'en', onOpenGame: noop, onRefresh: noop, syncInProgress: false,
   filters: { sources_limited: false, sources: [], disabled_formats: [] } }));
 assert.equal((library.match(/class="tv-library-tile /g) || []).length, 8);
-const sidebar = render(React.createElement(Sidebar, {
+const sidebarProps = {
   currentView: 'home', onSelectView: noop, language: 'pl',
   onSelectLanguage: noop, languageMenuOpen: false, setLanguageMenuOpen: noop,
-  isSidebarFocused: true
-}));
-assert.ok(sidebar.includes('tv-sidebar-expanded'));
-assert.ok(sidebar.includes(t('pl', 'TXT_NAV_HOME')));
-assert.ok(sidebar.includes(t('pl', 'TXT_NAV_GAMES')));
-assert.ok(sidebar.includes(t('pl', 'TXT_NAV_SETTINGS')));
-console.log('PASS: native layout geometry, viewport fitting, portrait/platform covers, selection, empty state, library page, and game-panel SSR');
+  isSidebarFocused: false
+};
+const collapsedSidebar = render(React.createElement(Sidebar, sidebarProps));
+assert.match(collapsedSidebar, /tv-sidebar-collapsed/);
+assert.match(collapsedSidebar, /data-state="collapsed"/);
+assert.ok(!collapsedSidebar.includes('tv-sidebar-dim-active'));
+assert.ok(collapsedSidebar.includes('tv-brand-mark'));
+assert.ok(collapsedSidebar.includes('olDrive'));
+const focusedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, isSidebarFocused: true }));
+assert.match(focusedSidebar, /tv-sidebar-expanded/);
+assert.match(focusedSidebar, /data-state="expanded"/);
+assert.match(focusedSidebar, /tv-sidebar-dim-active/);
+assert.ok(focusedSidebar.includes(t('pl', 'TXT_NAV_HOME')));
+assert.ok(focusedSidebar.includes(t('pl', 'TXT_NAV_GAMES')));
+assert.ok(focusedSidebar.includes(t('pl', 'TXT_NAV_SETTINGS')));
+const settingsSidebar = render(React.createElement(Sidebar, { ...sidebarProps, currentView: 'settings' }));
+assert.match(settingsSidebar, /tv-sidebar-settings/);
+assert.match(settingsSidebar, /data-state="expanded"/);
+assert.ok(!settingsSidebar.includes('tv-sidebar-dim-active'), 'Settings stays expanded without dimming the content');
+const languageSidebar = render(React.createElement(Sidebar, { ...sidebarProps, languageMenuOpen: true }));
+assert.match(languageSidebar, /tv-sidebar-expanded/);
+assert.match(languageSidebar, /aria-expanded="true"/);
+assert.match(languageSidebar, /id="tv-language-options"/);
+assert.equal(declaration('.tv-nav-item', 'height'), 92, 'Web sidebar row height must match native');
+assert.equal(declaration('.tv-navigation', 'top'), 148, 'Web navigation start must match native');
+assert.equal(declaration('.tv-sidebar-collapsed', 'width'), 92, 'Native collapsed rail is 92px');
+assert.equal(declaration('.tv-sidebar-expanded', 'width'), 272, 'Native expanded rail is 272px');
+assert.match(css, /\.tv-sidebar \{[^}]*transition: width/);
+assert.match(css, /\.tv-sidebar-dim-active \{[^}]*opacity: 1/);
+console.log('PASS: native layout geometry, viewport fitting, portrait/platform covers, selection, empty state, library page, game-panel and sliding-sidebar SSR');

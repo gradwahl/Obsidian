@@ -19,7 +19,8 @@ export default defineConfig({
         // Include only versioned artwork, never local downloaded caches.
         const files = execFileSync('git', ['ls-files', '-z', '--', 'assets'], {
           cwd: projectRoot,
-          encoding: 'utf8'
+          encoding: 'utf8',
+          maxBuffer: 64 * 1024 * 1024 // Accommodate large tracked-artwork listings.
         }).split('\0').filter(Boolean).filter(fileName =>
           !fileName.replace(/\\/g, '/').startsWith('assets/catalogs/') &&
           !fileName.replace(/\\/g, '/').startsWith('assets/artwork/'));

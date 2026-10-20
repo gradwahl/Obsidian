@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { SidebarView, LanguageCode } from '../types';
 import { t, LANGUAGES } from '../translations';
-import { FittedText } from './FittedText';
 
 interface SidebarProps {
   currentView: SidebarView;
@@ -36,7 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const isExpanded = isHovered || isSidebarFocused || languageMenuOpen;
+  // Native SDL2 keeps the rail expanded on Settings as well as on hover/focus.
+  const isExpanded = isHovered || isSidebarFocused || languageMenuOpen || currentView === 'settings';
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -68,11 +68,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       <div
-        className={`tv-sidebar-dim ${isExpanded ? 'tv-sidebar-dim-active' : ''}`}
+        className={`tv-sidebar-dim ${isExpanded && currentView !== 'settings' ? 'tv-sidebar-dim-active' : ''}`}
         aria-hidden="true"
       />
       <aside
-        className={`tv-sidebar ${isExpanded ? 'tv-sidebar-expanded' : 'tv-sidebar-collapsed'}`}
+        className={`tv-sidebar ${isExpanded ? 'tv-sidebar-expanded' : 'tv-sidebar-collapsed'} ${currentView === 'settings' ? 'tv-sidebar-settings' : ''}`}
+        aria-label="Main navigation"
+        data-state={isExpanded ? 'expanded' : 'collapsed'}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -81,6 +83,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="tv-language" ref={menuRef}>
             <button
               onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+              aria-expanded={languageMenuOpen}
+              aria-controls="tv-language-options"
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded bg-[#18181c] hover:bg-[#23232a] text-sm font-medium transition-all ${
                 languageMenuOpen
                   ? 'ring-2 ring-white text-white'
@@ -103,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Language dropdown menu */}
             {languageMenuOpen && (
-              <div className="absolute top-16 left-2 w-56 bg-[#16161a] border border-[#2e2e38] rounded-md shadow-2xl py-1.5 z-50 backdrop-blur-md">
+              <div id="tv-language-options" className="absolute top-16 left-2 w-56 bg-[#16161a] border border-[#2e2e38] rounded-md shadow-2xl py-1.5 z-50 backdrop-blur-md">
                 {LANGUAGES.map((item) => (
                   <button
                     key={item.code}
@@ -127,10 +131,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Decorative Brand Logo "P" */}
-          <div className="tv-brand-logo" title="PEGASUS-DL / PolDrive">
-            <div className="tv-brand-icon">P</div>
-            <span className="tv-nav-label tv-brand-title">PEGASUS-DL</span>
+          {/* Native PS5 wordmark: a red P on the collapsed rail, 'olDrive' revealed when expanded. */}
+          <div className="tv-brand-logo" aria-label="PolDrive">
+            <span className="tv-brand-mark" aria-hidden="true">P</span>
+            <span className="tv-brand-title" aria-hidden="true">olDrive</span>
           </div>
 
           {/* Navigation list */}
@@ -142,6 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={item.view}
                   onClick={() => onSelectView(item.view)}
                   aria-current={isActive ? 'page' : undefined}
+                  title={t(language, item.labelKey)}
                   className={`tv-nav-item ${isActive ? 'tv-nav-active' : ''} ${
                     isActive && isSidebarFocused ? 'tv-nav-focused' : ''
                   }`}

@@ -141,7 +141,20 @@ static SDL_Rect search_key_target(int key) {
 
 static SDL_Rect search_result_target(int index) {
     int slot = index % SEARCH_PAGE;
-    return (SDL_Rect){820 + slot % 3 * 350, 210 + slot / 3 * 238, 330, 220};
+    return (SDL_Rect){640 + slot % 3 * 350, 210 + slot / 3 * 238, 330, 220};
+}
+
+static SDL_Rect search_page_button(bool next) {
+    return (SDL_Rect){next ? 1624 : 1560, 931, 48, 48};
+}
+
+static void search_change_page(WolodriveApp *app, int direction) {
+    int pages=(app->search_count+SEARCH_PAGE-1)/SEARCH_PAGE;
+    if (pages<2) return;
+    int page=app->search_selected/SEARCH_PAGE;
+    int new_page=SDL_max(0,SDL_min(pages-1,page+direction));
+    app->search_selected=new_page*SEARCH_PAGE;
+    app->search_results_focus=true;
 }
 
 static void search_type_key(WolodriveApp *app, int key) {
@@ -156,6 +169,14 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
         return true;
     }
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
+        if (app->search_count > SEARCH_PAGE) {
+            if (contains_point(search_page_button(false),ev->button.x,ev->button.y)) {
+                search_change_page(app,-1); return true;
+            }
+            if (contains_point(search_page_button(true),ev->button.x,ev->button.y)) {
+                search_change_page(app,1); return true;
+            }
+        }
         for (int k = 0; k < SEARCH_KEYS; k++) if (contains_point(search_key_target(k), ev->button.x, ev->button.y)) {
             app->sidebar_focus = app->search_results_focus = false;
             app->search_key = k;
@@ -250,8 +271,8 @@ static void render_search(WolodriveApp *app) {
     }
     char count[80];
     snprintf(count, sizeof(count), TR(app, TXT_SEARCH_COUNT), app->search_count);
-    draw_text(app, app->font_small, count, CONTENT_X, 740, muted, 0);
-    draw_text(app, app->font_micro, TR(app, TXT_SEARCH_HINT), CONTENT_X, 800, muted, 455);
+    draw_text(app, app->font_small, count, 1560, 140, muted, 0);
+    draw_text(app, app->font_micro, TR(app, TXT_SEARCH_HINT), CONTENT_X, 750, muted, 455);
     int start = app->search_selected / SEARCH_PAGE * SEARCH_PAGE;
     for (int i = start; i < app->search_count && i < start + SEARCH_PAGE; i++) {
         SDL_Rect box = search_result_target(i);
@@ -264,9 +285,23 @@ static void render_search(WolodriveApp *app) {
     }
     if (!app->search_count) draw_text(app, app->font_body,
         TR(app, settings_filters_active(app) ? TXT_SETTINGS_NO_MATCHES : TXT_SEARCH_EMPTY),
-        820, 230, muted, 950);
+        640, 230, muted, 950);
     if (app->search_count) {
-        snprintf(count, sizeof(count), "%d / %d", app->search_selected + 1, app->search_count);
-        draw_text(app, app->font_micro, count, 820, 950, muted, 0);
+        if (app->search_count > SEARCH_PAGE) {
+            int page=app->search_selected/SEARCH_PAGE;
+            int pages=(app->search_count+SEARCH_PAGE-1)/SEARCH_PAGE;
+            snprintf(count,sizeof(count),"Page %d of %d",page+1,pages);
+            draw_text(app,app->font_micro,count,640,945,muted,0);
+            SDL_Rect prev=search_page_button(false),next=search_page_button(true);
+            fill_rect(r,prev.x,prev.y,prev.w,prev.h,30,30,38,255);
+            fill_rect(r,next.x,next.y,next.w,next.h,30,30,38,255);
+            draw_fitted_text(app,app->font_row_title,"<",prev,
+                             page ? white : muted,prev,true);
+            draw_fitted_text(app,app->font_row_title,">",next,
+                             page+1<pages ? white : muted,next,true);
+        } else {
+            snprintf(count,sizeof(count),"%d / %d",app->search_selected+1,app->search_count);
+            draw_text(app,app->font_micro,count,640,945,muted,0);
+        }
     }
 }

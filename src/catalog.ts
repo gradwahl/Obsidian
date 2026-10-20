@@ -1,5 +1,11 @@
 import { GameItem, CatalogFilters, HomeCategoryId } from './types';
 import rawCatalog from './catalogData.json';
+import additionalSources from '../config/additional_sources.json';
+
+/* Single offline source registry for React and the generated native snapshot. */
+export const SOURCE_WEBSITES: Record<string, string> = Object.fromEntries(
+  additionalSources.map(source => [source.name, source.url])
+);
 
 function computeDeterministicMetadata(item: GameItem): GameItem {
   let h = 2166136261 >>> 0;
@@ -144,7 +150,7 @@ export function getHomeCategoryGames(
 }
 
 export function getDistinctSources(catalog: GameItem[]): string[] {
-  const set = new Set<string>();
+  const set = new Set<string>(Object.keys(SOURCE_WEBSITES));
   for (const it of catalog) {
     if (it.source_name) set.add(it.source_name);
   }

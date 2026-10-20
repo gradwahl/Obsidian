@@ -7,7 +7,7 @@ PS5_PORT        ?= 9021
 PS5_FTP_PORT    ?= 1337
 PS5_PAYLOAD_SDK ?= /opt/ps5-payload-sdk
 
-.PHONY: all linux preview build-linux test benchmark-ui ps5 deploy deploy-ftp clean
+.PHONY: all linux preview build-linux test test-native-snapshot benchmark-ui ps5 deploy deploy-ftp clean
 
 all: build-linux
 
@@ -17,7 +17,10 @@ linux: build-linux
 
 preview: linux
 
-build-linux:
+src/native_catalog_snapshot.h: scripts/generate_native_snapshot.py src/catalogData.json config/additional_sources.json
+	python3 scripts/generate_native_snapshot.py
+
+build-linux: src/native_catalog_snapshot.h
 	@mkdir -p build assets/covers
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 \
 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
@@ -26,7 +29,15 @@ build-linux:
 	    -lm -lpthread
 	@echo "[WOLODRIVE] Zbudowano natywną binarkę Linux: build/wolodrive"
 
-benchmark-ui:
+test-native-snapshot: src/native_catalog_snapshot.h
+	@mkdir -p build
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+	    tests/test_native_snapshot.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    -o build/test_native_snapshot \
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	./build/test_native_snapshot
+
+benchmark-ui: src/native_catalog_snapshot.h
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
 	    tests/benchmark_ui.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
@@ -34,7 +45,7 @@ benchmark-ui:
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
 	SDL_VIDEODRIVER=dummy ./build/benchmark_ui
 
-test:
+test: src/native_catalog_snapshot.h
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
 	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
@@ -73,7 +84,7 @@ windows: build-windows
 	@echo "[WOLODRIVE] Uruchamianie Wolodrive 2.0 (Windows)..."
 	./build/wolodrive.exe
 
-ps5:
+ps5: src/native_catalog_snapshot.h
 	@mkdir -p build
 	@if [ ! -d "${PS5_PAYLOAD_SDK}" ]; then \
 	    echo "[BŁĄD] Nie znaleziono PS5_PAYLOAD_SDK w ${PS5_PAYLOAD_SDK}."; \
