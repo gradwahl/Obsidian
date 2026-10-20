@@ -35,6 +35,7 @@ export interface GameItem {
   source_url?: string; // Informational website page; not an installer.
   platform?: string;
   cover_url?: string;
+  cover_fallback_url?: string;
   cover_local_path?: string;
   boxart_url?: string;
   backdrop_url?: string;

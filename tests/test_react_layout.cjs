@@ -73,7 +73,7 @@ assert.equal(filteredAxekinHome.length, 128);
 assert.ok(filteredAxekinHome.every(game => game.source_name === 'Axekin'));
 assert.equal(filteredAxekinHome[2].title, fullAxekin[0].title);
 
-const { applyArtworkMatches } = require('../src/artworkMatches.ts');
+const { applyArtworkMatches, coverSources, nextCoverSource } = require('../src/artworkMatches.ts');
 const missingCover = { ...homeFixture[3], id_code: 'ART001', cover_r: 40, cover_g: 50, cover_b: 60 };
 const detectedArt = { 'Axekin|ART001': { url: 'https://images.example/box.png',
   provider: 'libretro-exact', confidence: 95 } };
@@ -83,6 +83,22 @@ assert.match(render(React.createElement(CoverArt, { game: matchedCover })),
   /src="https:\/\/images.example\/box.png"/);
 const manualArt = { ...missingCover, cover_local_path: '/user/cover.png' };
 assert.deepEqual(applyArtworkMatches([manualArt], detectedArt)[0], manualArt);
+const sourceArt = { ...missingCover, cover_url: 'https://source.example/protected.webp' };
+const withFallback = applyArtworkMatches([sourceArt], detectedArt)[0];
+assert.equal(withFallback.cover_url, sourceArt.cover_url);
+assert.equal(withFallback.cover_fallback_url, detectedArt['Axekin|ART001'].url);
+assert.deepEqual(coverSources(withFallback), [sourceArt.cover_url, withFallback.cover_fallback_url]);
+assert.equal(nextCoverSource(withFallback, []), sourceArt.cover_url);
+assert.equal(nextCoverSource(withFallback, [sourceArt.cover_url]), detectedArt['Axekin|ART001'].url);
+assert.equal(nextCoverSource(withFallback, [sourceArt.cover_url, withFallback.cover_fallback_url]), '');
+const inheritedCover = applyArtworkMatches([missingCover], {
+  'Axekin|ART001': { ...detectedArt['Axekin|ART001'], url: sourceArt.cover_url,
+    fallback: detectedArt['Axekin|ART001'] }
+})[0];
+assert.equal(inheritedCover.boxart_url, sourceArt.cover_url);
+assert.equal(nextCoverSource(inheritedCover, [sourceArt.cover_url]), detectedArt['Axekin|ART001'].url);
+assert.deepEqual(coverSources({ ...withFallback, backdrop_url: 'https://source.example/hero' }, true),
+  ['https://source.example/hero', sourceArt.cover_url, withFallback.cover_fallback_url]);
 assert.equal(applyArtworkMatches([missingCover], {
   'Axekin|ART001': { url: 'https://images.example/uncertain.png', provider: 'candidate', confidence: 70 }
 })[0].boxart_url, undefined);

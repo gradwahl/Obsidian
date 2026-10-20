@@ -13,7 +13,7 @@ typedef struct {
     size_t size;
 } MemoryBuffer;
 
-typedef struct { char source[64], id[32], url[512]; } CoverOverride;
+typedef struct { char source[64], id[32], url[512], fallback[512]; } CoverOverride;
 static CoverOverride *cover_overrides;
 static size_t cover_count;
 static bool covers_loaded;
@@ -42,6 +42,8 @@ static void load_cover_overrides(void) {
         if (!url) continue;
         *url++=0;
         url[strcspn(url,"\r\n")]=0;
+        char *fallback=strchr(url,'\t');
+        if (fallback) *fallback++=0;
         if (!line[0] || !id[0] || strncmp(url,"https://",8) ||
             strlen(line)>=64 || strlen(id)>=32 || strlen(url)>=512) continue;
         if (cover_count==allocated) {
@@ -55,19 +57,22 @@ static void load_cover_overrides(void) {
         SDL_strlcpy(row->source,line,sizeof(row->source));
         SDL_strlcpy(row->id,id,sizeof(row->id));
         SDL_strlcpy(row->url,url,sizeof(row->url));
+        row->fallback[0]=0;
+        if (fallback && !strncmp(fallback,"https://",8) && strlen(fallback)<sizeof(row->fallback))
+            SDL_strlcpy(row->fallback,fallback,sizeof(row->fallback));
     }
     fclose(fp);
     qsort(cover_overrides,cover_count,sizeof(*cover_overrides),cover_cmp);
 }
-static const char *matched_cover(const char *source, const char *id) {
+static const CoverOverride *matched_cover(const char *source, const char *id) {
     load_cover_overrides();
     if (!cover_count) return NULL;
-    CoverOverride key={{0},{0},{0}};
+    CoverOverride key={0};
     SDL_strlcpy(key.source,source,sizeof(key.source));
     SDL_strlcpy(key.id,id,sizeof(key.id));
     const CoverOverride *found=bsearch(&key,cover_overrides,cover_count,
                                        sizeof(*cover_overrides),cover_cmp);
-    return found ? found->url : NULL;
+    return found;
 }
 /* Full image downloads remain lazy in src/artwork.c. */
 
@@ -543,9 +548,16 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
         snprintf(target->download_url, sizeof(target->download_url), "%s", dl_url);
     }
     SDL_strlcpy(target->cover_url, cover_url ? cover_url : "", sizeof(target->cover_url));
-    if (fmt == FMT_CATALOG && !target->boxart_url[0] && !target->cover_url[0]) {
-        const char *url = matched_cover(target->source_name,target->id_code);
-        if (url) SDL_strlcpy(target->boxart_url,url,sizeof(target->boxart_url));
+    target->cover_fallback_url[0] = 0;
+    if (fmt == FMT_CATALOG && !target->boxart_url[0]) {
+        const CoverOverride *match = matched_cover(target->source_name,target->id_code);
+        const char *url = match ? match->url : NULL;
+        if (url && strcmp(url, target->cover_url)) {
+            if (target->cover_url[0]) SDL_strlcpy(target->cover_fallback_url,url,sizeof(target->cover_fallback_url));
+            else SDL_strlcpy(target->boxart_url,url,sizeof(target->boxart_url));
+        }
+        if (match && match->fallback[0])
+            SDL_strlcpy(target->cover_fallback_url,match->fallback,sizeof(target->cover_fallback_url));
     }
 
     target->format  = fmt;

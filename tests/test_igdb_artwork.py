@@ -51,6 +51,14 @@ class IGDBTests(unittest.TestCase):
         self.assertIn("sony-ps4|samegame", targets)
         self.assertIn("sony-ps5|samegame", targets)
 
+    def test_fallback_scan_includes_supplied_art_only_when_requested(self):
+        records = [("Source", {"id": "1", "title": "Example", "platform": "sony-ps1",
+                               "coverUrl": "https://source.test/protected.webp"})]
+        self.assertEqual(igdb.eligible_titles(records, {}), {})
+        names = igdb.eligible_titles(records, {}, fallbacks=True)
+        self.assertEqual(names, {"sony-ps1|example": ("sony-ps1", "Example")})
+        self.assertEqual(igdb.eligible_titles(records, {"Source|1": {}}, fallbacks=True), {})
+
     def test_client_does_not_leak_credentials_into_url_and_checks_platforms(self):
         seen = []
         def open_fake(req, timeout=None):

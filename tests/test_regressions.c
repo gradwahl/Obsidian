@@ -1205,10 +1205,20 @@ static void test_additional_source_snapshot(void) {
     assert(added >= 100);
     assert(app->catalog_source_count == sources);
     assert(app->catalog_count > 100);
-    bool psp_present = false, named_source = false;
+    bool psp_present = false, named_source = false, ps1_fallback = false, inherited_fallback = false;
     int axekin_count = 0, enriched_covers = 0;
     for (int i = 0; i < app->catalog_count; i++) {
         GameItem *item = &app->catalog[i];
+        if (!strcmp(item->id_code, "EXT-5fe80be2c82547bd45cc")) {
+            assert(item->cover_url[0] && item->cover_fallback_url[0]);
+            assert(strcmp(item->cover_url, item->cover_fallback_url));
+            ps1_fallback = true;
+        }
+        if (!strcmp(item->id_code, "EXT-acd556adb52df12e771f")) {
+            assert(item->boxart_url[0] && item->cover_fallback_url[0]);
+            assert(strcmp(item->boxart_url, item->cover_fallback_url));
+            inherited_fallback = true; /* Four-column TSV row. */
+        }
         assert(item->format == FMT_CATALOG);
         assert(!item->download_url[0] && !item->install_path[0]);
         if (strcmp(item->platform, "sony-psp") == 0) psp_present = true;
@@ -1227,7 +1237,7 @@ static void test_additional_source_snapshot(void) {
             assert(library_match);
         }
     }
-    assert(psp_present && named_source);
+    assert(psp_present && named_source && ps1_fallback && inherited_fallback);
     assert(axekin_count > 18000);
     assert(enriched_covers > 0); /* Local overlay resolves box art. */
     int previous_count = app->catalog_count;

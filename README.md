@@ -19,6 +19,34 @@ in the React preview and read as an optional URL overlay by the native
 catalogue loader. The existing asynchronous artwork cache loads images only
 when a card is visible, and manual local art always wins.
 
+Supplied image URLs can fail even when they return HTTP 200: Axekin's image
+host currently returns an HTML bot challenge for the PS1 examples tested.
+Wolodrive prepares independent IGDB/Libretro fallbacks for supplied covers and
+for matching rows that inherit those source URLs. Healthy supplied art retains
+its priority; a load/decode failure advances to the independent cover in cards,
+heroes and details, in both the web and native renderer. It does not attempt
+to solve or bypass a source challenge. Missing or ambiguous alternatives still
+show a placeholder. Coverage counts above remain metadata-link counts.
+
+To include entries that already have source artwork when building IGDB fallbacks:
+
+```bash
+python3 scripts/igdb_artwork.py --bulk --aliases --fallbacks
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+Use `python` on native Windows. Canonical/alias catalogue caches and previous
+successful matches are reused. No credentials are needed for the enrichment
+step. The JSON manifest marks supplied-art alternatives with `fallbackOnly`
+and inherited-art alternatives with `fallback`. The native TSV retains its
+three required columns and accepts an optional fourth independent fallback URL;
+deploy the refreshed TSV alongside the rebuilt native executable. Local PNG,
+JPG and WebP overrides keep their existing priority.
+
+The [PS1 artwork delivery report](docs/ps1_artwork_delivery.md) records the
+confirmed cause, seven tested covers and remaining verification limits.
+
 To refresh matches after indexing titles:
 
 ```bash

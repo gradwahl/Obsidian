@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
+import { nextCoverSource } from '../artworkMatches';
 
 interface HeroBannerProps { game: GameItem | null; language: LanguageCode;
   heading?: string; emptyMessage?: string; showDate?: boolean; }
@@ -19,8 +20,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ game, language, heading,
     window.addEventListener('keydown', toggle);
     return () => window.removeEventListener('keydown', toggle);
   }, []);
-  const source = [game?.backdrop_url, game?.cover_local_path, game?.cover_url]
-    .find(value => value && !failedSources.includes(value)) || '';
+  const source = game ? nextCoverSource(game, failedSources, true) : '';
   const date = String(game?.catalog_added_at || '').slice(0, 8);
   const added = date.length === 8 ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6)}` : '';
   return <section className="tv-hero" aria-label={game?.title || heading || t(language, 'TXT_LATEST_GAMES')}>

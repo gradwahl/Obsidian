@@ -46,6 +46,29 @@ class ArtworkTests(unittest.TestCase):
         self.assertEqual(report["status"]["direct"], 1)
         self.assertEqual(report["status"]["matched"], 2)
 
+    def test_supplied_art_gets_independent_fallback_without_being_counted_as_missing(self):
+        records = [("Source", {"id": "1", "platform": "sony-ps1", "title": "Example",
+                               "coverUrl": "https://source.test/challenge.webp"}),
+                   ("Other", {"id": "2", "platform": "sony-ps1", "title": "Example"})]
+        index = {"sony-ps1": {"strict": {}, "relaxed": {"example": {"https://thumbnails.libretro.com/example.png"}}}}
+        matches, report = art.match_records(records, index)
+        self.assertTrue(matches["Source|1"]["fallbackOnly"])
+        self.assertEqual(matches["Source|1"]["provider"], "libretro-unique")
+        self.assertEqual(report["status"], {"direct": 1, "matched": 1})
+        self.assertEqual(report["fallbackCount"], 2)
+        self.assertEqual(matches["Other|2"]["url"], records[0][1]["coverUrl"])
+        self.assertEqual(matches["Other|2"]["fallback"]["provider"], "libretro-unique")
+        # Conflicting regional covers cannot be guessed. An independently
+        # verified IGDB identity can supply its own unambiguous cover instead.
+        index["sony-ps1"]["relaxed"]["example"].add("https://thumbnails.libretro.com/other.png")
+        ambiguous = art.match_records(records, index)[0]
+        self.assertNotIn("Source|1", ambiguous)
+        self.assertNotIn("fallback", ambiguous["Other|2"])
+        igdb = {"sony-ps1|example": {"provider": "igdb-exact-platform-title", "confidence": 95,
+                                   "url": "https://images.igdb.com/igdb/image/upload/t_cover_big/co12345.jpg"}}
+        self.assertEqual(art.match_records(records, index, igdb)[0]["Source|1"]["provider"],
+                         "igdb-exact-platform-title")
+
     def test_directory_parsing_and_offline_index(self):
         listing = ('<a href="Pokemon%20Red%20(USA).png">Red</a>'
                    '<a href="Pokemon%20Red%20(Japan).png">JP</a>'

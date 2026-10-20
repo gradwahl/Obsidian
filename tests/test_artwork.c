@@ -102,6 +102,15 @@ int main(void) {
     app->renderer = SDL_CreateSoftwareRenderer(screen);
     assert(app->renderer);
     test_scroll_queue(app->renderer);
+    /* A source returning HTML must advance through failed candidates to an
+       independently matched cover, rather than stopping at a placeholder. */
+    GameItem protected_source = {0};
+    snprintf(protected_source.cover_url, sizeof(protected_source.cover_url), "%s/challenge", server);
+    snprintf(protected_source.icon_url, sizeof(protected_source.icon_url), "%s/bad-source", server);
+    snprintf(protected_source.cover_fallback_url, sizeof(protected_source.cover_fallback_url), "%s/independent", server);
+    int fallback_w = 0, fallback_h = 0;
+    assert(wait_art(app, &protected_source, false, &fallback_w, &fallback_h));
+    assert(fallback_w == 160 && fallback_h == 90);
     SDL_Rect fit = artwork_fit(200, 400, (SDL_Rect){10,20,320,180}, false);
     assert(fit.x == 125 && fit.y == 20 && fit.w == 90 && fit.h == 180);
     fit = artwork_fit(400,400,(SDL_Rect){0,0,320,180},false);

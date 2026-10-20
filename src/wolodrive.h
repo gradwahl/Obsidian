@@ -102,6 +102,7 @@ typedef struct {
     char download_url[512];     /* Bezpośredni link do pakietu z katalogu JSON */
     char boxart_url[512];      /* Complete portrait front cover, including platform strip. */
     char cover_url[512];       /* Portrait cover/icon fallback. */
+    char cover_fallback_url[512]; /* Independent provider if supplied art fails. */
     char icon_url[512];        /* Square game icon. */
     char landscape_url[512];   /* Wide card artwork, kept separate from the cover. */
     char backdrop_url[512];    /* Wide hero/background artwork. */

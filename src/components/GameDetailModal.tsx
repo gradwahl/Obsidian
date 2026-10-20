@@ -4,6 +4,7 @@ import { t } from '../translations';
 import { X, ExternalLink } from 'lucide-react';
 import { isSameGame } from '../catalog';
 import { CoverArt } from './GameCard';
+import { nextCoverSource } from '../artworkMatches';
 
 interface GameDetailModalProps {
   game: GameItem;
@@ -32,6 +33,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [showOriginalDesc, setShowOriginalDesc] = useState(false);
   const [entryPage, setEntryPage] = useState(0);
+  const [failedSources, setFailedSources] = useState<string[]>([]);
   useEffect(() => { setEntryPage(0); setActiveTab('install'); setSelectedScreenshot(null); }, [game]);
 
   const neighborCatalog = neighborGames || catalog;
@@ -51,7 +53,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
   const screenshots = game.screenshot_urls || [];
   const entryCount = activeTab === 'install' ? relatedPackages.length : activeTab === 'dlc' ? relatedDLC.length : screenshots.length;
-  const coverSrc = game.cover_local_path || game.cover_url || '';
+  const coverSrc = nextCoverSource(game, failedSources, true);
 
   let descText = game.description;
   if (game.description_id && !showOriginalDesc) {
@@ -69,7 +71,8 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
         <div className="tv-detail-header">
           {coverSrc && (
             <img
-              src={game.backdrop_url || coverSrc}
+              src={coverSrc}
+              onError={() => setFailedSources(values => [...values, coverSrc])}
               alt=""
               className="w-full h-full object-cover opacity-25 filter blur-xs scale-105"
             />

@@ -3,13 +3,13 @@ import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
 import { platformLabel } from '../layout';
 import { FittedText } from './FittedText';
+import { nextCoverSource } from '../artworkMatches';
 
 export function CoverArt({ game, className = '' }: { game: GameItem; className?: string }) {
   const [failedSources, setFailedSources] = useState<string[]>([]);
-  const source = [game.boxart_url, game.cover_local_path, game.cover_url]
-    .find(value => value && !failedSources.includes(value)) || '';
+  const source = nextCoverSource(game, failedSources);
   const platform = platformLabel(game.id_code);
-  const completeBox = Boolean(game.boxart_url && source === game.boxart_url);
+  const completeBox = Boolean(source && (source === game.boxart_url || source === game.cover_fallback_url));
   return <div className={`tv-cover ${className}`} style={{ background:
     `linear-gradient(rgb(${game.cover_r},${game.cover_g},${game.cover_b}), #101014)` }}>
     {platform && !completeBox && <div className={`tv-platform tv-platform-${platform.toLowerCase()}`}>{platform}</div>}

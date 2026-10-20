@@ -162,15 +162,15 @@ def atomic_json(path, data):
     temp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     temp.replace(path)
 
-def eligible_titles(records, matches, platforms=None):
-    """Missing-only, deduplicated across all sources and editions."""
+def eligible_titles(records, matches, platforms=None, *, fallbacks=False):
+    """Uncovered identities, optionally including supplied art for backups."""
     names = {}
     for source, game in records:
         if platforms and game["platform"] not in platforms:
             continue
         if game["platform"] not in PLATFORM_NAMES:
             continue
-        if game.get("coverUrl") or game.get("boxArtUrl"):
+        if not fallbacks and (game.get("coverUrl") or game.get("boxArtUrl")):
             continue
         if source + "|" + game["id"] in matches:
             continue
@@ -571,6 +571,8 @@ def main(argv=None):
                         help="Cache console catalogues (500 games/page) and match all missing titles locally")
     parser.add_argument("--aliases", action="store_true",
                         help="With --bulk, fetch and match official IGDB alternative names in a separate cache")
+    parser.add_argument("--fallbacks", action="store_true",
+                        help="With --bulk, also match entries with supplied art to prepare independent fallbacks")
     parser.add_argument("--refresh-catalogue", action="store_true",
                         help="With --bulk, rebuild selected console catalogue caches from the first page")
     parser.add_argument("--max-queries", type=int, default=50,
@@ -583,6 +585,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.aliases and not args.bulk:
         parser.error("--aliases requires --bulk")
+    if args.fallbacks and not args.bulk:
+        parser.error("--fallbacks requires --bulk")
     if args.refresh_catalogue and not args.bulk:
         parser.error("--refresh-catalogue requires --bulk")
     if args.bulk and args.retry_unmatched:
@@ -596,7 +600,7 @@ def main(argv=None):
         parser.error("Unknown Games/Roms console: " + ", ".join(sorted(requested - PLATFORM_NAMES.keys())))
     records = load_records()
     baseline = load_json(ROOT / "assets/artwork/cover-matches.json", {"matches": {}})["matches"]
-    candidates = eligible_titles(records, baseline, requested)
+    candidates = eligible_titles(records, baseline, requested, fallbacks=args.fallbacks)
     cache = load_json(CACHE, {"schemaVersion": 1, "results": {}})
     if cache.get("schemaVersion") != 1:
         raise RuntimeError("Unexpected IGDB local cache format")
@@ -617,7 +621,8 @@ def main(argv=None):
     pending = [key for key in candidates if needs_query(key)]
     retries = sum(key in cache["results"] for key in pending)
     if args.bulk:
-        print(f"Bulk mode: {len(candidates):,} uncovered titles; "
+        label = "missing-art/fallback candidates" if args.fallbacks else "uncovered titles"
+        print(f"Bulk mode: {len(candidates):,} {label}; "
               "previously unsuccessful searches are rechecked locally.", flush=True)
     else:
         print(f"Unique uncovered game/platform titles: {len(candidates):,}; "

@@ -133,6 +133,29 @@ def libretro_index(platform, offline=False, cache=CACHE):
     return {"strict": strict, "relaxed": relaxed, "count": len(parser.files)}
 
 
+def trusted_igdb(row):
+    return (isinstance(row, dict) and row.get("provider") in IGDB_PROVIDERS
+            and row.get("confidence", 0) >= 95 and safe_url(row.get("url"))
+            and urlsplit(row["url"]).hostname == "images.igdb.com")
+
+
+def independent_cover(game, indexes, igdb_matches):
+    """An independent provider, never the same source URL that may be blocked."""
+    key = game["platform"] + "|" + normalize(game["title"])
+    row = igdb_matches.get(key)
+    if trusted_igdb(row):
+        return {"url": row["url"], "provider": row["provider"], "confidence": 95}
+    index = indexes.get(game["platform"])
+    if index:
+        strict = index["strict"].get(normalize(game["title"], tags=False), set())
+        loose = index["relaxed"].get(normalize(game["title"]), set())
+        if len(strict) == 1:
+            return {"url": next(iter(strict)), "provider": "libretro-exact", "confidence": 95}
+        if not strict and len(loose) == 1:
+            return {"url": next(iter(loose)), "provider": "libretro-unique", "confidence": 85}
+    return None
+
+
 def match_records(records, indexes, igdb_matches=None):
     igdb_matches = igdb_matches or {}
     existing = defaultdict(set)
@@ -145,6 +168,7 @@ def match_records(records, indexes, igdb_matches=None):
     matches, totals = {}, Counter()
     by_source, by_platform, providers = defaultdict(Counter), defaultdict(Counter), Counter()
     review = []
+    fallback_providers = Counter()
     for name, game in records:
         key = (game["platform"], normalize(game["title"]))
         url = game.get("boxArtUrl") or game.get("coverUrl")
@@ -175,10 +199,7 @@ def match_records(records, indexes, igdb_matches=None):
                         status = "review"
         if status == "missing":
             igdb = igdb_matches.get(key[0] + "|" + key[1])
-            if (isinstance(igdb, dict) and igdb.get("provider") in IGDB_PROVIDERS
-                    and igdb.get("confidence", 0) >= 95 and
-                    safe_url(igdb.get("url")) and
-                    urlsplit(igdb["url"]).hostname == "images.igdb.com"):
+            if trusted_igdb(igdb):
                 url = igdb["url"]
                 status, via, confidence = "matched", igdb["provider"], 95
         totals[status] += 1
@@ -187,12 +208,23 @@ def match_records(records, indexes, igdb_matches=None):
         if status == "matched":
             providers[via] += 1
             matches[name + "|" + game["id"]] = {"url": url, "provider": via, "confidence": confidence}
+            if via == "same-console-title":
+                fallback = independent_cover(game, indexes, igdb_matches)
+                if fallback and fallback["url"] != url:
+                    matches[name + "|" + game["id"]]["fallback"] = fallback
+                    fallback_providers[fallback["provider"]] += 1
+        elif status == "direct":
+            fallback = independent_cover(game, indexes, igdb_matches)
+            if fallback and fallback["url"] != url:
+                matches[name + "|" + game["id"]] = {**fallback, "fallbackOnly": True}
+                fallback_providers[fallback["provider"]] += 1
         elif status == "review" and len(review) < 100:
             review.append({"source": name, "title": game["title"], "platform": game["platform"]})
     return matches, {"total": len(records), "status": dict(totals), "providers": dict(providers),
                      "sources": {name: dict(v) for name, v in sorted(by_source.items())},
                      "platforms": {name: dict(v) for name, v in sorted(by_platform.items())},
-                     "reviewSamples": review}
+                     "reviewSamples": review, "fallbackProviders": dict(fallback_providers),
+                     "fallbackCount": sum(fallback_providers.values())}
 
 
 def write_outputs(matches, report, root=ROOT):
@@ -213,7 +245,11 @@ def write_outputs(matches, report, root=ROOT):
     for source, identity in sorted(native):
         found = matches.get(source + "|" + identity)
         if found and not any(ch in source + identity + found["url"] for ch in "\t\n\r"):
-            lines.append("\t".join((source, identity, found["url"])))
+            fields = [source, identity, found["url"]]
+            fallback = found.get("fallback", {}).get("url", "")
+            if fallback and not any(ch in fallback for ch in "\t\n\r"):
+                fields.append(fallback)
+            lines.append("\t".join(fields))
     tsv = directory / "cover-matches.tsv"
     tmp = tsv.with_suffix(".tmp")
     tmp.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
@@ -232,6 +268,7 @@ def write_outputs(matches, report, root=ROOT):
         f"**review:** {report['status'].get('review',0):,} | "
         f"**missing:** {report['status'].get('missing',0):,}",
         "", f"Native artwork overrides: {len(lines):,}", "",
+        f"Independent fallbacks for supplied artwork: {report.get('fallbackCount', 0):,}", "",
         "## Sources", "",
         "| Source | Direct | Matched | Review | Missing | Coverage |",
         "|---|---:|---:|---:|---:|---:|",
@@ -301,6 +338,7 @@ def main(argv=None):
     matches, report = match_records(records, indexes, igdb)
     path, native = write_outputs(matches, report)
     print(f"Results: {report['status']}; providers: {report['providers']}", flush=True)
+    print(f"Independent cover fallbacks: {report['fallbackCount']:,}", flush=True)
     print(f"Manifest: {path}; native TSV: {native}", flush=True)
     if args.download:
         sys.path.insert(0, str(ROOT / "scripts"))

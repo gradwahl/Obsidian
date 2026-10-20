@@ -5,7 +5,9 @@ Ambiguous edition/region covers are withheld for manual review.
 
 **Entries:** 85,602 | **direct art:** 20,393 | **matched:** 44,225 | **review:** 1,170 | **missing:** 19,814
 
-Native artwork overrides: 304
+Native artwork overrides: 18,084
+
+Independent fallbacks for supplied artwork: 30,065
 
 ## Sources
 

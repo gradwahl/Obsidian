@@ -143,7 +143,7 @@ class AliasTests(unittest.TestCase):
         matches, report = artwork.match_records(
             [("Source", dict(row, coverUrl="https://existing.test/cover.jpg"))], {},
             {"nintendo-3ds|regionalname": match})
-        self.assertEqual(matches, {})
+        self.assertTrue(matches["Source|1"]["fallbackOnly"])
         self.assertEqual(report["status"]["direct"], 1)
 
 
