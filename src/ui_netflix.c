@@ -528,52 +528,79 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
     if (texture && width > 0 && height > 0) {
         SDL_Rect box = {x, y, w, h};
         SDL_Color color = artwork_background(app, texture);
-        fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, alpha,
-                               color.r/8, color.g/8, color.b/8, alpha, 24);
-        bool complete_box = !is_hero && artwork_complete_box(app, texture);
-        if (!is_hero && !complete_box) {
-            int band = render_box_brand(app, it, box);
-            box.y += band; box.h -= band;
-        }
-        /* Fill the case below its platform strip without letterboxing. */
+
         SDL_Rect previous;
         bool clipped = SDL_RenderIsClipEnabled(r);
         SDL_RenderGetClipRect(r, &previous);
         SDL_Rect intersection = box;
         if (clipped) SDL_IntersectRect(&box, &previous, &intersection);
         SDL_RenderSetClipRect(r, &intersection);
-        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-        SDL_SetTextureAlphaMod(texture, alpha);
 
         if (is_hero) {
-            int tex_w = 0, tex_h = 0;
-            if (SDL_QueryTexture(texture, NULL, NULL, &tex_w, &tex_h) == 0 && tex_w > 0 && tex_h > 0) {
-                float tex_aspect = (float)tex_w / (float)tex_h;
-                float dst_aspect = (float)box.w / (float)box.h;
-                SDL_Rect srcrect;
-                if (tex_aspect > dst_aspect) {
-                    srcrect.h = tex_h;
-                    srcrect.w = (int)lroundf((float)tex_h * dst_aspect);
-                    srcrect.x = (tex_w - srcrect.w) / 2;
-                    srcrect.y = 0;
-                } else {
-                    srcrect.w = tex_w;
-                    srcrect.h = (int)lroundf((float)tex_w / dst_aspect);
-                    srcrect.x = 0;
-                    srcrect.y = (tex_h - srcrect.h) / 2;
+            float tex_aspect = (float)width / (float)height;
+            fill_vertical_gradient(r, x, y, w, h,
+                                   color.r / 3, color.g / 3, color.b / 3, alpha,
+                                   10, 10, 14, alpha, 24);
+
+            if (tex_aspect >= 1.15f) {
+                int backdrop_w = (int)lroundf((float)h * tex_aspect);
+                if (backdrop_w < w) backdrop_w = w;
+                int backdrop_x = x + w - backdrop_w;
+                SDL_Rect dst_rect = {backdrop_x, y, backdrop_w, h};
+
+                SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+                SDL_SetTextureAlphaMod(texture, (Uint8)((235 * alpha) / 255));
+                SDL_RenderCopy(r, texture, NULL, &dst_rect);
+
+                for (int gx = 0; gx < 800; gx++) {
+                    float t = (float)gx / 800.0f;
+                    Uint8 dark_a = (Uint8)((248.0f * (1.0f - t * t)) * alpha / 255.0f);
+                    if (dark_a > 0) fill_rect(r, x + gx, y, 1, h, 10, 10, 14, dark_a);
                 }
-                SDL_RenderCopy(r, texture, &srcrect, &box);
             } else {
-                SDL_Rect destination = artwork_fit(width, height, box, true);
-                SDL_RenderCopy(r, texture, NULL, &destination);
+                int card_h = 440;
+                int card_w = (int)lroundf((float)card_h * tex_aspect);
+                if (card_w > 340) card_w = 340;
+                if (card_w < 200) card_w = 200;
+                int card_x = x + w - card_w - 90;
+                int card_y = y + (h - card_h) / 2 + 10;
+                SDL_Rect card_rect = {card_x, card_y, card_w, card_h};
+
+                fill_rect(r, card_x - 30, card_y - 20, card_w + 60, card_h + 40,
+                          color.r / 2, color.g / 2, color.b / 2, (Uint8)((90 * alpha) / 255));
+
+                draw_drop_shadow(r, card_x, card_y, card_w, card_h, 8, 6, (Uint8)((180 * alpha) / 255));
+
+                SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+                SDL_SetTextureAlphaMod(texture, alpha);
+                SDL_RenderCopy(r, texture, NULL, &card_rect);
+                draw_border(r, card_x, card_y, card_w, card_h, 1, 255, 255, 255, (Uint8)((130 * alpha) / 255));
+                SDL_SetTextureAlphaMod(texture, 255);
+
+                for (int gx = 0; gx < 700; gx++) {
+                    float t = (float)gx / 700.0f;
+                    Uint8 dark_a = (Uint8)((248.0f * (1.0f - t * t)) * alpha / 255.0f);
+                    if (dark_a > 0) fill_rect(r, x + gx, y, 1, h, 10, 10, 14, dark_a);
+                }
             }
-        } else {
-            SDL_Rect destination = artwork_fit(width, height, box, true);
-            SDL_RenderCopy(r, texture, NULL, &destination);
+            SDL_SetTextureAlphaMod(texture, 255);
+            SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
+            return;
         }
 
+        fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, alpha,
+                               color.r/8, color.g/8, color.b/8, alpha, 24);
+        bool complete_box = artwork_complete_box(app, texture);
+        if (!complete_box) {
+            int band = render_box_brand(app, it, box);
+            box.y += band; box.h -= band;
+        }
+
+        SDL_Rect destination = artwork_fit(width, height, box, true);
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureAlphaMod(texture, alpha);
+        SDL_RenderCopy(r, texture, NULL, &destination);
         SDL_SetTextureAlphaMod(texture, 255);
-        if (is_hero) fill_rect(r, x, y, w, h, 0, 0, 0, (Uint8)((70 * alpha) / 255));
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
     } else {
         /* Elegancki, stylowy Placeholder z logo WOLODRIVE i gradientem bazowym */
@@ -1623,11 +1650,9 @@ static void render_hero_banner(WolodriveApp *app) {
         render_cover_or_placeholder(app, hero, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, true);
     }
 
-    /* Czarny gradient zanikający w lewo i w dół (vignette / fade to black) */
-    fill_rect(r, RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720, 0, 0, 0, 55);
-    shade_hero(r);
-    fill_vertical_gradient(r, RAIL_WIDTH, 420, SCREEN_WIDTH - RAIL_WIDTH, 320,
-                           0, 0, 0, 0, 0, 0, 0, 255, 32);
+    /* Czarny gradient dolny krawędzi sekcji Hero */
+    fill_vertical_gradient(r, RAIL_WIDTH, 420, SCREEN_WIDTH - RAIL_WIDTH, 132,
+                           0, 0, 0, 0, 0, 0, 0, 255, 18);
 
     draw_text(app, app->font_logo, "W", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
     draw_text(app, app->font_micro, "W O L O D R I V E", CONTENT_X + 45, 116, white, 0);

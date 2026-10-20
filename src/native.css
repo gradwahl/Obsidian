@@ -32,12 +32,13 @@
 .tv-nav-active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #e50914; }
 .tv-nav-focused { outline: 2px solid #f5f5f5; outline-offset: -6px; }
 .tv-home { position: relative; width: 100%; height: 1016px; flex: none; overflow: hidden; }
-.tv-hero { position: absolute; top: 0; left: 0; width: 100%; height: 750px; }
-.tv-hero-art { position: absolute; top: 0; width: 100%; height: 720px; object-fit: cover; object-position: center; opacity: .68; }
-@keyframes tvHeroCrossfade { from { opacity: 0; transform: scale(1.02); } to { opacity: .68; transform: scale(1); } }
+.tv-hero { position: absolute; top: 0; left: 0; width: 100%; height: 552px; overflow: hidden; }
+.tv-hero-art { position: absolute; opacity: 0.90; transition: opacity 0.3s ease; }
+.tv-hero-landscape { right: 0; top: 0; height: 100%; width: 68%; object-fit: cover; object-position: right top; }
+.tv-hero-portrait { right: 90px; top: 36px; height: 440px; max-width: 340px; object-fit: contain; border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 80px rgba(225, 9, 20, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); }
+@keyframes tvHeroCrossfade { from { opacity: 0; transform: scale(1.02); } to { opacity: .90; transform: scale(1); } }
 .tv-hero-crossfade { animation: tvHeroCrossfade 0.38s ease-out; }
-.tv-hero-cover { filter: blur(4px); }
-.tv-hero-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 420px, #000 740px), linear-gradient(to right, rgba(0,0,0,.96) 0%, rgba(0,0,0,.96) 28%, rgba(0,0,0,.6) 55%, transparent 100%); }
+.tv-hero-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #0a0a0e 0%, #0a0a0e 38%, rgba(10, 10, 14, 0.7) 58%, transparent 85%), linear-gradient(to bottom, transparent 380px, #0a0a0e 552px); }
 .tv-wordmark { position: absolute; top: 96px; left: 38px; display: flex; align-items: center; gap: 14px; height: 44px; }
 .tv-wordmark strong { color: #e50914; font-size: 32px; font-weight: 700; }
 .tv-wordmark span { font-size: 16px; font-weight: 700; }

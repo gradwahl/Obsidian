@@ -55,7 +55,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         <img
           key={`${game?.id_code}_${source}`}
           className={`tv-hero-art tv-hero-crossfade ${
-            source === game?.backdrop_url ? '' : 'tv-hero-cover'
+            source === game?.backdrop_url ? 'tv-hero-landscape' : 'tv-hero-portrait'
           }`}
           src={source}
           alt=""
