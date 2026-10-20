@@ -1585,24 +1585,7 @@ void ui_update_animations(WolodriveApp *app, float dt) {
     }
 }
 
-/* A single texture avoids seams between translucent strips at scaled sizes. */
-static void shade_hero(SDL_Renderer *r) {
-    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, 256, 1, 32, SDL_PIXELFORMAT_RGBA32);
-    if (!surface) return;
-    for (int x = 0; x < 256; x++) {
-        float t = (float)x / 255.0f;
-        float fade = fmaxf(0.0f, (t - 0.28f) / 0.72f);
-        Uint8 alpha = (Uint8)(245.0f * (1.0f - fade) * (1.0f - fade));
-        ((Uint32 *)surface->pixels)[x] = SDL_MapRGBA(surface->format, 0, 0, 0, alpha);
-    }
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(r, surface);
-    SDL_FreeSurface(surface);
-    if (!texture) return;
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    SDL_Rect destination = {RAIL_WIDTH, 0, SCREEN_WIDTH - RAIL_WIDTH, 720};
-    SDL_RenderCopy(r, texture, NULL, &destination);
-    SDL_DestroyTexture(texture);
-}
+
 
 static const char *action_label(WolodriveApp *app, GameItem *item) {
     if (item->state == STATE_DOWNLOADING) return TR(app, TXT_DOWNLOADING);
@@ -1945,11 +1928,11 @@ static void render_sidebar(WolodriveApp *app) {
     fill_rect(r, 26, brand_y + 4, 38, 38, 0, 0, 0, 140);
     fill_rect(r, 24, brand_y + 2, 38, 38, 229, 9, 20, 255);
     draw_border(r, 24, brand_y + 2, 38, 38, 1, 255, 255, 255, 180);
-    draw_text(app, app->font_row_title ? app->font_row_title : app->font_logo, P, 35, brand_y + 5, (SDL_Color){255, 255, 255, 255}, 0);
+    draw_text(app, app->font_row_title ? app->font_row_title : app->font_logo, "P", 35, brand_y + 5, (SDL_Color){255, 255, 255, 255}, 0);
     if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
         Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
         if (brand_alpha > 0) {
-            draw_text(app, app->font_small ? app->font_small : app->font_body, PEGASUS-DL, 76, brand_y + 10, (SDL_Color){229, 9, 20, brand_alpha}, 0);
+            draw_text(app, app->font_small ? app->font_small : app->font_body, "PEGASUS-DL", 76, brand_y + 10, (SDL_Color){229, 9, 20, brand_alpha}, 0);
         }
     }
 

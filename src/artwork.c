@@ -170,6 +170,7 @@ static SDL_Surface *artwork_load(struct ArtworkCache *cache, const ArtworkEntry 
 }
 
 static SDL_Surface *artwork_resize(SDL_Surface *source, bool soft) {
+    (void)soft;
     if (!source) return NULL;
     SDL_Rect fit = artwork_fit(source->w, source->h, (SDL_Rect){0,0,1920,1080}, false);
     if (source->w <= fit.w && source->h <= fit.h) {
