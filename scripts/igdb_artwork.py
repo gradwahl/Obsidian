@@ -183,6 +183,7 @@ class IGDBClient:
         self.token = None
         self.last_request = 0.0
         self.calls = 0
+        self.fallback_searches = 0
         self.request_lock = Lock()
 
     def authenticate(self):
@@ -256,7 +257,13 @@ class IGDBClient:
         return self.query("games", body)
 
     def multi_search(self, requests):
-        """Up to ten independent games searches; exact named response mapping."""
+        """Search up to ten games with verified handling of sparse responses.
+
+        IGDB can omit named result blocks for searches without hits. An
+        omitted block is *not* evidence the game is absent, so query only
+        those titles individually before caching any 'not-found' result.
+        Never silently accept unknown, duplicated, or malformed blocks.
+        """
         if not 1 <= len(requests) <= 10:
             raise ValueError("IGDB Multi-Query requires 1-10 game searches")
         queries = []
@@ -276,14 +283,24 @@ class IGDBClient:
             match = re.fullmatch(r"game(\d+)", name) if isinstance(name, str) else None
             if not match or int(match[1]) >= len(requests) or name in results:
                 raise ValueError("Unrecognised or duplicate IGDB Multi-Query result")
-            rows = block.get("result", [])
-            if not isinstance(rows, list):
+            rows = block.get("result")
+            if rows is not None and not isinstance(rows, list):
                 raise ValueError("Invalid IGDB Multi-Query game rows")
             results[name] = rows
-        expected = {f"game{i}" for i in range(len(requests))}
-        if results.keys() != expected:
-            # Partial responses must NOT be cached as 'not-found'.
-            raise ValueError("Incomplete IGDB Multi-Query response; no results saved")
+
+        # Some Multi-Query responses exclude a name entirely when no games
+        # matched. Verify absent blocks (or a block missing 'result') with
+        # the normal /games endpoint; its [] is a confirmed empty search.
+        # These requests use the same shared rate limiter and retry policy.
+        for index, (title, platform_id) in enumerate(requests):
+            name = f"game{index}"
+            if results.get(name) is None:
+                rows = self.search(title, platform_id)
+                if not isinstance(rows, list):
+                    raise ValueError("Invalid IGDB individual fallback response")
+                results[name] = rows
+                with self.request_lock:
+                    self.fallback_searches += 1
         return [results[f"game{i}"] for i in range(len(requests))]
 
 
@@ -456,7 +473,8 @@ def main(argv=None):
     # Exporting only eligible_titles() would silently erase those covers on
     # the next batch, even though they remain in the IGDB result cache.
     matches = export_cache(cache)
-    print(f"Queried: {requested_count}; IGDB cached matches exported: {matches}.", flush=True)
+    print(f"Queried: {requested_count}; IGDB cached matches exported: {matches}; "
+          f"missing Multi-Query blocks verified individually: {client.fallback_searches}.", flush=True)
     print("Run python scripts/enrich_artwork.py --offline to merge covers into Wolodrive.")
     return 0
 

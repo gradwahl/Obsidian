@@ -41,14 +41,36 @@ class MultiQueryTests(unittest.TestCase):
         self.assertEqual(igdb.escape_search('Test"; } query games "evil" {'),
                          "Test query games evil")
 
-    def test_empty_and_incomplete_are_not_misclassified(self):
+    def test_sparse_blocks_fall_back_without_losing_real_covers(self):
         client = igdb.IGDBClient("test", "fake")
-        request = [("Game 00", 48), ("Game 01", 48)]
+        request = [("Game 00", 48), ("Game 01", 48), ("Game 02", 167)]
+        searched = []
         client.query = lambda *_args: [{"name": "game1", "result": []},
                                        {"name": "game0", "result": [game(0)]}]
+        def individual(title, pid):
+            searched.append((title, pid))
+            return [game(2, 167)] if title == "Game 02" else []
+        client.search = individual
+        rows = client.multi_search(request)
+        self.assertEqual([len(row) for row in rows], [1, 0, 1])
+        self.assertEqual(rows[2][0]["platforms"], [167])
+        self.assertEqual(searched, [("Game 02", 167)])
+        self.assertEqual(client.fallback_searches, 1)
+        # An entirely empty Multi-Query is also handled by individual
+        # checks, never by blindly assigning 'not-found'.
+        client.query = lambda *_args: []
+        client.search = lambda title, pid: []
+        self.assertEqual(client.multi_search(request), [[], [], []])
+        self.assertEqual(client.fallback_searches, 4)
+
+    def test_absent_result_list_and_invalid_names_do_not_silently_cache(self):
+        client = igdb.IGDBClient("test", "fake")
+        request = [("Game 00", 48), ("Game 01", 48)]
+        client.query = lambda *_args: [{"name": "game1"},
+                                       {"name": "game0", "result": [game(0)]}]
+        client.search = lambda title, pid: []
         self.assertEqual([len(row) for row in client.multi_search(request)], [1, 0])
         for result in [
-            [{"name": "game0", "result": [game(0)]}],
             [{"name": "game0", "result": []}, {"name": "game0", "result": []}],
             [{"name": "game0", "result": []}, {"name": "unexpected", "result": []}],
             [{"name": "game0", "result": {}}, {"name": "game1", "result": []}],
@@ -60,6 +82,25 @@ class MultiQueryTests(unittest.TestCase):
             client.multi_search([])
         with self.assertRaises(ValueError):
             client.multi_search([("Good", 48)] * 11)
+
+    def test_failed_verification_not_copied_into_cache(self):
+        client = igdb.IGDBClient("test", "fake")
+        client.query = lambda *_args: [{"name": "game0", "result": [game(0)]}]
+        def fail(*_args):
+            raise RuntimeError("individual API unavailable")
+        client.search = fail
+        names = {
+            "sony-ps4|game00": ("sony-ps4", "Game 00"),
+            "sony-ps4|game01": ("sony-ps4", "Game 01"),
+        }
+        cache = {"schemaVersion": 1, "results": {}}
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "cache.json"
+            with patch.object(igdb, "CACHE", path):
+                with self.assertRaisesRegex(RuntimeError, "unavailable"):
+                    igdb.scan(client, names, cache, 2, {"sony-ps4": 48})
+                self.assertEqual(cache["results"], {})
+                self.assertFalse(path.exists())
 
     def test_exactly_ten_searches_per_request_and_resumable_parallel_cache(self):
         names = {f"sony-ps4|game{i:02d}": ("sony-ps4", f"Game {i:02d}")

@@ -94,10 +94,15 @@ npm run build:static
 Use `--batch-size 1 --workers 1` for troubleshooting or smaller requests.
 The importer checkpoints each successfully completed Multi-Query group;
 **never run two importer processes against the same cache simultaneously**.
-If interrupted, completed batches remain resumable. Incomplete or malformed
-Multi-Query responses fail without caching false `not-found` results. Existing
-cached results and previously exported IGDB covers remain intact. Never put
-IGDB credentials in Git or command arguments.
+If interrupted, completed batches remain resumable. IGDB may omit a named
+Multi-Query result block if a title has no hits. When this happens, the importer
+**verifies only the omitted searches individually** with the regular games
+endpoint (same global request limit) before treating them as `not-found`.
+A failed verification or malformed Multi-Query response prevents that batch
+from being cached. The summary reports how many individual verifications were
+needed. Extra requests for absent names may reduce the speed gain on batches
+with many missing titles. Existing cached results and exported IGDB covers
+remain intact. Never put IGDB credentials in Git or command arguments.
 
 It searches missing
 titles only, deduplicates by console/title and resumes via ignored local
