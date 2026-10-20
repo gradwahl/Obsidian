@@ -87,7 +87,9 @@ def image_type(data):
         return "jpg"
     if len(data) >= 16 and data.startswith(b"RIFF") and data[8:12] == b"WEBP":
         return "webp"
-    raise ValueError("Response is not a supported PNG, JPEG or WebP image")
+    if len(data) >= 16 and data[4:8] == b"ftyp" and data[8:12] in (b"avif", b"avis"):
+        return "avif"
+    raise ValueError("Response is not a supported PNG, JPEG, WebP or AVIF image")
 
 
 def collect(catalogs):

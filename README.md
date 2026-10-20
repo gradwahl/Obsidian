@@ -83,7 +83,7 @@ python3 scripts/download_artwork.py --local --workers 8
 Use `python` on native Windows. The default destination is this repository's
 `assets/covers` folder; `--output` can select another path. URLs are deduplicated
 and valid existing images are reused. Files use the native app's URL-hashed
-`.art` cache names but contain ordinary PNG, JPEG or WebP bytes. Failed requests
+`.art` cache names but contain ordinary PNG, JPEG, WebP or AVIF bytes. Failed requests
 and HTML/error responses are recorded instead of saved as covers. Uncached
 Axekin `/uploads/games/` links are recorded as blocked because that route
 returned bot-check HTML; independent alternatives are downloaded separately.

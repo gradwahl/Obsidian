@@ -108,6 +108,9 @@ class DownloadArtworkTests(unittest.TestCase):
     def test_hash_and_file_types(self):
         self.assertEqual(artwork.cache_name("hello"), "a430d84680aabd0b.art")
         self.assertEqual(artwork.image_type(PNG), "png")
+        self.assertEqual(artwork.image_type(b"\0\0\0\x1cftypavif\0\0\0\0avifmif1miaf"), "avif")
+        with self.assertRaises(ValueError):
+            artwork.image_type(b"\0\0\0\x1cftypmp42\0\0\0\0isommp42")
         with self.assertRaises(ValueError):
             artwork.image_type(b"<html>Error</html>")
 
