@@ -3,9 +3,9 @@
 These counts describe metadata matches, not downloaded or verified images.
 Ambiguous edition/region covers are withheld for manual review.
 
-**Entries:** 85,602 | **direct art:** 20,393 | **matched:** 47,945 | **review:** 1,170 | **missing:** 16,094
+**Entries:** 85,601 | **direct art:** 20,393 | **matched:** 48,039 | **review:** 1,170 | **missing:** 15,999
 
-Native artwork overrides: 18,141
+Native artwork overrides: 18,142
 
 Independent fallbacks for supplied artwork: 30,065
 
@@ -15,17 +15,17 @@ Independent fallbacks for supplied artwork: 30,065
 |---|---:|---:|---:|---:|---:|
 | Archive.org / AlvRo | 0 | 54 | 0 | 9 | 85.7% |
 | Archive.org / maelly_pooh | 0 | 93 | 0 | 38 | 71.0% |
-| Axekin | 19,564 | 253 | 23 | 233 | 98.7% |
+| Axekin | 19,564 | 254 | 23 | 232 | 98.7% |
 | CDRomance | 0 | 1 | 0 | 18 | 5.3% |
 | DownloadGamePSP | 0 | 1,602 | 10 | 360 | 81.2% |
 | GFS Catalog | 685 | 0 | 0 | 0 | 100.0% |
-| NoPayStation | 0 | 6,549 | 159 | 5,224 | 54.9% |
+| NoPayStation | 0 | 6,640 | 159 | 5,133 | 55.6% |
 | PKGPS4 | 0 | 53 | 0 | 11 | 82.8% |
-| PSN-Content | 0 | 2,444 | 0 | 3,015 | 44.8% |
-| ROMsHQ | 0 | 0 | 0 | 5 | 0.0% |
+| PSN-Content | 0 | 2,445 | 0 | 3,014 | 44.8% |
+| ROMsHQ | 0 | 0 | 0 | 4 | 0.0% |
 | RomHeaven | 141 | 0 | 0 | 0 | 100.0% |
 | RomsTime | 0 | 20,211 | 975 | 2,911 | 83.9% |
-| SuperPSX | 0 | 3,486 | 0 | 406 | 89.6% |
+| SuperPSX | 0 | 3,487 | 0 | 405 | 89.6% |
 | Vimm's Lair | 0 | 54 | 3 | 5 | 87.1% |
 | WowRoms | 3 | 0 | 0 | 0 | 100.0% |
 | Ziperto | 0 | 13,145 | 0 | 3,859 | 77.3% |
@@ -49,7 +49,7 @@ Independent fallbacks for supplied artwork: 30,065
 | nintendo-nes | 1,012 | 2,092 | 108 | 594 | 81.6% |
 | nintendo-pokemini | 11 | 0 | 0 | 0 | 100.0% |
 | nintendo-snes | 574 | 1,766 | 235 | 342 | 80.2% |
-| nintendo-switch | 1,328 | 11,080 | 0 | 2,889 | 81.1% |
+| nintendo-switch | 1,328 | 11,080 | 0 | 2,888 | 81.1% |
 | nintendo-wii | 1,227 | 2,104 | 52 | 189 | 93.3% |
 | nintendo-wiiu | 650 | 322 | 0 | 65 | 93.7% |
 | sega-32x | 4 | 0 | 0 | 0 | 100.0% |
@@ -60,15 +60,17 @@ Independent fallbacks for supplied artwork: 30,065
 | sega-saturn | 225 | 13 | 0 | 13 | 94.8% |
 | sony-ps1 | 1,371 | 1,471 | 259 | 458 | 79.9% |
 | sony-ps2 | 1,907 | 85 | 8 | 25 | 98.4% |
-| sony-ps3 | 1,103 | 6,803 | 3 | 6,941 | 53.2% |
+| sony-ps3 | 1,103 | 6,897 | 3 | 6,847 | 53.9% |
 | sony-ps4 | 233 | 2,437 | 0 | 329 | 89.0% |
 | sony-ps5 | 1,654 | 802 | 0 | 62 | 97.5% |
 | sony-psp | 494 | 5,282 | 28 | 1,647 | 77.5% |
 
 ## Providers
 
+- gametdb-exact-platform-title: 1
+- gametdb-exact-product-id: 92
 - igdb-exact-platform-alias: 1,794
-- igdb-exact-platform-title: 23,156
+- igdb-exact-platform-title: 23,157
 - launchbox-exact-platform-alias: 900
 - launchbox-exact-platform-title: 2,820
 - libretro-exact: 40

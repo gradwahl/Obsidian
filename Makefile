@@ -57,6 +57,8 @@ test:
 	python3 -m unittest discover -s tests -p test_full_sources.py
 	python3 -m unittest discover -s tests -p test_enrich_artwork.py
 	python3 -m unittest discover -s tests -p test_launchbox_artwork.py
+	python3 -m unittest discover -s tests -p test_gametdb_artwork.py
+	python3 -m unittest discover -s tests -p test_review_artwork.py
 	python3 -m unittest discover -s tests -p "test_igdb*.py"
 	python3 tests/run_tests.py
 

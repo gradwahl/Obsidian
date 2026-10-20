@@ -47,6 +47,12 @@ def clean(text):
     return html.unescape(re.sub(r"<[^>]+>", " ", str(text or ""))).strip()
 
 
+def navigation_title(title):
+    return bool(re.fullmatch(
+        r"download|download now|learn more|view|read more|open|new releases|see all|comments?(?:\s+\d+)?",
+        title.strip(), re.I))
+
+
 def platform(text, fallback=""):
     text = text.lower()
     for key, pattern in (("sony-psvita", r"ps\s*vita"), ("sony-psp", r"\bpsp\b|playstation portable"),
@@ -126,7 +132,7 @@ class Listings(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "a" and self.link:
             title = clean(self.full_title or "".join(self.text))
-            if title and urllib.parse.urlsplit(self.link).netloc == urllib.parse.urlsplit(self.base).netloc:
+            if title and not navigation_title(title) and urllib.parse.urlsplit(self.link).netloc == urllib.parse.urlsplit(self.base).netloc:
                 self.rows.append((title, self.link, self.image))
             self.link = None
         if tag in ("h2", "h3"):
@@ -182,9 +188,7 @@ class PublicGameLinks(HTMLParser):
         if tag == "a" and self.link:
             title = clean(self.full_title or " ".join(self.parts).strip() or self.image_title)
             title = re.sub(r"\s+", " ", title)
-            if 4 <= len(title) <= 160 and not re.search(
-                r"^(?:download|download now|learn more|view|read more|open|new releases|see all|comments?(?:\s+\d+)?)$", title, re.I
-            ):
+            if 4 <= len(title) <= 160 and not navigation_title(title):
                 self.rows.append((title, self.link))
             self.link = None
 

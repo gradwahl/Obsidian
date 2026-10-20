@@ -85,6 +85,61 @@ Downloaded caches are local files; the importer and metadata overlays are the
 reproducible source of this artwork. Native Windows application build/launch
 verification remains separate from Windows importer verification.
 
+#### GameTDB IDs, source cleanup and artwork review
+
+Public PlayStation product identifiers are retained as `productId` and
+`productRegion` in TSV snapshots. To enrich existing rows without replacing
+their titles, IDs or catalogue membership:
+
+```bash
+python3 scripts/cleanup_artwork_sources.py
+python3 scripts/import_tsv_sources.py --restore-product-ids
+python3 scripts/gametdb_artwork.py
+```
+
+Use `python` on native Windows. The restoration reads configured public TSV
+feeds into memory and writes only the public product ID/region for an exact
+existing identity and title. Conflicting metadata is withheld; package links,
+RAPs, license data and binary hashes are not copied. Future full TSV imports
+retain those same public fields. Cleanup applies exact reviewed corrections
+from `config/source_title_corrections.json` and removes one confirmed navigation
+row; suspicious repeated titles without proof of identity remain unchanged.
+
+The GameTDB importer caches the public PS3 and Switch database archives in
+`.cache/wolodrive-artwork`. A product ID must exist on the exact console; when
+no ID is supplied, only one exact cleaned/localised title-to-product match is
+accepted. Demo, trial, DLC, edition, bundle and modified-release labels prevent
+an ID from silently borrowing a differently named base-game cover. Only flat
+front-cover routes for the same product ID are tried. Successful image responses
+enter `assets/artwork/gametdb-covers.json`; missing/failed images do not count as
+new coverage. Existing artwork and withheld review entries keep their priority.
+`--offline` makes no network requests, reusing the metadata/export and valid
+local images. `--refresh` downloads current databases. Download diagnostics go
+to `.cache/wolodrive-artwork/gametdb-downloads.json`.
+
+Enrichment also writes every withheld entry, its reason, and all candidate URLs
+to `assets/artwork/review-queue.json`. Prepare local comparison sheets with:
+
+```bash
+python3 -m pip install Pillow
+python3 scripts/review_artwork.py --download
+```
+
+Pillow is needed only for this saved-image report. The importer itself uses the
+Python standard library on both platforms. The default output is
+`.cache/wolodrive-artwork/review/index.html`, with numbered JPEG contact sheets
+and download/render diagnostics alongside it. The HTML shows all original
+titles and source-page links and embeds only local images. The sheets compare
+source title, console, record ID, provider and regional filename information;
+unavailable candidates are marked. Fonts prefer Yu Gothic on Windows or
+Noto Sans CJK on Linux, falling back to Arial/DejaVu Sans when installed. Install
+`noto-fonts-cjk` (Arch) or `fonts-noto-cjk` (Debian/Ubuntu) for Japanese/Chinese
+labels, or pass `--font /path/to/unicode-font.ttf`. The HTML retains full Unicode
+text for manual inspection even when a sheet font lacks a particular glyph.
+Run without `--download` to rebuild the report using only cached images.
+Preparing the report does not approve candidates or modify the artwork overlay.
+No graphical application or browser automation is required.
+
 The [PS1 artwork delivery report](docs/ps1_artwork_delivery.md) records the
 confirmed cause, seven tested covers and remaining verification limits.
 

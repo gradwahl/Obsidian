@@ -156,9 +156,10 @@ def independent_cover(game, indexes, igdb_matches):
     return None
 
 
-def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
+def match_records(records, indexes, igdb_matches=None, launchbox_matches=None, gametdb_matches=None):
     igdb_matches = igdb_matches or {}
     launchbox_matches = launchbox_matches or {}
+    gametdb_matches = gametdb_matches or {}
     existing = defaultdict(set)
     for name, game in records:
         url = game.get("boxArtUrl") or game.get("coverUrl")
@@ -169,11 +170,13 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
     matches, totals = {}, Counter()
     by_source, by_platform, providers = defaultdict(Counter), defaultdict(Counter), Counter()
     review = []
+    review_entries = []
     fallback_providers = Counter()
     for name, game in records:
         key = (game["platform"], normalize(game["title"]))
         url = game.get("boxArtUrl") or game.get("coverUrl")
         status, via, confidence = "missing", "", 0
+        review_urls, reason = set(), ""
         if safe_url(url):
             status = "direct"
         else:
@@ -183,6 +186,7 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
                 status, via, confidence = "matched", "same-console-title", 96
             elif len(shared) > 1:
                 status = "review"
+                review_urls, reason = shared, "conflicting-source-covers"
             else:
                 index = indexes.get(game["platform"])
                 if index:
@@ -193,11 +197,13 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
                         status, via, confidence = "matched", "libretro-exact", 95
                     elif len(strict) > 1:
                         status = "review"
+                        review_urls, reason = strict, "multiple-exact-libretro-covers"
                     elif len(loose) == 1:
                         url, = loose
                         status, via, confidence = "matched", "libretro-unique", 85
                     elif len(loose) > 1:
                         status = "review"
+                        review_urls, reason = loose, "multiple-normalised-libretro-covers"
         if status == "missing":
             igdb = igdb_matches.get(key[0] + "|" + key[1])
             if trusted_igdb(igdb):
@@ -206,6 +212,12 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
         if status == "missing":
             from launchbox_artwork import trusted_match
             candidate = launchbox_matches.get(name + "|" + game["id"])
+            if trusted_match(candidate):
+                url = candidate["url"]
+                status, via, confidence = "matched", candidate["provider"], 95
+        if status == "missing" and gametdb_matches:
+            from gametdb_artwork import trusted_match
+            candidate = gametdb_matches.get(name + "|" + game["id"])
             if trusted_match(candidate):
                 url = candidate["url"]
                 status, via, confidence = "matched", candidate["provider"], 95
@@ -225,18 +237,32 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
             if fallback and fallback["url"] != url:
                 matches[name + "|" + game["id"]] = {**fallback, "fallbackOnly": True}
                 fallback_providers[fallback["provider"]] += 1
-        elif status == "review" and len(review) < 100:
-            review.append({"source": name, "title": game["title"], "platform": game["platform"]})
+        elif status == "review":
+            proposals = [{"url": url, "provider": reason} for url in sorted(review_urls)]
+            for proposed in (igdb_matches.get(key[0] + "|" + key[1]),
+                             launchbox_matches.get(name + "|" + game["id"]),
+                             gametdb_matches.get(name + "|" + game["id"])):
+                if isinstance(proposed, dict) and safe_url(proposed.get("url")) and proposed["url"] not in review_urls:
+                    proposals.append(proposed)
+            review_entries.append({"identity": name + "|" + game["id"], "source": name,
+                                   "title": game["title"], "platform": game["platform"],
+                                   "sourceUrl": game.get("sourceUrl", ""), "reason": reason,
+                                   "candidates": proposals})
+            if len(review) < 100:
+                review.append({"source": name, "title": game["title"], "platform": game["platform"]})
     return matches, {"total": len(records), "status": dict(totals), "providers": dict(providers),
                      "sources": {name: dict(v) for name, v in sorted(by_source.items())},
                      "platforms": {name: dict(v) for name, v in sorted(by_platform.items())},
-                     "reviewSamples": review, "fallbackProviders": dict(fallback_providers),
+                     "reviewSamples": review, "reviewEntries": review_entries, "fallbackProviders": dict(fallback_providers),
                      "fallbackCount": sum(fallback_providers.values())}
 
 
 def write_outputs(matches, report, root=ROOT):
     directory = root / "assets/artwork"
     directory.mkdir(parents=True, exist_ok=True)
+    if "reviewEntries" in report:
+        from igdb_artwork import atomic_json
+        atomic_json(directory / "review-queue.json", {"schemaVersion": 1, "entries": report["reviewEntries"]})
     path = directory / "cover-matches.json"
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps({"schemaVersion": 1, "matches": matches}, ensure_ascii=False,
@@ -349,7 +375,14 @@ def main(argv=None):
         if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
             raise ValueError("LaunchBox artwork export has an unexpected schema")
         launchbox = exported["matches"]
-    matches, report = match_records(records, indexes, igdb, launchbox)
+    gametdb_file = ROOT / "assets/artwork/gametdb-covers.json"
+    gametdb = {}
+    if gametdb_file.is_file():
+        exported = json.loads(gametdb_file.read_text(encoding="utf-8"))
+        if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
+            raise ValueError("GameTDB artwork export has an unexpected schema")
+        gametdb = exported["matches"]
+    matches, report = match_records(records, indexes, igdb, launchbox, gametdb)
     path, native = write_outputs(matches, report)
     print(f"Results: {report['status']}; providers: {report['providers']}", flush=True)
     print(f"Independent cover fallbacks: {report['fallbackCount']:,}", flush=True)
