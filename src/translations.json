@@ -297,15 +297,15 @@
     "ru": "Загрузки и установки"
   },
   "TXT_SOURCE": {
-    "en": "WOLODRIVE STORE   •   SOURCE: %s",
-    "pl": "SKLEP WOLODRIVE   •   ŹRÓDŁO: %s",
-    "es": "TIENDA WOLODRIVE   •   FUENTE: %s",
-    "fr": "BOUTIQUE WOLODRIVE   •   SOURCE : %s",
-    "nl": "WOLODRIVE-WINKEL   •   BRON: %s",
-    "de": "WOLODRIVE-SHOP   •   QUELLE: %s",
-    "it": "NEGOZIO WOLODRIVE   •   FONTE: %s",
-    "zh": "WOLODRIVE 商店   •   来源：%s",
-    "ru": "МАГАЗИН WOLODRIVE   •   ИСТОЧНИК: %s"
+    "en": "POLDRIVE STORE   •   SOURCE: %s",
+    "pl": "SKLEP POLDRIVE   •   ŹRÓDŁO: %s",
+    "es": "TIENDA POLDRIVE   •   FUENTE: %s",
+    "fr": "BOUTIQUE POLDRIVE   •   SOURCE : %s",
+    "nl": "POLDRIVE-WINKEL   •   BRON: %s",
+    "de": "POLDRIVE-SHOP   •   QUELLE: %s",
+    "it": "NEGOZIO POLDRIVE   •   FONTE: %s",
+    "zh": "POLDRIVE 商店   •   来源：%s",
+    "ru": "МАГАЗИН POLDRIVE   •   ИСТОЧНИК: %s"
   },
   "TXT_SIZE": {
     "en": "SIZE: %.1f GB",
@@ -737,15 +737,15 @@
     "ru": "Полный установщик .pkg (PS4 FPKG) с разблокированной частотой кадров на PlayStation 5."
   },
   "TXT_DESC_GHOST_OF_TSUSHIMA": {
-    "en": ".pkg version ready for direct installation using Package Installer or a Wolodrive download.",
-    "pl": "Wersja .pkg gotowa do bezpośredniej instalacji przez Package Installer lub strumieniowego pobrania Wolodrive.",
-    "es": "Versión .pkg lista para instalar con Package Installer o mediante descarga de Wolodrive.",
-    "fr": "Version .pkg prête à installer avec Package Installer ou par téléchargement Wolodrive.",
-    "nl": ".pkg-versie klaar voor installatie met Package Installer of een Wolodrive-download.",
-    "de": ".pkg-Version zur Installation mit Package Installer oder über einen Wolodrive-Download.",
-    "it": "Versione .pkg da installare con Package Installer o tramite download Wolodrive.",
-    "zh": ".pkg 版本，可通过 Package Installer 或 Wolodrive 下载后直接安装。",
-    "ru": "Версия .pkg для установки через Package Installer или загрузку Wolodrive."
+    "en": ".pkg version ready for direct installation using Package Installer or a PolDrive download.",
+    "pl": "Wersja .pkg gotowa do bezpośredniej instalacji przez Package Installer lub strumieniowego pobrania PolDrive.",
+    "es": "Versión .pkg lista para instalar con Package Installer o mediante descarga de PolDrive.",
+    "fr": "Version .pkg prête à installer avec Package Installer ou par téléchargement PolDrive.",
+    "nl": ".pkg-versie klaar voor installatie met Package Installer of een PolDrive-download.",
+    "de": ".pkg-Version zur Installation mit Package Installer oder über einen PolDrive-Download.",
+    "it": "Versione .pkg da installare con Package Installer o tramite download PolDrive.",
+    "zh": ".pkg 版本，可通过 Package Installer 或 PolDrive 下载后直接安装。",
+    "ru": "Версия .pkg для установки через Package Installer или загрузку PolDrive."
   },
   "TXT_DESC_DRIVECLUB": {
     "en": "Classic PS4 FPKG (.pkg) edition including all season passes and an unlocked frame rate.",
@@ -770,15 +770,15 @@
     "ru": "Скачивание и установка пакетов в этой версии пока недоступны."
   },
   "TXT_WINDOW_TITLE": {
-    "en": "Wolodrive — PS5 Homebrew Store & Pegasus-DL",
-    "pl": "Wolodrive — Sklep homebrew PS5 i Pegasus-DL",
-    "es": "Wolodrive — Tienda homebrew PS5 y Pegasus-DL",
-    "fr": "Wolodrive — Boutique homebrew PS5 et Pegasus-DL",
-    "nl": "Wolodrive — PS5-homebrewwinkel en Pegasus-DL",
-    "de": "Wolodrive — PS5-Homebrew-Shop und Pegasus-DL",
-    "it": "Wolodrive — Negozio homebrew PS5 e Pegasus-DL",
-    "zh": "Wolodrive — PS5 自制软件商店与 Pegasus-DL",
-    "ru": "Wolodrive — Магазин homebrew PS5 и Pegasus-DL"
+    "en": "PolDrive — PS5 Homebrew Store & Pegasus-DL",
+    "pl": "PolDrive — Sklep homebrew PS5 i Pegasus-DL",
+    "es": "PolDrive — Tienda homebrew PS5 y Pegasus-DL",
+    "fr": "PolDrive — Boutique homebrew PS5 et Pegasus-DL",
+    "nl": "PolDrive — PS5-homebrewwinkel en Pegasus-DL",
+    "de": "PolDrive — PS5-Homebrew-Shop und Pegasus-DL",
+    "it": "PolDrive — Negozio homebrew PS5 e Pegasus-DL",
+    "zh": "PolDrive — PS5 自制软件商店与 Pegasus-DL",
+    "ru": "PolDrive — Магазин homebrew PS5 и Pegasus-DL"
   },
   "TXT_FORMAT_FOLDER": {
     "en": ".ffpkg (Folder package)",

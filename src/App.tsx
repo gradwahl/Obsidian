@@ -83,9 +83,9 @@ export function App() {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
-  // Initial welcome notification matching C code: Started WOLODRIVE (2.0.0-PRO (PS5 13.60))
+  // Initial welcome notification matching C code: Started PolDrive (2.0.0-PRO (PS5 13.60))
   useEffect(() => {
-    showToast(t(language, 'TXT_STARTED', 'WOLODRIVE', '2.0.0-PRO (PS5 13.60)'));
+    showToast(t(language, 'TXT_STARTED', 'PolDrive', '2.0.0-PRO (PS5 13.60)'));
   }, []);
 
   // Update document title on language change
@@ -178,7 +178,7 @@ export function App() {
       // Fetch default sources
       const res = await fetch(
         'https://raw.githubusercontent.com/pegasus-ps5/pegasus-dl/refs/heads/main/catalogs/default-sources.json',
-        { headers: { 'User-Agent': 'Wolodrive/2.0 (PS5-13.60; Pegasus-DL-Client)' } }
+        { headers: { 'User-Agent': 'PolDrive/2.0 (PS5-13.60; Pegasus-DL-Client)' } }
       );
       if (res.ok) {
         const manifest = await res.json();

@@ -117,7 +117,7 @@ export function HomeView({
             {activeCat.games.length ? selectedIndex + 1 : 0} / {activeCat.games.length}
           </span>
         </div>
-        <div className="tv-home-logo">WOLODRIVE</div>
+        <div className="tv-home-logo">PolDrive</div>
       </div>
     );
   }
@@ -245,7 +245,7 @@ export function HomeView({
           {t(language, 'TXT_REFRESH_HINT')}
         </button>
       </div>
-      <div className="tv-home-logo">WOLODRIVE</div>
+      <div className="tv-home-logo">PolDrive</div>
     </div>
   );
 }

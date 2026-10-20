@@ -59,7 +59,7 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
-    printf("[WOLODRIVE NOTIFY] %s\n", buffer);
+    printf("[POLDRIVE NOTIFY] %s\n", buffer);
 
     if (app) {
         snprintf(app->toast_message, sizeof(app->toast_message), "%s", buffer);
@@ -71,7 +71,7 @@ void sys_send_notification(WolodriveApp *app, const char *fmt, ...) {
     memset(&req, 0, sizeof(req));
     req.target_id = -1;
     req.use_icon_image_uri = 1;
-    snprintf(req.message, sizeof(req.message), "[Wolodrive] %s", buffer);
+    snprintf(req.message, sizeof(req.message), "[PolDrive] %s", buffer);
     snprintf(req.icon_uri, sizeof(req.icon_uri), "cxml://psnotification/tex_icon_system");
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 #endif
@@ -152,7 +152,7 @@ static void add_seed_entry(WolodriveApp *app, const char *id, const char *title,
     snprintf(it->id_code, sizeof(it->id_code), "%s", id);
     snprintf(it->title, sizeof(it->title), "%s", title);
     snprintf(it->version, sizeof(it->version), "01.00");
-    snprintf(it->source_name, sizeof(it->source_name), "Pegasus-DL / Wolodrive");
+    snprintf(it->source_name, sizeof(it->source_name), "Pegasus-DL / PolDrive");
     it->description_id = description_id;
     snprintf(it->install_path, sizeof(it->install_path), "%s", path);
     snprintf(it->cover_url, sizeof(it->cover_url), "%s", cover_url ? cover_url : "");
@@ -178,7 +178,7 @@ void sys_init(WolodriveApp *app) {
     snprintf(app->language_path, sizeof(app->language_path), "%s/language", WOLODRIVE_DATA_PATH);
     snprintf(app->settings_path, sizeof(app->settings_path), "%s/filters", WOLODRIVE_DATA_PATH);
 #else
-    char *pref_path = SDL_GetPrefPath("Wolodrive", "Wolodrive");
+    char *pref_path = SDL_GetPrefPath("PolDrive", "PolDrive");
     if (pref_path) {
         snprintf(app->language_path, sizeof(app->language_path), "%slanguage", pref_path);
         snprintf(app->settings_path, sizeof(app->settings_path), "%sfilters", pref_path);

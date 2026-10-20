@@ -148,6 +148,12 @@ enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 272,
        CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40,
        HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
 static const SDL_Rect LANGUAGE_BUTTON = {0, 16, SIDEBAR_EXPANDED_W, 64};
+static SDL_Rect language_button_rect(const WolodriveApp *app) {
+    int w = (int)lroundf(app->sidebar_width);
+    if (w < SIDEBAR_COLLAPSED_W) w = SIDEBAR_COLLAPSED_W;
+    if (w > SIDEBAR_EXPANDED_W) w = SIDEBAR_EXPANDED_W;
+    return (SDL_Rect){0, 16, w, 64};
+}
 static const SDL_Rect LANGUAGE_MENU = {14, 122, SIDEBAR_EXPANDED_W - 28, LANG_COUNT * 44 + 16};
 static const char *action_label(WolodriveApp *app, GameItem *item);
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
@@ -237,7 +243,7 @@ static const char *library_section_title(WolodriveApp *app) {
 
 static void select_sidebar_view(WolodriveApp *app, int view) {
     app->active_row = view;
-    app->sidebar_focus = true;
+    app->sidebar_focus = false;
     if (view == VIEW_HOME) {
         app->home_cat_index = 0;
         app->home_grid_expanded = false;
@@ -252,8 +258,11 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
 
 static SDL_Rect sidebar_target(int row) {
     int y_offset = 148;
-    int row_h = 64;
-    int pos = row == VIEW_SETTINGS ? VIEW_DOWNLOADS + 1 : row;
+    int row_h = 62;
+    int pos;
+    if (row == VIEW_SEARCH) pos = 0;
+    else if (row == VIEW_SETTINGS) pos = VIEW_DOWNLOADS + 2;
+    else pos = row + 1;
     return (SDL_Rect){0, y_offset + pos * row_h, SIDEBAR_EXPANDED_W, row_h};
 }
 
@@ -325,7 +334,7 @@ static bool handle_language_input(WolodriveApp *app, const SDL_Event *ev) {
         return true;
     }
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
-        if (contains_point(LANGUAGE_BUTTON, ev->button.x, ev->button.y)) {
+        if (contains_point(language_button_rect(app), ev->button.x, ev->button.y)) {
             toggle_language_menu(app);
             return true;
         }
@@ -613,7 +622,7 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
         SDL_SetTextureAlphaMod(texture, 255);
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
     } else {
-        /* Elegancki, stylowy Placeholder z logo WOLODRIVE i gradientem bazowym */
+        /* Elegancki, stylowy Placeholder z logo PolDrive i gradientem bazowym */
         fill_vertical_gradient(r, x, y, w, h,
                                it->cover_r, it->cover_g, it->cover_b, alpha,
                                (uint8_t)(it->cover_r / 3), (uint8_t)(it->cover_g / 3), (uint8_t)(it->cover_b / 3), alpha,
@@ -625,8 +634,13 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
 
         SDL_Color watermark_col = { 255, 255, 255, (Uint8)((75 * alpha) / 255) };
         SDL_Color sub_col       = { 220, 220, 225, (Uint8)((160 * alpha) / 255) };
-        draw_text(app, is_hero ? app->font_row_title : app->font_small,
-                  "WOLODRIVE", x + 18, y + h / 2 - (is_hero ? 28 : 22), watermark_col, 0);
+        {
+            TTF_Font *ph_f = is_hero ? app->font_row_title : app->font_small;
+            int ph_y = y + h / 2 - (is_hero ? 28 : 22);
+            SDL_Color ph_red = { 229, 9, 20, (Uint8)((210 * alpha) / 255) };
+            int ph_pw = draw_text(app, ph_f, "P", x + 18, ph_y, ph_red, 0);
+            draw_text(app, ph_f, "olDrive", x + 18 + (ph_pw > 0 ? ph_pw + 1 : 14), ph_y, watermark_col, 0);
+        }
 
         draw_text(app, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
         if (!is_hero) render_box_brand(app, it, (SDL_Rect){x,y,w,h});
@@ -652,22 +666,22 @@ bool ui_create_renderer(WolodriveApp *app) {
 #endif
     app->renderer = SDL_CreateRenderer(app->window, -1, flags);
     if (!app->renderer && flags != SDL_RENDERER_SOFTWARE) {
-        fprintf(stderr, "[WOLODRIVE WARN] Accelerated renderer: %s; trying software\n", SDL_GetError());
+        fprintf(stderr, "[POLDRIVE WARN] Accelerated renderer: %s; trying software\n", SDL_GetError());
         app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_SOFTWARE);
     }
     if (!app->renderer) {
-        fprintf(stderr, "[WOLODRIVE ERROR] SDL_CreateRenderer: %s\n", SDL_GetError());
+        fprintf(stderr, "[POLDRIVE ERROR] SDL_CreateRenderer: %s\n", SDL_GetError());
         return false;
     }
     if (SDL_RenderSetLogicalSize(app->renderer, SCREEN_WIDTH, SCREEN_HEIGHT) != 0) {
-        fprintf(stderr, "[WOLODRIVE ERROR] SDL_RenderSetLogicalSize: %s\n", SDL_GetError());
+        fprintf(stderr, "[POLDRIVE ERROR] SDL_RenderSetLogicalSize: %s\n", SDL_GetError());
         return false;
     }
     SDL_RendererInfo info;
     app->vsync_enabled = false;
     if (SDL_GetRendererInfo(app->renderer, &info) == 0) {
         app->vsync_enabled = (info.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
-        printf("[WOLODRIVE DISPLAY] Video: %s; renderer: %s\n",
+        printf("[POLDRIVE DISPLAY] Video: %s; renderer: %s\n",
                SDL_GetCurrentVideoDriver(), info.name);
     }
     /* Also request VSync on the final renderer, including the WSL/software
@@ -675,7 +689,7 @@ bool ui_create_renderer(WolodriveApp *app) {
 #if SDL_VERSION_ATLEAST(2, 0, 18)
     if (SDL_RenderSetVSync(app->renderer, 1) == 0) app->vsync_enabled = true;
 #endif
-    printf("[WOLODRIVE DISPLAY] VSync: %s; frame limit: 60 FPS\n",
+    printf("[POLDRIVE DISPLAY] VSync: %s; frame limit: 60 FPS\n",
            app->vsync_enabled ? "enabled" : "unavailable (using frame pacing)");
     return true;
 }
@@ -701,11 +715,11 @@ bool ui_init(WolodriveApp *app) {
         if (!app->font_small) app->font_small = fallback_font;
         if (!app->font_micro) app->font_micro = fallback_font;
     } else {
-        fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
+        fprintf(stderr, "[POLDRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
         return false;
     }
     if (!TTF_GlyphIsProvided(app->font_body, 0x4e2d)) {
-        fprintf(stderr, "[WOLODRIVE WARN] Install Noto Sans CJK or provide assets/font_cjk.ttc for Chinese text.\n");
+        fprintf(stderr, "[POLDRIVE WARN] Install Noto Sans CJK or provide assets/font_cjk.ttc for Chinese text.\n");
     }
 
     app->active_row = 0;
@@ -1079,7 +1093,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         float sb_limit = app->sidebar_width > (float)SIDEBAR_COLLAPSED_W
                              ? app->sidebar_width
                              : (float)SIDEBAR_COLLAPSED_W + 24.0f;
-        app->sidebar_hovered = (mx >= 0 && (float)mx <= sb_limit);
+        app->sidebar_hovered = (mx >= 0 && (float)mx <= sb_limit); if (!app->sidebar_hovered) app->sidebar_focus = false;
     }
 
     if (handle_language_input(app, ev)) return;
@@ -1647,8 +1661,10 @@ static void render_hero_banner(WolodriveApp *app) {
     fill_vertical_gradient(r, RAIL_WIDTH, 420, SCREEN_WIDTH - RAIL_WIDTH, 132,
                            0, 0, 0, 0, 0, 0, 0, 255, 18);
 
-    draw_text(app, app->font_logo, "W", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
-    draw_text(app, app->font_micro, "W O L O D R I V E", CONTENT_X + 45, 116, white, 0);
+    {
+        int p_w = draw_text(app, app->font_logo, "P", CONTENT_X, 100, (SDL_Color){229, 9, 20, 255}, 0);
+        draw_text(app, app->font_logo, "olDrive", CONTENT_X + (p_w > 0 ? p_w + 1 : 22), 100, white, 0);
+    }
     /* Two title lines fit without displacing metadata or description. */
     SDL_Rect title_clip = {CONTENT_X, 142, 940, 136};
     SDL_RenderSetClipRect(r, &title_clip);
@@ -1923,16 +1939,20 @@ static void render_sidebar(WolodriveApp *app) {
     SDL_RenderGetClipRect(r, &prev_clip);
     SDL_RenderSetClipRect(r, &sb_clip);
 
-    /* Nowy stały logotyp marki P centralnie pod globusem a nad lupą */
-    int brand_y = 86;
-    fill_rect(r, 26, brand_y + 4, 38, 38, 0, 0, 0, 140);
-    fill_rect(r, 24, brand_y + 2, 38, 38, 229, 9, 20, 255);
-    draw_border(r, 24, brand_y + 2, 38, 38, 1, 255, 255, 255, 180);
-    draw_text(app, app->font_row_title ? app->font_row_title : app->font_logo, "P", 35, brand_y + 5, (SDL_Color){255, 255, 255, 255}, 0);
+    /* Nowy logotyp marki: stylizowane czerwone P centralnie pod globusem a nad lupą (bez kwadratu tła) */
+    int brand_y = 82;
+    TTF_Font *p_font = app->font_logo ? app->font_logo : app->font_row_title;
+    /* Cień 3D oraz dynamiczny akcent pod literą P */
+    draw_text(app, p_font, "P", 33, brand_y + 2, (SDL_Color){90, 0, 5, 220}, 0);
+    draw_text(app, p_font, "P", 31, brand_y, (SDL_Color){229, 9, 20, 255}, 0);
+    fill_rect(r, 29, brand_y + 38, 24, 3, 229, 9, 20, 255);
+    fill_rect(r, 33, brand_y + 42, 16, 2, 160, 10, 18, 200);
+
     if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
         Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
         if (brand_alpha > 0) {
-            draw_text(app, app->font_small ? app->font_small : app->font_body, "PEGASUS-DL", 76, brand_y + 10, (SDL_Color){229, 9, 20, brand_alpha}, 0);
+            TTF_Font *sub_font = app->font_row_title ? app->font_row_title : app->font_body;
+            draw_text(app, sub_font, "olDrive", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
         }
     }
 
@@ -1940,12 +1960,12 @@ static void render_sidebar(WolodriveApp *app) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
 
-        Uint8 ir = selected ? 255 : 210;
-        Uint8 ig = selected ? 30  : 35;
-        Uint8 ib = selected ? 40  : 42;
-        Uint8 ia = selected ? 255 : 230;
+        Uint8 ir = selected ? 255 : 215;
+        Uint8 ig = selected ? 35  : 32;
+        Uint8 ib = selected ? 45  : 40;
+        Uint8 ia = selected ? 255 : 235;
 
-        int x = 28, y = target.y + 18;
+        int x = 28, y = target.y + 17;
         if (selected) {
             fill_rect(r, 0, target.y, sb_w - 1, target.h, 38, 12, 16, 255);
             fill_rect(r, 0, target.y, 5, target.h, 255, 30, 40, 255);
@@ -1953,36 +1973,65 @@ static void render_sidebar(WolodriveApp *app) {
                 draw_border(r, 5, target.y + 2, sb_w - 9, target.h - 4, 2, 255, 60, 60, 255);
         }
 
-        /* Pogrubione, wyraziste czerwone ikony (2px-3px, bez przerw i dziur) */
+        /* Pogrubione, urozmaicone czerwone ikony (bez przerw) */
         if (row == VIEW_SEARCH) {
-            draw_border(r, x, y, 20, 20, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 16, y + 16, 12, 4, ir, ig, ib, ia);
-            fill_rect(r, x + 18, y + 18, 10, 4, ir, ig, ib, ia);
-            fill_rect(r, x + 20, y + 20, 8, 4, ir, ig, ib, ia);
+            /* Zaokrąglona soczewka lupy + ukośna pogrubiona rączka */
+            fill_rect(r, x + 5, y, 12, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 5, y + 19, 12, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 5, 3, 12, ir, ig, ib, ia);
+            fill_rect(r, x + 19, y + 5, 3, 12, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 2, 4, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 16, y + 2, 4, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 16, 4, 4, ir, ig, ib, ia);
+            fill_rect(r, x + 16, y + 16, 4, 4, ir, ig, ib, ia);
+            /* Blik w soczewce */
+            fill_rect(r, x + 5, y + 5, 4, 2, ir, ig, ib, ia);
+            fill_rect(r, x + 5, y + 5, 2, 4, ir, ig, ib, ia);
+            /* Rączka */
+            for (int h = 0; h < 9; h++) {
+                fill_rect(r, x + 18 + h, y + 18 + h, 4, 4, ir, ig, ib, ia);
+            }
         } else if (row == VIEW_HOME) {
-            fill_rect(r, x - 2, y + 10, 16, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 12, y - 2, 6, 15, ir, ig, ib, ia);
-            fill_rect(r, x + 14, y + 10, 16, 3, ir, ig, ib, ia);
-            draw_border(r, x + 2, y + 10, 24, 18, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 11, y + 16, 7, 12, ir, ig, ib, ia);
+            /* Symetryczny trójkątny dach z kominem + podstawa domu z drzwiami */
+            fill_rect(r, x + 20, y + 1, 4, 8, ir, ig, ib, ia);
+            for (int h = 0; h < 12; h++) {
+                fill_rect(r, x + 13 - h, y + h, 4, 3, ir, ig, ib, ia);
+                fill_rect(r, x + 13 + h, y + h, 4, 3, ir, ig, ib, ia);
+            }
+            fill_rect(r, x - 1, y + 11, 30, 3, ir, ig, ib, ia);
+            draw_border(r, x + 2, y + 12, 24, 16, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 11, y + 18, 6, 10, ir, ig, ib, ia);
         } else if (row == VIEW_GAMES) {
-            draw_border(r, x - 2, y + 4, 32, 20, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 3, y + 11, 8, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 5, y + 9, 3, 8, ir, ig, ib, ia);
-            fill_rect(r, x + 20, y + 8, 3, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 25, y + 8, 3, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 20, y + 14, 3, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 25, y + 14, 3, 3, ir, ig, ib, ia);
+            /* Nowoczesny Gamepad z gripami, D-padem i przyciskami */
+            draw_border(r, x - 2, y + 3, 32, 18, 3, ir, ig, ib, ia);
+            fill_rect(r, x - 2, y + 20, 8, 6, ir, ig, ib, ia);
+            fill_rect(r, x + 22, y + 20, 8, 6, ir, ig, ib, ia);
+            /* D-pad */
+            fill_rect(r, x + 3, y + 10, 9, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 6, y + 7, 3, 9, ir, ig, ib, ia);
+            /* Przyciski akcji */
+            fill_rect(r, x + 21, y + 7, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 13, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 18, y + 10, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 24, y + 10, 3, 3, ir, ig, ib, ia);
         } else if (row == VIEW_EMULATORS) {
-            draw_border(r, x, y, 28, 20, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 12, y + 8, 4, 18, ir, ig, ib, ia);
-            fill_rect(r, x + 10, y + 4, 8, 8, ir, ig, ib, ia);
-            fill_rect(r, x - 2, y + 22, 32, 4, ir, ig, ib, ia);
+            /* Ekran Retro TV z antenkami i podstawką */
+            for (int h = 0; h < 6; h++) {
+                fill_rect(r, x + 9 - h, y + 5 - h, 3, 2, ir, ig, ib, ia);
+                fill_rect(r, x + 17 + h, y + 5 - h, 3, 2, ir, ig, ib, ia);
+            }
+            draw_border(r, x, y + 6, 28, 18, 3, ir, ig, ib, ia);
+            draw_border(r, x + 4, y + 10, 15, 10, 2, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 11, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 21, y + 16, 3, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 6, y + 25, 16, 3, ir, ig, ib, ia);
         } else if (row == VIEW_FILES) {
-            draw_border(r, x, y + 4, 28, 22, 3, ir, ig, ib, ia);
-            fill_rect(r, x, y, 12, 6, ir, ig, ib, ia);
-            fill_rect(r, x + 2, y + 12, 24, 3, ir, ig, ib, ia);
+            /* Katalog z zakładką */
+            fill_rect(r, x, y + 1, 12, 5, ir, ig, ib, ia);
+            draw_border(r, x, y + 5, 28, 21, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 2, y + 11, 24, 3, ir, ig, ib, ia);
         } else if (row == VIEW_PAYLOADS) {
+            /* Procesor / Chip z rdzeniem i nóżkami */
             draw_border(r, x + 4, y + 4, 20, 20, 3, ir, ig, ib, ia);
             fill_rect(r, x + 10, y + 10, 8, 8, ir, ig, ib, ia);
             for (int pin = 0; pin < 3; pin++) {
@@ -1993,16 +2042,21 @@ static void render_sidebar(WolodriveApp *app) {
                 fill_rect(r, x + 23, y + off, 5, 3, ir, ig, ib, ia);
             }
         } else if (row == VIEW_DOWNLOADS) {
-            fill_rect(r, x + 11, y, 6, 16, ir, ig, ib, ia);
-            for (int h = 0; h < 7; h++) fill_rect(r, x + 14 - h * 2, y + 15 + h, h * 4 + 1, 2, ir, ig, ib, ia);
-            fill_rect(r, x - 2, y + 24, 32, 4, ir, ig, ib, ia);
+            /* Strzałka pobierania do tacki */
+            fill_rect(r, x + 11, y, 6, 14, ir, ig, ib, ia);
+            for (int h = 0; h < 8; h++)
+                fill_rect(r, x + 14 - (7 - h) * 2, y + 12 + h, (7 - h) * 4 + 1, 2, ir, ig, ib, ia);
+            fill_rect(r, x, y + 23, 28, 4, ir, ig, ib, ia);
+            fill_rect(r, x, y + 19, 3, 7, ir, ig, ib, ia);
+            fill_rect(r, x + 25, y + 19, 3, 7, ir, ig, ib, ia);
         } else if (row == VIEW_SETTINGS) {
-            fill_rect(r, x, y + 2, 28, 3, ir, ig, ib, ia);
-            fill_rect(r, x, y + 12, 28, 3, ir, ig, ib, ia);
-            fill_rect(r, x, y + 22, 28, 3, ir, ig, ib, ia);
-            fill_rect(r, x + 6, y - 1, 6, 9, ir, ig, ib, ia);
-            fill_rect(r, x + 18, y + 9, 6, 9, ir, ig, ib, ia);
-            fill_rect(r, x + 10, y + 19, 6, 9, ir, ig, ib, ia);
+            /* Trzy suwaki korektora */
+            fill_rect(r, x, y + 3, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 13, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x, y + 23, 28, 3, ir, ig, ib, ia);
+            fill_rect(r, x + 5, y, 6, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 17, y + 10, 6, 9, ir, ig, ib, ia);
+            fill_rect(r, x + 9, y + 20, 6, 9, ir, ig, ib, ia);
         }
 
         /* Renderowanie podpisu zakładki (tekst obok ikony) */
@@ -2010,9 +2064,9 @@ static void render_sidebar(WolodriveApp *app) {
             Uint8 text_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
             if (text_alpha > 0) {
                 const char *label_text = sidebar_item_title(app, row);
-                if (label_text && label_text[0] != '\0') {
+                if (label_text && label_text[0] != ' ') {
                     TTF_Font *font = app->font_small ? app->font_small : app->font_body;
-                    SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){220, 130, 135, 255};
+                    SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){225, 140, 145, 255};
                     UiTextEntry *entry = cached_text(app, font, label_text, text_color, 0);
                     if (entry && entry->texture) {
                         int text_x = 84;
@@ -2036,27 +2090,40 @@ static void render_language_control(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
     int sb_w = (int)lroundf(app->sidebar_width);
     if (sb_w < SIDEBAR_COLLAPSED_W) sb_w = SIDEBAR_COLLAPSED_W;
-    Uint8 c = app->language_menu_open ? 245 : 160;
+    Uint8 ir = app->language_menu_open ? 255 : 215;
+    Uint8 ig = app->language_menu_open ? 35  : 32;
+    Uint8 ib = app->language_menu_open ? 45  : 40;
+    Uint8 ia = 255;
+
     if (app->language_menu_open) {
         fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, sb_w - 1,
-                  LANGUAGE_BUTTON.h, 25, 25, 25, 255);
-        fill_rect(r, 0, LANGUAGE_BUTTON.y, 4, LANGUAGE_BUTTON.h, 229, 9, 20, 255);
+                  LANGUAGE_BUTTON.h, 38, 12, 16, 255);
+        fill_rect(r, 0, LANGUAGE_BUTTON.y, 5, LANGUAGE_BUTTON.h, 255, 30, 40, 255);
     }
-    /* Outline globe matches the sidebar icons without relying on a font glyph. */
-    int cx = 46, cy = LANGUAGE_BUTTON.y + 44;
-    SDL_SetRenderDrawColor(r, c, c, c, 255);
-    for (int ring = 0; ring < 2; ring++) {
-        SDL_Point points[33];
-        for (int i = 0; i <= 32; i++) {
-            float angle = (float)i * 6.2831853f / 32.0f;
-            points[i] = (SDL_Point){cx + (int)lroundf(cosf(angle) * (ring ? 7 : 16)),
-                                    cy + (int)lroundf(sinf(angle) * 16)};
+
+    /* Pogrubiony czerwony globus wycentrowany w osi ikon (cx = 42) */
+    int cx = 42, cy = LANGUAGE_BUTTON.y + 42;
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(r, ir, ig, ib, ia);
+
+    for (int dy = -15; dy <= 15; dy++) {
+        for (int dx = -15; dx <= 15; dx++) {
+            float d = sqrtf((float)(dx * dx + dy * dy));
+            if (d >= 12.5f && d <= 15.5f) {
+                SDL_RenderDrawPoint(r, cx + dx, cy + dy);
+            }
+            float md = sqrtf((float)(dx * dx) * 4.2f + (float)(dy * dy));
+            if (md >= 12.3f && md <= 15.5f) {
+                SDL_RenderDrawPoint(r, cx + dx, cy + dy);
+            }
         }
-        SDL_RenderDrawLines(r, points, 33);
     }
-    SDL_RenderDrawLine(r, cx - 16, cy, cx + 16, cy);
-    SDL_RenderDrawLine(r, cx - 13, cy - 8, cx + 13, cy - 8);
-    SDL_RenderDrawLine(r, cx - 13, cy + 8, cx + 13, cy + 8);
+    fill_rect(r, cx - 14, cy - 1, 29, 3, ir, ig, ib, ia);
+    fill_rect(r, cx - 12, cy - 7, 25, 2, ir, ig, ib, ia);
+    fill_rect(r, cx - 12, cy + 6, 25, 2, ir, ig, ib, ia);
+    fill_rect(r, cx - 1, cy - 14, 3, 29, ir, ig, ib, ia);
+
+    Uint8 c = app->language_menu_open ? 255 : 220;
     if (sb_w > SIDEBAR_COLLAPSED_W + 28) {
         SDL_Rect label = {84, LANGUAGE_BUTTON.y + 24, sb_w - 128, 42};
         if (label.w > 24) {
@@ -2081,7 +2148,10 @@ static void render_top_bar(WolodriveApp *app) {
     /* Pełny, nieprzezroczysty ciemny pas tła stopki (Y=950 do dołu ekranu) zasłaniający kafelki */
     fill_rect(r, 0, 950, SCREEN_WIDTH, 130, 8, 8, 10, 250);
     fill_rect(r, 0, 950, SCREEN_WIDTH, 1, 35, 35, 45, 255);
-    draw_text(app, app->font_logo, "WOLODRIVE", 1620, 956, red, 0);
+    {
+        int fp_w = draw_text(app, app->font_logo, "P", 1650, 956, red, 0);
+        draw_text(app, app->font_logo, "olDrive", 1650 + (fp_w > 0 ? fp_w + 1 : 22), 956, (SDL_Color){245, 245, 245, 255}, 0);
+    }
     if (app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS) {
         draw_text(app, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
         draw_single_line(app, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
@@ -2257,7 +2327,7 @@ static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path)
     SDL_free(base);
 #endif
     if (!surface) {
-        fprintf(stderr, "[WOLODRIVE ARTWORK] Could not load %s: %s\n", path, IMG_GetError());
+        fprintf(stderr, "[POLDRIVE ARTWORK] Could not load %s: %s\n", path, IMG_GetError());
         return art; /* Cache failure too, preserving a usable text fallback. */
     }
     art->width = surface->w;

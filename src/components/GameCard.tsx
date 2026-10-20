@@ -17,7 +17,7 @@ export function CoverArt({ game, className = '' }: { game: GameItem; className?:
       <div className="tv-rating-badge">★ {game.rating_score.toFixed(1)}</div>
     ) : null}
     <div className="tv-cover-image">
-      {!source && <div className="tv-cover-placeholder"><strong>WOLODRIVE</strong><span>{game.title}</span></div>}
+      {!source && <div className="tv-cover-placeholder"><strong>PolDrive</strong><span>{game.title}</span></div>}
       {source && <img src={source} alt={game.title}
         onError={() => setFailedSources(values => [...values, source])} />}
     </div>

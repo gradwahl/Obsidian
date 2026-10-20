@@ -16,18 +16,18 @@ int main(int argc, char *argv[]) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER) != 0) {
-        fprintf(stderr, "[WOLODRIVE ERROR] SDL_Init: %s\n", SDL_GetError());
+        fprintf(stderr, "[POLDRIVE ERROR] SDL_Init: %s\n", SDL_GetError());
         free(app);
         return 1;
     }
 
     int img_flags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_WEBP;
     if ((IMG_Init(img_flags) & img_flags) == 0) {
-        fprintf(stderr, "[WOLODRIVE WARN] IMG_Init: %s\n", IMG_GetError());
+        fprintf(stderr, "[POLDRIVE WARN] IMG_Init: %s\n", IMG_GetError());
     }
 
     if (TTF_Init() != 0) {
-        fprintf(stderr, "[WOLODRIVE ERROR] TTF_Init: %s\n", TTF_GetError());
+        fprintf(stderr, "[POLDRIVE ERROR] TTF_Init: %s\n", TTF_GetError());
         IMG_Quit();
         SDL_Quit();
         free(app);
@@ -56,13 +56,13 @@ int main(int argc, char *argv[]) {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
     app->window = SDL_CreateWindow(
-        "Wolodrive",
+        "PolDrive",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         win_w, win_h, win_flags
     );
 
     if (!app->window) {
-        fprintf(stderr, "[WOLODRIVE ERROR] SDL_CreateWindow: %s\n", SDL_GetError());
+        fprintf(stderr, "[POLDRIVE ERROR] SDL_CreateWindow: %s\n", SDL_GetError());
         SDL_DestroyMutex(app->catalog_mutex);
         TTF_Quit();
         IMG_Quit();
