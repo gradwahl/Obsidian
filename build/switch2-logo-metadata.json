@@ -1,0 +1,105 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "pages": {
+      "158173039": {
+        "pageid": 158173039,
+        "ns": 6,
+        "title": "File:Nintendo Switch 2 logo transparent.svg",
+        "imagerepository": "local",
+        "imageinfo": [
+          {
+            "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Nintendo_Switch_2_logo_transparent.svg/960px-Nintendo_Switch_2_logo_transparent.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+            "thumbwidth": 600,
+            "thumbheight": 536,
+            "responsiveUrls": {
+              "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Nintendo_Switch_2_logo_transparent.svg/1280px-Nintendo_Switch_2_logo_transparent.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+            },
+            "thumbattribs": {
+              "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Nintendo_Switch_2_logo_transparent.svg/960px-Nintendo_Switch_2_logo_transparent.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+              "decoding": "async",
+              "loading": "lazy",
+              "width": 600,
+              "height": 536,
+              "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Nintendo_Switch_2_logo_transparent.svg/1280px-Nintendo_Switch_2_logo_transparent.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+            },
+            "url": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Nintendo_Switch_2_logo_transparent.svg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nintendo_Switch_2_logo_transparent.svg",
+            "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=158173039",
+            "extmetadata": {
+              "DateTime": {
+                "value": "2025-01-18 23:35:00",
+                "source": "mediawiki-metadata",
+                "hidden": ""
+              },
+              "ObjectName": {
+                "value": "Nintendo Switch 2 logo transparent",
+                "source": "mediawiki-metadata"
+              },
+              "CommonsMetadataExtension": {
+                "value": 1.2,
+                "source": "extension",
+                "hidden": ""
+              },
+              "Categories": {
+                "value": "With trademark|PD textlogo|SVG text logos|Valid SVG created with Other tools:Text logos|White logos with transparent background|SVG logos of Nintendo consoles|Nintendo Switch 2 logos",
+                "source": "commons-categories",
+                "hidden": ""
+              },
+              "Assessments": {
+                "value": "",
+                "source": "commons-categories",
+                "hidden": ""
+              },
+              "ImageDescription": {
+                "value": "This is the logo for the Nintendo Switch 2.",
+                "source": "commons-desc-page"
+              },
+              "DateTimeOriginal": {
+                "value": "2025-01-16",
+                "source": "commons-desc-page"
+              },
+              "Credit": {
+                "value": "<a rel=\"nofollow\" class=\"external free\" href=\"https://www.nintendo.com/successor/assets/img/region-selector/section-hero-logo.svg\">https://www.nintendo.com/successor/assets/img/region-selector/section-hero-logo.svg</a>",
+                "source": "commons-desc-page"
+              },
+              "Artist": {
+                "value": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Nintendo\" class=\"extiw\" title=\"w:en:Nintendo\"><span title=\"Japanese multinational video game and consumer electronics company\">Nintendo</span></a></bdi>",
+                "source": "commons-desc-page"
+              },
+              "LicenseShortName": {
+                "value": "Public domain",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "UsageTerms": {
+                "value": "Public domain",
+                "source": "commons-desc-page"
+              },
+              "AttributionRequired": {
+                "value": "false",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "Copyrighted": {
+                "value": "False",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "Restrictions": {
+                "value": "trademarked",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "License": {
+                "value": "pd",
+                "source": "commons-templates",
+                "hidden": ""
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

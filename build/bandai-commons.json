@@ -1,0 +1,108 @@
+{
+  "continue": {
+    "iistart": "2022-03-09T01:25:25Z",
+    "continue": "||"
+  },
+  "query": {
+    "pages": {
+      "35129074": {
+        "pageid": 35129074,
+        "ns": 6,
+        "title": "File:Logo Bandai.svg",
+        "imagerepository": "local",
+        "imageinfo": [
+          {
+            "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Logo_Bandai.svg/960px-Logo_Bandai.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+            "thumbwidth": 960,
+            "thumbheight": 938,
+            "responsiveUrls": {
+              "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Logo_Bandai.svg/1920px-Logo_Bandai.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+            },
+            "thumbattribs": {
+              "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Logo_Bandai.svg/960px-Logo_Bandai.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+              "decoding": "async",
+              "loading": "lazy",
+              "width": 960,
+              "height": 938,
+              "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Logo_Bandai.svg/1920px-Logo_Bandai.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+            },
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/48/Logo_Bandai.svg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Logo_Bandai.svg",
+            "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=35129074",
+            "extmetadata": {
+              "DateTime": {
+                "value": "2022-05-28 12:31:01",
+                "source": "mediawiki-metadata",
+                "hidden": ""
+              },
+              "ObjectName": {
+                "value": "Logo Bandai",
+                "source": "mediawiki-metadata"
+              },
+              "CommonsMetadataExtension": {
+                "value": 1.2,
+                "source": "extension",
+                "hidden": ""
+              },
+              "Categories": {
+                "value": "With trademark|PD textlogo|SVG Simplified|Valid SVG created with Text Editor|SVG text logos|2 rows logos|White letter logos with red background|Red and white logos of Japan|Bandai logos (1983)|SVG logos of Bandai Namco Group|Inkscape SVG substitution",
+                "source": "commons-categories",
+                "hidden": ""
+              },
+              "Assessments": {
+                "value": "",
+                "source": "commons-categories",
+                "hidden": ""
+              },
+              "ImageDescription": {
+                "value": "The logo of the Japanese company \"BANDAI\"",
+                "source": "commons-desc-page"
+              },
+              "DateTimeOriginal": {
+                "value": "1983",
+                "source": "commons-desc-page"
+              },
+              "Credit": {
+                "value": "May be obtained from Bandai",
+                "source": "commons-desc-page"
+              },
+              "Artist": {
+                "value": "Bandai/Shin Matsunaga",
+                "source": "commons-desc-page"
+              },
+              "LicenseShortName": {
+                "value": "Public domain",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "UsageTerms": {
+                "value": "Public domain",
+                "source": "commons-desc-page"
+              },
+              "AttributionRequired": {
+                "value": "false",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "Copyrighted": {
+                "value": "False",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "Restrictions": {
+                "value": "trademarked",
+                "source": "commons-desc-page",
+                "hidden": ""
+              },
+              "License": {
+                "value": "pd",
+                "source": "commons-templates",
+                "hidden": ""
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

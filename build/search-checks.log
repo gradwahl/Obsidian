@@ -1,0 +1,75 @@
+gcc -D_GNU_SOURCE -Wall -Wextra -O2 \
+    src/main.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
+    -o build/wolodrive \
+    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` \
+    -lm -lpthread
+[WOLODRIVE] Zbudowano natywną binarkę Linux: build/wolodrive
+gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c src/ui_netflix.c \
+    -o build/test_i18n \
+    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+    tests/test_regressions.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c \
+    -o build/test_regressions \
+    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+    tests/test_translation.c src/i18n.c src/library.c src/text.c src/translation.c src/sys_bridge.c src/catalog_pegasus.c \
+    -o build/test_translation \
+    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+python3 tests/run_tests.py
+Verified all 118 bundled company/console logos and photos, model bindings, attribution records and file hashes.
+Checked 85 translation keys in all nine languages.
+[WOLODRIVE DISPLAY] Video: dummy; renderer: software
+[WOLODRIVE NOTIFY] Started WOLODRIVE (2.0.0-PRO (PS5 13.60))
+[WOLODRIVE NOTIFY] Język: Polski
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Language: English
+[WOLODRIVE NOTIFY] Package downloads and installation are not available in this build yet.
+[WOLODRIVE NOTIFY] Langue : Français
+[WOLODRIVE NOTIFY] Le téléchargement et l’installation de paquets ne sont pas encore disponibles dans cette version.
+[WOLODRIVE NOTIFY] Taal: Nederlands
+[WOLODRIVE NOTIFY] Pakketten downloaden en installeren is nog niet beschikbaar in deze versie.
+[WOLODRIVE NOTIFY] Sprache: Deutsch
+[WOLODRIVE NOTIFY] Das Herunterladen und Installieren von Paketen ist in dieser Version noch nicht verfügbar.
+[WOLODRIVE NOTIFY] Idioma: Español
+[WOLODRIVE NOTIFY] La descarga e instalación de paquetes aún no están disponibles en esta versión.
+[WOLODRIVE NOTIFY] Lingua: Italiano
+[WOLODRIVE NOTIFY] Il download e l’installazione dei pacchetti non sono ancora disponibili in questa versione.
+[WOLODRIVE NOTIFY] 语言：中文
+[WOLODRIVE NOTIFY] 此版本尚不支持安装包的下载和安装。
+[WOLODRIVE NOTIFY] Язык: Русский
+[WOLODRIVE NOTIFY] Скачивание и установка пакетов в этой версии пока недоступны.
+[WOLODRIVE NOTIFY] Język: Polski
+[WOLODRIVE NOTIFY] Language: English
+[WOLODRIVE NOTIFY] Język: Polski
+[WOLODRIVE NOTIFY] Uruchomiono WOLODRIVE (2.0.0-PRO (PS5 13.60))
+[WOLODRIVE NOTIFY] Idioma: Español (no se pudo guardar la preferencia)
+Locale detection, fallback, persistence, keyboard/controller switching and rendering passed.
+HTML tags/entities, JSON Unicode and UTF-8 truncation passed.
+[WOLODRIVE NOTIFY] Uruchomiono WOLODRIVE (2.0.0-PRO (PS5 13.60))
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+No seeded installations, fake progress, or installation claims from remote metadata.
+Native-alpha hardware, original company colors and readable monochrome marks passed.
+Latest games: UTC dates, game filtering, source merging, ordering beyond 256 entries, selection and bounded cover priority passed.
+[WOLODRIVE DISPLAY] Video: dummy; renderer: software[WOLODRIVE ARTWORK] Could not load assets/library/missing-test-image.png: Couldn't open /mnt/c/Users/Callum/Documents/GitHub/wolodrive/build/../assets/library/missing-test-image.png: No such file or directory
+
+[WOLODRIVE NOTIFY] Uruchomiono WOLODRIVE (2.0.0-PRO (PS5 13.60))
+[WOLODRIVE NOTIFY] Pobieranie i instalowanie pakietów nie jest jeszcze dostępne w tej wersji.
+Emulators browses all 58 systems with shared cards, paging, back navigation and isolated empty sources.
+All 118 artwork files for 58 systems decode, cache and resolve outside the repo.
+Company grids, console pages, PS4/PS5 filtering, empty platforms and keyboard/controller/mouse back navigation passed.
+Search: full catalog, title/ID matching, UTF-8 editing, paging, refresh, details and keyboard/controller/mouse input passed.
+Six labeled sidebar views, keyboard/controller/mouse navigation, mixed game formats, action footer and empty states passed.
+Opaque and blended gradients have no scaling gaps/overlaps at four window sizes, including fallback rendering.
+[WOLODRIVE NOTIFY] Langue : Français (préférence non enregistrée)
+Online translation contract, all nine targets, cache, source invalidation, errors, latest-request queue and shutdown passed.

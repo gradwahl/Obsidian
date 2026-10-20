@@ -1,0 +1,6 @@
+gcc -D_GNU_SOURCE -Wall -Wextra -O2 \
+    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+    -o build/wolodrive \
+    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` \
+    -lm -lpthread
+[WOLODRIVE] Zbudowano natywną binarkę Linux: build/wolodrive
