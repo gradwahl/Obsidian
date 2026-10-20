@@ -52,15 +52,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   return (
     <section className="tv-hero" aria-label={game?.title || heading || t(language, 'TXT_LATEST_GAMES')}>
       {source && (
-        <img
-          key={`${game?.id_code}_${source}`}
-          className={`tv-hero-art tv-hero-crossfade ${
-            source === game?.backdrop_url ? 'tv-hero-landscape' : 'tv-hero-portrait'
-          }`}
-          src={source}
-          alt=""
-          onError={() => setFailedSources((values) => [...values, source])}
-        />
+        <div className="tv-hero-backdrop">
+          <img
+            key={`${game?.id_code}_${source}`}
+            className={`tv-hero-art tv-hero-crossfade ${
+              source === game?.backdrop_url ? 'tv-hero-landscape' : 'tv-hero-portrait'
+            }`}
+            src={source}
+            alt=""
+            onError={() => setFailedSources((values) => [...values, source])}
+          />
+        </div>
       )}
       <div className="tv-hero-shade" />
       <div className="tv-wordmark">
