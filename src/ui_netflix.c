@@ -104,17 +104,32 @@ static TTF_Font *open_font_with_path_resolution(const char *candidate, int ptsiz
     return NULL;
 }
 
+static bool font_supports_polish(TTF_Font *f) {
+    if (!f) return false;
+    static const uint16_t pl_chars[] = {0x0105, 0x0107, 0x0119, 0x0142, 0x0144, 0x015b, 0x017a, 0x017c};
+    for (size_t i = 0; i < sizeof(pl_chars)/sizeof(pl_chars[0]); i++) {
+        if (!TTF_GlyphIsProvided(f, pl_chars[i])) return false;
+    }
+    return true;
+}
+
 static TTF_Font *open_first_available_font(const char **candidates, int ptsize) {
     for (int i = 0; candidates[i] != NULL; i++) {
         TTF_Font *f = open_font_with_path_resolution(candidates[i], ptsize);
         if (!f) continue;
-        if (TTF_GlyphIsProvided(f, 0x4e2d) && TTF_GlyphIsProvided(f, 0x042f)) return f;
+        if (TTF_GlyphIsProvided(f, 0x4e2d) && TTF_GlyphIsProvided(f, 0x042f) && font_supports_polish(f)) return f;
         TTF_CloseFont(f);
     }
     for (int i = 0; candidates[i] != NULL; i++) {
         TTF_Font *f = open_font_with_path_resolution(candidates[i], ptsize);
         if (!f) continue;
-        if (TTF_GlyphIsProvided(f, 0x042f)) return f;
+        if (TTF_GlyphIsProvided(f, 0x042f) && font_supports_polish(f)) return f;
+        TTF_CloseFont(f);
+    }
+    for (int i = 0; candidates[i] != NULL; i++) {
+        TTF_Font *f = open_font_with_path_resolution(candidates[i], ptsize);
+        if (!f) continue;
+        if (font_supports_polish(f)) return f;
         TTF_CloseFont(f);
     }
     for (int i = 0; candidates[i] != NULL; i++) {
@@ -521,7 +536,6 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
             box.y += band; box.h -= band;
         }
         /* Fill the case below its platform strip without letterboxing. */
-        SDL_Rect destination = artwork_fit(width, height, box, true);
         SDL_Rect previous;
         bool clipped = SDL_RenderIsClipEnabled(r);
         SDL_RenderGetClipRect(r, &previous);
@@ -530,7 +544,34 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
         SDL_RenderSetClipRect(r, &intersection);
         SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
         SDL_SetTextureAlphaMod(texture, alpha);
-        SDL_RenderCopy(r, texture, NULL, &destination);
+
+        if (is_hero) {
+            int tex_w = 0, tex_h = 0;
+            if (SDL_QueryTexture(texture, NULL, NULL, &tex_w, &tex_h) == 0 && tex_w > 0 && tex_h > 0) {
+                float tex_aspect = (float)tex_w / (float)tex_h;
+                float dst_aspect = (float)box.w / (float)box.h;
+                SDL_Rect srcrect;
+                if (tex_aspect > dst_aspect) {
+                    srcrect.h = tex_h;
+                    srcrect.w = (int)lroundf((float)tex_h * dst_aspect);
+                    srcrect.x = (tex_w - srcrect.w) / 2;
+                    srcrect.y = 0;
+                } else {
+                    srcrect.w = tex_w;
+                    srcrect.h = (int)lroundf((float)tex_w / dst_aspect);
+                    srcrect.x = 0;
+                    srcrect.y = (tex_h - srcrect.h) / 2;
+                }
+                SDL_RenderCopy(r, texture, &srcrect, &box);
+            } else {
+                SDL_Rect destination = artwork_fit(width, height, box, true);
+                SDL_RenderCopy(r, texture, NULL, &destination);
+            }
+        } else {
+            SDL_Rect destination = artwork_fit(width, height, box, true);
+            SDL_RenderCopy(r, texture, NULL, &destination);
+        }
+
         SDL_SetTextureAlphaMod(texture, 255);
         if (is_hero) fill_rect(r, x, y, w, h, 0, 0, 0, (Uint8)((70 * alpha) / 255));
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
@@ -562,6 +603,7 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
 }
 
 bool ui_create_renderer(WolodriveApp *app) {
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
 #ifndef __PS5__
     /* WSLg can create an accelerated renderer successfully but present only black.
