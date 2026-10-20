@@ -18,6 +18,7 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
+IGDB_PROVIDERS = ("igdb-exact-platform-title", "igdb-exact-platform-alias")
 CACHE = ROOT / ".cache" / "wolodrive-artwork"
 FULL = ("axekin", "superpsx", "downloadgamepsp", "ziperto", "nopaystation",
         "psn-content", "alvro", "maelly-pooh", "romstime")
@@ -174,12 +175,12 @@ def match_records(records, indexes, igdb_matches=None):
                         status = "review"
         if status == "missing":
             igdb = igdb_matches.get(key[0] + "|" + key[1])
-            if (isinstance(igdb, dict) and igdb.get("provider") == "igdb-exact-platform-title"
+            if (isinstance(igdb, dict) and igdb.get("provider") in IGDB_PROVIDERS
                     and igdb.get("confidence", 0) >= 95 and
                     safe_url(igdb.get("url")) and
                     urlsplit(igdb["url"]).hostname == "images.igdb.com"):
                 url = igdb["url"]
-                status, via, confidence = "matched", "igdb-exact-platform-title", 95
+                status, via, confidence = "matched", igdb["provider"], 95
         totals[status] += 1
         by_source[name][status] += 1
         by_platform[game["platform"]][status] += 1

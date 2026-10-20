@@ -21,7 +21,7 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from enrich_artwork import load_records, normalize, safe_url
+from enrich_artwork import IGDB_PROVIDERS, load_records, normalize, safe_url
 
 CACHE = ROOT / ".cache/wolodrive-artwork/igdb-results.json"
 EXPORT = ROOT / "assets/artwork/igdb-covers.json"
@@ -182,26 +182,52 @@ def escape_search(value):
         raise ValueError("IGDB search title out of bounds")
     return value
 
-def select_match(platform, title, candidates, platform_id):
+def game_names(game, aliases=False):
+    """Canonical title plus published alternatives, excluding non-title labels."""
+    names = {match_name(game.get("name"))}
+    if aliases:
+        for row in game.get("alternative_names", []):
+            comment = row.get("comment", "")
+            if re.search(r"acronym|abbreviat|working|development|prototype|executable|filename|misspell|incorrect|erroneous",
+                         comment, re.I):
+                continue
+            name = match_name(row["name"])
+            if len(name) >= 3:
+                names.add(name)
+    return names - {""}
+
+
+def select_match(platform, title, candidates, platform_id, *, aliases=False):
     """Require unambiguous exact cleaned name, same IGDB platform, cover."""
     if not platform_id:
         return {"status": "skipped-platform"}
     expected = match_name(search_title(platform, title))
     candidates_with_cover = []
+    matching_games = set()
+    used_alias = False
     for game in candidates:
-        if not isinstance(game, dict) or match_name(game.get("name")) != expected:
+        if not isinstance(game, dict) or expected not in game_names(game, aliases):
             continue
         if platform_id not in (game.get("platforms") or []):
             continue
+        if type(game.get("id")) is not int:
+            continue
+        matching_games.add(game["id"])
+        used_alias |= match_name(game.get("name")) != expected
         image = (game.get("cover") or {}).get("image_id")
         link = cover_url(image)
         if link and isinstance(game.get("id"), int):
             candidates_with_cover.append((game["id"], image, link))
+    # An alias can identify a different edition/game, even if only one of
+    # those games has a cover or their current cover images happen to agree.
+    if aliases and used_alias and len(matching_games) > 1:
+        return {"status": "review"}
     unique_images = {image for _, image, _ in candidates_with_cover}
     if len(unique_images) == 1:
         game_id, _, link = candidates_with_cover[0]
         return {"status": "matched", "url": link, "gameId": game_id,
-                "provider": "igdb-exact-platform-title", "confidence": 95}
+                "provider": "igdb-exact-platform-alias" if used_alias else "igdb-exact-platform-title",
+                "confidence": 95}
     if len(unique_images) > 1:
         return {"status": "review"}
     return {"status": "not-found"}
@@ -335,9 +361,12 @@ class IGDBClient:
                     self.fallback_searches += 1
         return [results[f"game{i}"] for i in range(len(requests))]
 
-    def catalogue_page(self, platform_id, after_id):
+    def catalogue_page(self, platform_id, after_id, *, aliases=False):
+        fields = 'id,name,platforms,cover.image_id'
+        if aliases:
+            fields += ',alternative_names.name,alternative_names.comment'
         return self.query("games", (
-            'fields id,name,platforms,cover.image_id; '
+            f'fields {fields}; '
             f'where platforms = ({int(platform_id)}) & id > {int(after_id)}; '
             'sort id asc; limit 500;'))
 
@@ -349,9 +378,10 @@ def batches(values, size):
         yield chunk
 
 
-def load_catalogue(client, platform_id, *, refresh=False, progress=None):
+def load_catalogue(client, platform_id, *, refresh=False, progress=None, aliases=False):
     """Checkpoint pages by ascending ID; never match an incomplete catalogue."""
-    path = CACHE.parent / "igdb-catalogues" / f"{platform_id}.json"
+    directory = "igdb-catalogues-aliases" if aliases else "igdb-catalogues"
+    path = CACHE.parent / directory / f"{platform_id}.json"
     empty = {"schemaVersion": 1, "platformId": platform_id,
              "complete": False, "games": []}
     catalogue = empty if refresh else load_json(path, empty)
@@ -371,11 +401,18 @@ def load_catalogue(client, platform_id, *, refresh=False, progress=None):
                     (row.get("cover") is not None and not isinstance(row["cover"], dict))):
                 raise ValueError("Invalid or unordered IGDB catalogue rows")
             after_id = row["id"]
+            if aliases:
+                alternatives = row.get("alternative_names", [])
+                if (not isinstance(alternatives, list) or any(
+                        not isinstance(alias, dict) or not isinstance(alias.get("name"), str) or
+                        not isinstance(alias.get("comment", ""), str) for alias in alternatives)):
+                    raise ValueError("Invalid IGDB alternative names; expanded name rows required")
         return after_id
 
     cursor = validate(games, 0)
     while not catalogue["complete"]:
-        page = client.catalogue_page(platform_id, cursor)
+        page = (client.catalogue_page(platform_id, cursor, aliases=True) if aliases
+                else client.catalogue_page(platform_id, cursor))
         if not isinstance(page, list) or len(page) > 500:
             raise ValueError("Invalid IGDB catalogue page")
         cursor = validate(page, cursor)
@@ -387,7 +424,7 @@ def load_catalogue(client, platform_id, *, refresh=False, progress=None):
     return games
 
 
-def scan_bulk(client, names, cache, console_ids, *, refresh=False, progress=None):
+def scan_bulk(client, names, cache, console_ids, *, refresh=False, progress=None, aliases=False):
     """Match all uncovered titles locally, including prior unsuccessful searches.
 
     Only successes enter the shared search cache. Catalogue misses/reviews
@@ -403,20 +440,21 @@ def scan_bulk(client, names, cache, console_ids, *, refresh=False, progress=None
                    if console == platform and entries.get(key, {}).get("status") != "matched"]
         if not targets:
             continue
-        rows = load_catalogue(client, pid, refresh=refresh, progress=(
+        rows = load_catalogue(client, pid, refresh=refresh, aliases=aliases, progress=(
             (lambda count, done: progress(
                 f"{platform}: {count:,} catalogue games cached" + (" (complete)" if done else "")))
             if progress else None))
         index = {}
         for row in rows:
-            index.setdefault(match_name(row["name"]), []).append(row)
+            for name in game_names(row, aliases):
+                index.setdefault(name, []).append(row)
         statuses = Counter()
         for key, title in targets:
             clean = search_title(platform, title)
             if len(clean) < 3 or re.search(r"\[(?:DLC|Addon|Add-on)\]", clean, re.I):
                 statuses["skipped-metadata"] += 1
                 continue
-            result = select_match(platform, clean, index.get(match_name(clean), []), pid)
+            result = select_match(platform, clean, index.get(match_name(clean), []), pid, aliases=aliases)
             statuses[result["status"]] += 1
             if result["status"] == "matched":
                 entries[key] = {**result, "searchedTitle": clean}
@@ -502,11 +540,11 @@ def scan(client, names, cache, max_queries=50, console_ids=None, progress=None,
 def export_cache(cache, keys=None, path=None):
     path = path if path is not None else EXPORT
     allowed = keys if keys is not None else cache.get("results", {}).keys()
-    selected = {key: {"url": row["url"], "provider": "igdb-exact-platform-title",
+    selected = {key: {"url": row["url"], "provider": row["provider"],
                       "confidence": 95}
                 for key, row in cache.get("results", {}).items()
                 if key in allowed and row.get("status") == "matched" and
-                row.get("provider") == "igdb-exact-platform-title" and
+                row.get("provider") in IGDB_PROVIDERS and
                 isinstance(row.get("confidence"), int) and row["confidence"] >= 95 and
                 cover_url(row.get("url", "").rsplit("/", 1)[-1].removesuffix(".jpg")) == row.get("url")}
     atomic_json(path, {"schemaVersion": 1, "matches": selected})
@@ -517,6 +555,8 @@ def main(argv=None):
     parser.add_argument("--dry-run", action="store_true", help="Show eligible unique titles without credentials")
     parser.add_argument("--bulk", action="store_true",
                         help="Cache console catalogues (500 games/page) and match all missing titles locally")
+    parser.add_argument("--aliases", action="store_true",
+                        help="With --bulk, fetch and match official IGDB alternative names in a separate cache")
     parser.add_argument("--refresh-catalogue", action="store_true",
                         help="With --bulk, rebuild selected console catalogue caches from the first page")
     parser.add_argument("--max-queries", type=int, default=50,
@@ -527,6 +567,8 @@ def main(argv=None):
     parser.add_argument("--retry-unmatched", action="store_true",
                         help="Retry cached not-found/review results; never clear matched results")
     args = parser.parse_args(argv)
+    if args.aliases and not args.bulk:
+        parser.error("--aliases requires --bulk")
     if args.refresh_catalogue and not args.bulk:
         parser.error("--refresh-catalogue requires --bulk")
     if args.bulk and args.retry_unmatched:
@@ -597,8 +639,10 @@ def main(argv=None):
     if args.bulk:
         print("Bulk catalogue: 500 games/page, shared ~3 requests/second limiter; "
               "no individual title searches", flush=True)
+        if args.aliases:
+            print("Official alternative names enabled; using separate alias catalogue cache", flush=True)
         totals = scan_bulk(client, candidates, cache, ids,
-                           refresh=args.refresh_catalogue,
+                           refresh=args.refresh_catalogue, aliases=args.aliases,
                            progress=lambda message: print(message, flush=True))
         matches = export_cache(cache)
         print(f"Bulk results: {dict(totals)}; IGDB cached matches exported: {matches}.", flush=True)

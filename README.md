@@ -98,6 +98,43 @@ It rechecks previously unsuccessful title searches as well. The normal
 matching; catalogue pages are fetched sequentially with the shared rate limiter.
 No individual title searches or image downloads run in bulk mode.
 
+To match regional and alternative titles from IGDB's official
+[alternative names](https://api-docs.igdb.com/#alternative-name), run:
+
+```bash
+python3 scripts/igdb_artwork.py --bulk --aliases
+python3 scripts/enrich_artwork.py --offline
+npm run build:static
+```
+
+Use `python` instead of `python3` on native Windows. This fetches 500 games per
+page with expanded alternative names and their descriptions into a separate
+`.cache/wolodrive-artwork/igdb-catalogues-aliases/` directory. Existing canonical
+catalogues are retained; `--refresh-catalogue` is not needed for the first alias
+run. Interrupted alias downloads resume, and complete alias catalogues are
+reused. Add `--refresh-catalogue` later to fetch updated aliases.
+
+Aliases are opt-in with `--bulk --aliases`; ordinary bulk/title searches retain
+canonical-name matching. Both canonical and alternative names are checked
+together on the correct console. If an alias also identifies another game,
+the result requires review even if only one game has artwork or both share an
+image. Working/development/prototype titles, acronyms/abbreviations, executable
+filenames and explicitly incorrect/misspelled aliases are excluded by their
+IGDB descriptions; alternative-name comparison keys shorter than three
+characters are excluded. The existing title normalisation still applies;
+this does not introduce fuzzy matching, transliteration or substring matching.
+Sequels, editions and DLC labels are not removed from source titles.
+
+Alias successes are exported as `igdb-exact-platform-alias` with the same
+confidence threshold and source/platform/title identity checks. Earlier
+successful matches are preserved; alias collisions do not revoke existing
+approved covers. Enrichment reports the two IGDB providers separately and
+keeps the normal direct-art, same-console and Libretro priorities. No new
+negative title-search results are cached from alias misses. `--max-queries 0`
+also preserves both kinds of successful match when rebuilding an export.
+This path is verified with offline API fixtures on Windows and Linux under
+WSL; a live alias fetch and coverage gains require local IGDB credentials.
+
 Pages are checkpointed in ignored local files under
 `.cache/wolodrive-artwork/igdb-catalogues/`. An interrupted download resumes
 after its last saved game ID; matching waits until that console's catalogue
@@ -160,7 +197,8 @@ Trailing English articles are reordered for comparison (`Addams Family, The`
 matches `The Addams Family`); articles, subtitles and edition words are retained,
 and conflicting cover images still require review. Original export keys stay
 unchanged. Exact cleaned-title AND matching-console checks are
-still mandatory before any cover is accepted.
+still mandatory before any cover is accepted. With `--bulk --aliases`, an exact
+official alternative name can also qualify under the collision rules above.
 
 The [remaining-artwork audit](docs/artwork_matching_audit.md) records the latest
 offline matching improvements, coverage gains and unresolved source/provider gaps.

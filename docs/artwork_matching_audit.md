@@ -82,14 +82,18 @@ exclusion rules:
 - A missing exact name does not prove that a provider lacks the game. Cached
   IGDB pages contain canonical names, not the `alternative_names` field.
 
-The next useful work is source-specific cleanup of concatenated/navigation
-titles and an IGDB alternative-name fetch with ambiguity checks. That requires
-additional investigation or API requests; increasing the title-search batch
-limit does not resolve these naming problems. No fuzzy matches were applied.
+The next useful work identified by this audit was source-specific cleanup of
+concatenated/navigation titles and an IGDB alternative-name fetch with ambiguity
+checks. The latter is now implemented as `--bulk --aliases`, using a separate
+resumable cache and exact same-console comparisons. Live credentials are not
+available to the agent process, so the fetch has not run and the counts above
+remain unchanged. Increasing the title-search batch limit does not resolve
+these naming problems. No fuzzy matches were applied.
 
 ## Validation
 
-- IGDB tests: 29 passed on native Windows Python and Linux Python under WSL.
+- IGDB tests, including the alias extension: 38 passed on native Windows
+  Python and Linux Python under WSL.
 - Artwork enrichment/download tests: 22 passed on each of those environments
   (this suite overlaps the IGDB suite).
 - Existing approved manifest and IGDB export entries preserved byte-for-byte
