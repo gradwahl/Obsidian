@@ -92,9 +92,9 @@ static TTF_Font *open_font_with_path_resolution(const char *candidate, int ptsiz
     if (windir && windir[0]) {
         char resolved[1024];
         const char *fname = strrchr(candidate, '/');
-        if (!fname) fname = strrchr(candidate, '\');
+        if (!fname) fname = strrchr(candidate, '\\');
         fname = fname ? fname + 1 : candidate;
-        snprintf(resolved, sizeof(resolved), "%s\Fonts\%s", windir, fname);
+        snprintf(resolved, sizeof(resolved), "%s\\Fonts\\%s", windir, fname);
         f = TTF_OpenFont(resolved, ptsize);
         if (f) return f;
     }
@@ -563,8 +563,7 @@ bool ui_init(WolodriveApp *app) {
         if (!app->font_small) app->font_small = fallback_font;
         if (!app->font_micro) app->font_micro = fallback_font;
     } else {
-        fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s
-", TTF_GetError());
+        fprintf(stderr, "[WOLODRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
         return false;
     }
     if (!TTF_GlyphIsProvided(app->font_body, 0x4e2d)) {
