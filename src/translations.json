@@ -253,15 +253,15 @@
     "ru": "ЗАГРУЗКА ОБЛОЖКИ..."
   },
   "TXT_ROW_RECENT": {
-    "en": "Recently added (Pegasus-DL catalog)",
-    "pl": "Ostatnio dodane (Katalog Pegasus-DL)",
-    "es": "Añadidos recientemente (Pegasus-DL)",
-    "fr": "Ajouts récents (catalogue Pegasus-DL)",
-    "nl": "Recent toegevoegd (Pegasus-DL)",
-    "de": "Neu hinzugefügt (Pegasus-DL)",
-    "it": "Aggiunti di recente (Pegasus-DL)",
-    "zh": "最近添加（Pegasus-DL）",
-    "ru": "Недавно добавлено (Pegasus-DL)"
+    "en": "Recently added (Katalogi catalog)",
+    "pl": "Ostatnio dodane (Katalog Katalogi)",
+    "es": "Añadidos recientemente (Katalogi)",
+    "fr": "Ajouts récents (catalogue Katalogi)",
+    "nl": "Recent toegevoegd (Katalogi)",
+    "de": "Neu hinzugefügt (Katalogi)",
+    "it": "Aggiunti di recente (Katalogi)",
+    "zh": "最近添加（Katalogi）",
+    "ru": "Недавно добавлено (Katalogi)"
   },
   "TXT_ROW_PS5": {
     "en": "PS5 games (.exfat / .ffpkg)",
@@ -396,15 +396,15 @@
     "ru": "Назад / Отмена"
   },
   "TXT_REFRESH_HINT": {
-    "en": "Refresh Pegasus-DL [R]",
-    "pl": "Odśwież katalog Pegasus-DL [R]",
-    "es": "Actualizar Pegasus-DL [R]",
-    "fr": "Actualiser Pegasus-DL [R]",
-    "nl": "Pegasus-DL vernieuwen [R]",
-    "de": "Pegasus-DL aktualisieren [R]",
-    "it": "Aggiorna Pegasus-DL [R]",
-    "zh": "刷新 Pegasus-DL [R]",
-    "ru": "Обновить Pegasus-DL [R]"
+    "en": "Refresh Catalog [R]",
+    "pl": "Odśwież katalog [R]",
+    "es": "Actualizar Katalogi [R]",
+    "fr": "Actualiser Katalogi [R]",
+    "nl": "Katalogi vernieuwen [R]",
+    "de": "Katalogi aktualisieren [R]",
+    "it": "Aggiorna Katalogi [R]",
+    "zh": "刷新 Katalogi [R]",
+    "ru": "Обновить Katalogi [R]"
   },
   "TXT_PROGRESS": {
     "en": "DOWNLOADING: %.0f%%  •  %.1f GB",
@@ -429,15 +429,15 @@
     "ru": "ГОТОВО К ИГРЕ  •  %.1f GB"
   },
   "TXT_READY": {
-    "en": "Pegasus-DL ready",
-    "pl": "Pegasus-DL Ready",
-    "es": "Pegasus-DL listo",
-    "fr": "Pegasus-DL prêt",
-    "nl": "Pegasus-DL gereed",
-    "de": "Pegasus-DL bereit",
-    "it": "Pegasus-DL pronto",
-    "zh": "Pegasus-DL 已就绪",
-    "ru": "Pegasus-DL готов"
+    "en": "Katalogi ready",
+    "pl": "Katalogi Ready",
+    "es": "Katalogi listo",
+    "fr": "Katalogi prêt",
+    "nl": "Katalogi gereed",
+    "de": "Katalogi bereit",
+    "it": "Katalogi pronto",
+    "zh": "Katalogi 已就绪",
+    "ru": "Katalogi готов"
   },
   "TXT_STARTED": {
     "en": "Started %s (%s)",
@@ -528,26 +528,26 @@
     "ru": "Загрузка завершена: %s [%s]"
   },
   "TXT_SYNC_MANIFEST": {
-    "en": "Pegasus-DL: Downloading default-sources.json...",
-    "pl": "Pegasus-DL: Pobieranie default-sources.json...",
-    "es": "Pegasus-DL: Descargando default-sources.json...",
-    "fr": "Pegasus-DL : Téléchargement de default-sources.json...",
-    "nl": "Pegasus-DL: default-sources.json downloaden...",
-    "de": "Pegasus-DL: default-sources.json wird geladen...",
-    "it": "Pegasus-DL: Download di default-sources.json...",
-    "zh": "Pegasus-DL：正在下载 default-sources.json...",
-    "ru": "Pegasus-DL: Загрузка default-sources.json..."
+    "en": "Katalogi: Downloading default-sources.json...",
+    "pl": "Katalogi: Pobieranie default-sources.json...",
+    "es": "Katalogi: Descargando default-sources.json...",
+    "fr": "Katalogi : Téléchargement de default-sources.json...",
+    "nl": "Katalogi: default-sources.json downloaden...",
+    "de": "Katalogi: default-sources.json wird geladen...",
+    "it": "Katalogi: Download di default-sources.json...",
+    "zh": "Katalogi：正在下载 default-sources.json...",
+    "ru": "Katalogi: Загрузка default-sources.json..."
   },
   "TXT_SYNC_SUBCATALOG": {
-    "en": "Pegasus-DL: Loading catalog (%d/%d)...",
-    "pl": "Pegasus-DL: Wczytywanie sub-katalogu (%d/%d)...",
-    "es": "Pegasus-DL: Cargando catálogo (%d/%d)...",
-    "fr": "Pegasus-DL : Chargement du catalogue (%d/%d)...",
-    "nl": "Pegasus-DL: Catalogus laden (%d/%d)...",
-    "de": "Pegasus-DL: Katalog wird geladen (%d/%d)...",
-    "it": "Pegasus-DL: Caricamento catalogo (%d/%d)...",
-    "zh": "Pegasus-DL：正在加载目录（%d/%d）...",
-    "ru": "Pegasus-DL: Загрузка каталога (%d/%d)..."
+    "en": "Katalogi: Loading catalog (%d/%d)...",
+    "pl": "Katalogi: Wczytywanie sub-katalogu (%d/%d)...",
+    "es": "Katalogi: Cargando catálogo (%d/%d)...",
+    "fr": "Katalogi : Chargement du catalogue (%d/%d)...",
+    "nl": "Katalogi: Catalogus laden (%d/%d)...",
+    "de": "Katalogi: Katalog wird geladen (%d/%d)...",
+    "it": "Katalogi: Caricamento catalogo (%d/%d)...",
+    "zh": "Katalogi：正在加载目录（%d/%d）...",
+    "ru": "Katalogi: Загрузка каталога (%d/%d)..."
   },
   "TXT_SYNC_COVER": {
     "en": "Caching cover: %s (%d/%d)...",
@@ -561,48 +561,48 @@
     "ru": "Сохранение обложки: %s (%d/%d)..."
   },
   "TXT_SYNC_DONE": {
-    "en": "Pegasus-DL: %d games (%d sources)  •  Covers: %d/%d",
-    "pl": "Pegasus-DL: %d gier (%d sub-źródeł)  •  Okładki: %d/%d",
-    "es": "Pegasus-DL: %d juegos (%d fuentes)  •  Portadas: %d/%d",
-    "fr": "Pegasus-DL : %d jeux (%d sources)  •  Jaquettes : %d/%d",
-    "nl": "Pegasus-DL: %d games (%d bronnen)  •  Hoezen: %d/%d",
-    "de": "Pegasus-DL: %d Spiele (%d Quellen)  •  Cover: %d/%d",
-    "it": "Pegasus-DL: %d giochi (%d fonti)  •  Copertine: %d/%d",
-    "zh": "Pegasus-DL：%d 个游戏（%d 个来源）  •  封面：%d/%d",
-    "ru": "Pegasus-DL: %d игр (%d источников)  •  Обложки: %d/%d"
+    "en": "Katalogi: %d games (%d sources)  •  Covers: %d/%d",
+    "pl": "Katalogi: %d gier (%d sub-źródeł)  •  Okładki: %d/%d",
+    "es": "Katalogi: %d juegos (%d fuentes)  •  Portadas: %d/%d",
+    "fr": "Katalogi : %d jeux (%d sources)  •  Jaquettes : %d/%d",
+    "nl": "Katalogi: %d games (%d bronnen)  •  Hoezen: %d/%d",
+    "de": "Katalogi: %d Spiele (%d Quellen)  •  Cover: %d/%d",
+    "it": "Katalogi: %d giochi (%d fonti)  •  Copertine: %d/%d",
+    "zh": "Katalogi：%d 个游戏（%d 个来源）  •  封面：%d/%d",
+    "ru": "Katalogi: %d игр (%d источников)  •  Обложки: %d/%d"
   },
   "TXT_SYNC_LOADED": {
-    "en": "Pegasus-DL: Loaded %d remote packages",
-    "pl": "Pegasus-DL: Załadowano %d pakietów z katalogu zdalnego",
-    "es": "Pegasus-DL: %d paquetes remotos cargados",
-    "fr": "Pegasus-DL : %d paquets distants chargés",
-    "nl": "Pegasus-DL: %d externe pakketten geladen",
-    "de": "Pegasus-DL: %d externe Pakete geladen",
-    "it": "Pegasus-DL: %d pacchetti remoti caricati",
-    "zh": "Pegasus-DL：已加载 %d 个远程安装包",
-    "ru": "Pegasus-DL: Загружено %d удалённых пакетов"
+    "en": "Katalogi: Loaded %d remote packages",
+    "pl": "Katalogi: Załadowano %d pakietów z katalogu zdalnego",
+    "es": "Katalogi: %d paquetes remotos cargados",
+    "fr": "Katalogi : %d paquets distants chargés",
+    "nl": "Katalogi: %d externe pakketten geladen",
+    "de": "Katalogi: %d externe Pakete geladen",
+    "it": "Katalogi: %d pacchetti remoti caricati",
+    "zh": "Katalogi：已加载 %d 个远程安装包",
+    "ru": "Katalogi: Загружено %d удалённых пакетов"
   },
   "TXT_SYNC_CACHED": {
-    "en": "Pegasus-DL: Synced manifest (%d sources) and covers (%d)",
-    "pl": "Pegasus-DL: Zsynchronizowano manifest (%d źródeł) i cache okładek (%d)",
-    "es": "Pegasus-DL: Manifiesto (%d fuentes) y portadas (%d) sincronizados",
-    "fr": "Pegasus-DL : Manifeste (%d sources) et jaquettes (%d) synchronisés",
-    "nl": "Pegasus-DL: Manifest (%d bronnen) en hoezen (%d) gesynchroniseerd",
-    "de": "Pegasus-DL: Manifest (%d Quellen) und Cover (%d) synchronisiert",
-    "it": "Pegasus-DL: Manifesto (%d fonti) e copertine (%d) sincronizzati",
-    "zh": "Pegasus-DL：已同步清单（%d 个来源）和封面（%d）",
-    "ru": "Pegasus-DL: Манифест (%d источников) и обложки (%d) синхронизированы"
+    "en": "Katalogi: Synced manifest (%d sources) and covers (%d)",
+    "pl": "Katalogi: Zsynchronizowano manifest (%d źródeł) i cache okładek (%d)",
+    "es": "Katalogi: Manifiesto (%d fuentes) y portadas (%d) sincronizados",
+    "fr": "Katalogi : Manifeste (%d sources) et jaquettes (%d) synchronisés",
+    "nl": "Katalogi: Manifest (%d bronnen) en hoezen (%d) gesynchroniseerd",
+    "de": "Katalogi: Manifest (%d Quellen) und Cover (%d) synchronisiert",
+    "it": "Katalogi: Manifesto (%d fonti) e copertine (%d) sincronizzati",
+    "zh": "Katalogi：已同步清单（%d 个来源）和封面（%d）",
+    "ru": "Katalogi: Манифест (%d источников) и обложки (%d) синхронизированы"
   },
   "TXT_SYNC_BUSY": {
-    "en": "Pegasus-DL sync is already running...",
-    "pl": "Synchronizacja katalogu Pegasus-DL już trwa w tle...",
-    "es": "La sincronización de Pegasus-DL ya está en curso...",
-    "fr": "La synchronisation Pegasus-DL est déjà en cours...",
-    "nl": "Pegasus-DL-synchronisatie is al bezig...",
-    "de": "Pegasus-DL-Synchronisierung läuft bereits...",
-    "it": "La sincronizzazione Pegasus-DL è già in corso...",
-    "zh": "Pegasus-DL 同步已在进行中...",
-    "ru": "Синхронизация Pegasus-DL уже выполняется..."
+    "en": "Katalogi sync is already running...",
+    "pl": "Synchronizacja katalogu Katalogi już trwa w tle...",
+    "es": "La sincronización de Katalogi ya está en curso...",
+    "fr": "La synchronisation Katalogi est déjà en cours...",
+    "nl": "Katalogi-synchronisatie is al bezig...",
+    "de": "Katalogi-Synchronisierung läuft bereits...",
+    "it": "La sincronizzazione Katalogi è già in corso...",
+    "zh": "Katalogi 同步已在进行中...",
+    "ru": "Синхронизация Katalogi уже выполняется..."
   },
   "TXT_LANGUAGE": {
     "en": "Language: %s",
@@ -770,15 +770,15 @@
     "ru": "Скачивание и установка пакетов в этой версии пока недоступны."
   },
   "TXT_WINDOW_TITLE": {
-    "en": "PolDrive — PS5 Homebrew Store & Pegasus-DL",
-    "pl": "PolDrive — Sklep homebrew PS5 i Pegasus-DL",
-    "es": "PolDrive — Tienda homebrew PS5 y Pegasus-DL",
-    "fr": "PolDrive — Boutique homebrew PS5 et Pegasus-DL",
-    "nl": "PolDrive — PS5-homebrewwinkel en Pegasus-DL",
-    "de": "PolDrive — PS5-Homebrew-Shop und Pegasus-DL",
-    "it": "PolDrive — Negozio homebrew PS5 e Pegasus-DL",
-    "zh": "PolDrive — PS5 自制软件商店与 Pegasus-DL",
-    "ru": "PolDrive — Магазин homebrew PS5 и Pegasus-DL"
+    "en": "PolDrive — PS5 Homebrew Store & Katalogi",
+    "pl": "PolDrive — Sklep homebrew PS5 i Katalogi",
+    "es": "PolDrive — Tienda homebrew PS5 y Katalogi",
+    "fr": "PolDrive — Boutique homebrew PS5 et Katalogi",
+    "nl": "PolDrive — PS5-homebrewwinkel en Katalogi",
+    "de": "PolDrive — PS5-Homebrew-Shop und Katalogi",
+    "it": "PolDrive — Negozio homebrew PS5 e Katalogi",
+    "zh": "PolDrive — PS5 自制软件商店与 Katalogi",
+    "ru": "PolDrive — Магазин homebrew PS5 и Katalogi"
   },
   "TXT_FORMAT_FOLDER": {
     "en": ".ffpkg (Folder package)",

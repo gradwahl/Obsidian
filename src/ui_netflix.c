@@ -2145,19 +2145,22 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_Color red = {229, 9, 20, 255};
     SDL_Color muted = {155, 155, 155, 255};
 
-    /* Pełny, nieprzezroczysty ciemny pas tła stopki (Y=950 do dołu ekranu) zasłaniający kafelki */
-    fill_rect(r, 0, 950, SCREEN_WIDTH, 130, 8, 8, 10, 250);
-    fill_rect(r, 0, 950, SCREEN_WIDTH, 1, 35, 35, 45, 255);
+    /* Smukła, elegancka stopka (60px wysokości od Y=1020 do 1080) */
+    fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 10, 10, 12, 245);
+    fill_rect(r, 0, 1020, SCREEN_WIDTH, 2, 229, 9, 20, 255);
+
+    /* Logo PolDrive w prawym rogu stopki */
     {
-        int fp_w = draw_text(app, app->font_logo, "P", 1650, 956, red, 0);
-        draw_text(app, app->font_logo, "olDrive", 1650 + (fp_w > 0 ? fp_w + 1 : 22), 956, (SDL_Color){245, 245, 245, 255}, 0);
+        int fp_w = draw_text(app, app->font_micro, "P", SCREEN_WIDTH - 120, 1036, red, 0);
+        draw_text(app, app->font_micro, "olDrive", SCREEN_WIDTH - 120 + (fp_w > 0 ? fp_w + 1 : 12), 1036, (SDL_Color){245, 245, 245, 255}, 0);
     }
+
     if (app->active_row != VIEW_SEARCH && app->active_row != VIEW_SETTINGS) {
-        draw_text(app, app->font_micro, "← →  ↑ ↓ / D-pad    X / Enter", CONTENT_X, 984, muted, 0);
-        draw_single_line(app, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 378, 984, muted,
-                         (SDL_Rect){CONTENT_X + 378, 984, 260, 30});
-        draw_single_line(app, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 658, 984, muted,
-                         (SDL_Rect){CONTENT_X + 658, 984, 600, 30});
+        draw_text(app, app->font_micro, "[←→↑↓] Nawigacja   [X] Wybierz", CONTENT_X, 1036, muted, 0);
+        draw_single_line(app, app->font_micro, TR(app, TXT_BACK_HINT), CONTENT_X + 280, 1036, muted,
+                         (SDL_Rect){CONTENT_X + 280, 1036, 200, 24});
+        draw_single_line(app, app->font_micro, TR(app, TXT_REFRESH_HINT), CONTENT_X + 480, 1036, muted,
+                         (SDL_Rect){CONTENT_X + 480, 1036, 300, 24});
     }
 
     char sync_info[256];
@@ -2181,21 +2184,19 @@ static void render_top_bar(WolodriveApp *app) {
     }
     SDL_UnlockMutex(app->catalog_mutex);
 
-    draw_single_line(app, app->font_micro, sync_info, CONTENT_X, 1032, muted,
-                     (SDL_Rect){CONTENT_X, 1032, 880, 32});
     render_language_control(app);
 
-    /* Prawa strona: /data, /mnt/ext0, status sieci i temperatura CPU/GPU */
     char telemetry[256];
-    snprintf(telemetry, sizeof(telemetry),
-             "/data: %.0f GB | ext0: %.0f GB | CPU: %d°C | GPU: %d°C",
-             app->stats.data_free_gb,
-             app->stats.ext0_free_gb,
-             app->stats.cpu_temp_c,
-             app->stats.gpu_temp_c);
+#ifdef __PS5__
+    snprintf(telemetry, sizeof(telemetry), "data: %.0fGB | ext0: %.0fGB | CPU: %.1f°C | GPU: %.1f°C",
+             app->stats.data_free_gb, app->stats.ext0_free_gb,
+             app->stats.cpu_temp_c, app->stats.gpu_temp_c);
+#else
+    snprintf(telemetry, sizeof(telemetry), "data: null | ext0: null | CPU: null | GPU: null");
+#endif
 
-    draw_single_line(app, app->font_micro, telemetry, 1200, 1032, muted,
-                     (SDL_Rect){1200, 1032, 670, 32});
+    draw_single_line(app, app->font_micro, telemetry, 1200, 1036, muted,
+                     (SDL_Rect){1200, 1036, 350, 24});
 }
 
 static void render_language_menu(WolodriveApp *app) {
