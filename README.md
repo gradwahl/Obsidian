@@ -44,6 +44,47 @@ three required columns and accepts an optional fourth independent fallback URL;
 deploy the refreshed TSV alongside the rebuilt native executable. Local PNG,
 JPG and WebP overrides keep their existing priority.
 
+#### LaunchBox missing-cover import
+
+LaunchBox is an additional source for entries still missing artwork after the
+supplied-art, same-console, Libretro and IGDB stages. No account or API key is
+required. Run these commands from the repository on Linux or Windows/WSL:
+
+```bash
+python3 scripts/launchbox_artwork.py --download
+```
+
+On native Windows use `python` instead of `python3`. The standard-library-only
+importer saves LaunchBox's public `Metadata.zip` (about 104 MiB compressed) in
+`.cache/wolodrive-artwork/launchbox-Metadata.zip`, streams its XML locally, writes
+`assets/artwork/launchbox-covers.json`, and runs offline enrichment to update the
+shared JSON/TSV overlays and coverage report. `--download` saves the merged
+LaunchBox front covers in `assets/covers` using the native URL-hash filenames;
+valid cached images are reused. Results and failures are recorded in
+`assets/covers/launchbox-downloads.json`. Omit `--download` to update metadata only.
+Use `--offline` to reuse the saved archive without contacting the metadata host,
+or `--refresh` to download a new archive. Image downloads still require networking
+when `--offline --download` is used. At most three images download concurrently
+by default (`--workers 1` through `4`). Interrupted downloads can be rerun.
+
+Matching requires one distinct LaunchBox game on the exact console, using its
+canonical name or an official alternate name. The importer reuses the existing
+source-packaging cleanup, retains non-Latin letters, and preserves edition/DLC
+words. Only **Box - Front** images are accepted. Explicit source region tags
+require a matching cover region; conflicting multi-region tags are withheld.
+For titles without region tags, front scans are selected deterministically in
+World, North America, Europe, unspecified, then other-region order. Multiple
+game identities and existing review entries remain withheld. Existing approved
+artwork takes priority. Downloads verify image signatures; successful downloads
+alone do not prove that every title/image match is visually correct.
+
+Subsequent `python3 scripts/enrich_artwork.py --offline` runs retain LaunchBox
+matches through its separate export. Rebuild the web/static preview after
+updating the overlay; deploy the refreshed TSV and local images for native use.
+Downloaded caches are local files; the importer and metadata overlays are the
+reproducible source of this artwork. Native Windows application build/launch
+verification remains separate from Windows importer verification.
+
 The [PS1 artwork delivery report](docs/ps1_artwork_delivery.md) records the
 confirmed cause, seven tested covers and remaining verification limits.
 

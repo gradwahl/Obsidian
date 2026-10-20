@@ -156,8 +156,9 @@ def independent_cover(game, indexes, igdb_matches):
     return None
 
 
-def match_records(records, indexes, igdb_matches=None):
+def match_records(records, indexes, igdb_matches=None, launchbox_matches=None):
     igdb_matches = igdb_matches or {}
+    launchbox_matches = launchbox_matches or {}
     existing = defaultdict(set)
     for name, game in records:
         url = game.get("boxArtUrl") or game.get("coverUrl")
@@ -202,6 +203,12 @@ def match_records(records, indexes, igdb_matches=None):
             if trusted_igdb(igdb):
                 url = igdb["url"]
                 status, via, confidence = "matched", igdb["provider"], 95
+        if status == "missing":
+            from launchbox_artwork import trusted_match
+            candidate = launchbox_matches.get(name + "|" + game["id"])
+            if trusted_match(candidate):
+                url = candidate["url"]
+                status, via, confidence = "matched", candidate["provider"], 95
         totals[status] += 1
         by_source[name][status] += 1
         by_platform[game["platform"]][status] += 1
@@ -335,7 +342,14 @@ def main(argv=None):
         if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
             raise ValueError("IGDB artwork export has an unexpected schema")
         igdb = exported["matches"]
-    matches, report = match_records(records, indexes, igdb)
+    launchbox_file = ROOT / "assets/artwork/launchbox-covers.json"
+    launchbox = {}
+    if launchbox_file.is_file():
+        exported = json.loads(launchbox_file.read_text(encoding="utf-8"))
+        if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
+            raise ValueError("LaunchBox artwork export has an unexpected schema")
+        launchbox = exported["matches"]
+    matches, report = match_records(records, indexes, igdb, launchbox)
     path, native = write_outputs(matches, report)
     print(f"Results: {report['status']}; providers: {report['providers']}", flush=True)
     print(f"Independent cover fallbacks: {report['fallbackCount']:,}", flush=True)
