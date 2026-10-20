@@ -156,10 +156,11 @@ def independent_cover(game, indexes, igdb_matches):
     return None
 
 
-def match_records(records, indexes, igdb_matches=None, launchbox_matches=None, gametdb_matches=None):
+def match_records(records, indexes, igdb_matches=None, launchbox_matches=None, gametdb_matches=None, dlpsgame_matches=None):
     igdb_matches = igdb_matches or {}
     launchbox_matches = launchbox_matches or {}
     gametdb_matches = gametdb_matches or {}
+    dlpsgame_matches = dlpsgame_matches or {}
     existing = defaultdict(set)
     for name, game in records:
         url = game.get("boxArtUrl") or game.get("coverUrl")
@@ -221,6 +222,12 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None, g
             if trusted_match(candidate):
                 url = candidate["url"]
                 status, via, confidence = "matched", candidate["provider"], 95
+        if status == "missing" and dlpsgame_matches:
+            from dlpsgame_artwork import trusted_match
+            candidate = dlpsgame_matches.get(name + "|" + game["id"])
+            if game["platform"] == "sony-ps3" and trusted_match(candidate):
+                url = candidate["url"]
+                status, via, confidence = "matched", candidate["provider"], 95
         totals[status] += 1
         by_source[name][status] += 1
         by_platform[game["platform"]][status] += 1
@@ -241,7 +248,8 @@ def match_records(records, indexes, igdb_matches=None, launchbox_matches=None, g
             proposals = [{"url": url, "provider": reason} for url in sorted(review_urls)]
             for proposed in (igdb_matches.get(key[0] + "|" + key[1]),
                              launchbox_matches.get(name + "|" + game["id"]),
-                             gametdb_matches.get(name + "|" + game["id"])):
+                             gametdb_matches.get(name + "|" + game["id"]),
+                             dlpsgame_matches.get(name + "|" + game["id"])):
                 if isinstance(proposed, dict) and safe_url(proposed.get("url")) and proposed["url"] not in review_urls:
                     proposals.append(proposed)
             review_entries.append({"identity": name + "|" + game["id"], "source": name,
@@ -382,7 +390,14 @@ def main(argv=None):
         if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
             raise ValueError("GameTDB artwork export has an unexpected schema")
         gametdb = exported["matches"]
-    matches, report = match_records(records, indexes, igdb, launchbox, gametdb)
+    dlpsgame_file = ROOT / "assets/artwork/dlpsgame-covers.json"
+    dlpsgame = {}
+    if dlpsgame_file.is_file():
+        exported = json.loads(dlpsgame_file.read_text(encoding="utf-8"))
+        if exported.get("schemaVersion") != 1 or not isinstance(exported.get("matches"), dict):
+            raise ValueError("DLPSGame artwork export has an unexpected schema")
+        dlpsgame = exported["matches"]
+    matches, report = match_records(records, indexes, igdb, launchbox, gametdb, dlpsgame)
     path, native = write_outputs(matches, report)
     print(f"Results: {report['status']}; providers: {report['providers']}", flush=True)
     print(f"Independent cover fallbacks: {report['fallbackCount']:,}", flush=True)

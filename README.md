@@ -140,6 +140,36 @@ Run without `--download` to rebuild the report using only cached images.
 Preparing the report does not approve candidates or modify the artwork overlay.
 No graphical application or browser automation is required.
 
+#### DLPSGame PS3 artwork
+
+The public [DLPSGame PS3 category](https://dlpsgame.com/category/ps3/) is an
+additional artwork provider, separate from the existing DLPS catalogue source.
+Run `python3 scripts/dlpsgame_artwork.py` on Linux/WSL or
+`python scripts/dlpsgame_artwork.py` on Windows. No account is required.
+
+The importer verifies every page of WordPress category 64 (PS3), keeps only
+post ID, title, console, source-page URL and an allowlisted primary image URL,
+and downloads matching artwork into `assets/covers`. Post bodies are parsed
+in memory; game links, license data and raw HTML are not saved. The site cache
+is `.cache/wolodrive-artwork/dlpsgame-ps3.json`; use `--refresh` to rebuild it or
+`--offline` for a run that makes no requests. Incomplete pagination preserves
+the previous cache/export. At most two metadata and three image requests run
+concurrently. A completed image must pass the shared downloader's signature
+check before entering `assets/artwork/dlpsgame-covers.json`.
+
+Matching requires a single exact cleaned title on a PS3-category post and an
+uncovered PS3 catalogue entry. This provider's trailing `PSN` storefront label
+is removed for comparison; HD, DLC, demo, mod and named-edition words remain.
+Multiple posts with the same cleaned name are withheld. Existing artwork and
+the review queue retain their priority. Subsequent enrichment runs retain
+the separate export; rebuilding the static preview incorporates the changes.
+
+Some source images are custom covers and logos, rather than official scans.
+Five specific covers found questionable during saved-image inspection are
+withheld by exact post/image URL in `config/dlpsgame_artwork_exclusions.json`.
+They cannot re-enter through a cached export on a later run. Matching a title
+does not establish that all artwork posted by a third party is correct.
+
 The [PS1 artwork delivery report](docs/ps1_artwork_delivery.md) records the
 confirmed cause, seven tested covers and remaining verification limits.
 

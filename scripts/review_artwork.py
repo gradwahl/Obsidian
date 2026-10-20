@@ -15,10 +15,11 @@ from urllib.parse import urlsplit, quote, unquote
 from enrich_artwork import ROOT
 from igdb_artwork import atomic_json
 import download_artwork as downloader
+from dlpsgame_artwork import IMAGE_HOSTS as DLPS_IMAGE_HOSTS
 
 OUTPUT = ROOT / ".cache/wolodrive-artwork/review"
 HOSTS = {"thumbnails.libretro.com", "images.igdb.com", "images.launchbox-app.com",
-         "art.gametdb.com", "www.axekin.com", "axekin.com"}
+         "art.gametdb.com", "www.axekin.com", "axekin.com"} | DLPS_IMAGE_HOSTS
 
 
 def local_image(url):
