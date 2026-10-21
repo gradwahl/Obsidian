@@ -509,4 +509,15 @@ assert.match(nativeSettings, /Appearance \/ Wygląd/);
 assert.match(persistedTheme, /WOLODRIVE_THEME_1/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-hero-backdrop/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-nav-marker/);
+assert.match(ubiquity, /ubq-logo-main/);
+assert.match(ubiquity, /ubq-glass-capsule/);
+assert.doesNotMatch(ubiquity, /PS5 LIBRARY/);
+const ubiquityCollapsedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, uiTheme: 'ubiquity', isSidebarFocused: false }));
+const ubiquityExpandedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, uiTheme: 'ubiquity', isSidebarFocused: true }));
+assert.match(ubiquityCollapsedSidebar, /ubq-pd-bubble-collapsed/);
+assert.match(ubiquityExpandedSidebar, /ubq-pd-bubble-expanded/);
+assert.doesNotMatch(collapsedSidebar, /ubq-pd-bubble/, 'Netflix sidebar keeps its classic layout');
+assert.match(native, /draw_poldrive_premium_logo/);
+assert.match(native, /255,\s*51,\s*102,\s*255/);
 console.log('PASS: layout, Netflix motion, Ubiquity switch, web SSR and native appearance contracts');
+

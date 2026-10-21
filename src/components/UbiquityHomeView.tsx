@@ -147,8 +147,24 @@ export function UbiquityHomeView({
       <CinematicBackground game={game} />
       <div className="ubq-ambient-top">
         <span className="ubq-menu-glyph" aria-hidden="true">☰</span>
-        <span className="ubq-product-name"><b>P</b>olDrive</span>
-        <span className="ubq-system-label">PS5 LIBRARY</span>
+        <span className="ubq-product-name ubq-logo-lockup ubq-logo-main" aria-label="PolDrive">
+          <b className="ubq-logo-p">P</b>
+          <span className="ubq-logo-tail">
+            <span className="ubq-logo-white">ol</span>
+            <span className="ubq-logo-d">D</span>
+            <span className="ubq-logo-white">rive</span>
+          </span>
+        </span>
+        <div className="ubq-system-label ubq-glass-capsule" aria-label="PolDrive">
+          <span className="ubq-logo-lockup ubq-logo-capsule">
+            <b className="ubq-logo-p">P</b>
+            <span className="ubq-logo-tail">
+              <span className="ubq-logo-white">ol</span>
+              <span className="ubq-logo-d">D</span>
+              <span className="ubq-logo-white">rive</span>
+            </span>
+          </span>
+        </div>
       </div>
 
       <div className="ubq-feature" key={game?.id_code || heading}>

@@ -2267,19 +2267,95 @@ static void render_sidebar(WolodriveApp *app) {
     int brand_y = 82;
     TTF_Font *p_font = app->font_logo ? app->font_logo : app->font_row_title;
     if (app->ui_theme != UI_THEME_UBIQUITY) {
-    draw_text(app, p_font, "P", 33, brand_y + 2, (SDL_Color){90, 0, 5, 220}, 0);
-    draw_text(app, p_font, "P", 31, brand_y, (SDL_Color){229, 9, 20, 255}, 0);
-    fill_rect(r, 29, brand_y + 38, 24, 3, 229, 9, 20, 255);
-    fill_rect(r, 33, brand_y + 42, 16, 2, 160, 10, 18, 200);
+        draw_text(app, p_font, "P", 33, brand_y + 2, (SDL_Color){90, 0, 5, 220}, 0);
+        draw_text(app, p_font, "P", 31, brand_y, (SDL_Color){229, 9, 20, 255}, 0);
+        fill_rect(r, 29, brand_y + 38, 24, 3, 229, 9, 20, 255);
+        fill_rect(r, 33, brand_y + 42, 16, 2, 160, 10, 18, 200);
 
-    if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
-        Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
-        if (brand_alpha > 0) {
-            TTF_Font *sub_font = app->font_row_title ? app->font_row_title : app->font_body;
-            draw_text(app, sub_font, "oldrive", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
+        if (sb_w > SIDEBAR_COLLAPSED_W + 5) {
+            Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
+            if (brand_alpha > 0) {
+                TTF_Font *sub_font = app->font_row_title ? app->font_row_title : app->font_body;
+                draw_text(app, sub_font, "oldrive", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
+            }
         }
-    }
+    } else {
+        /* Ubiquity Sidebar "PD" -> "PolDrive" Smoked Glass & Cosmic Crimson Ribbons */
+        float exp_t = app->sidebar_expand;
+        if (exp_t < 0.0f) exp_t = 0.0f;
+        if (exp_t > 1.0f) exp_t = 1.0f;
+        int bx = (int)lroundf(27.0f - 9.0f * exp_t);
+        int by = 92;
+        int bw = (int)lroundf(38.0f + 158.0f * exp_t);
+        int bh = (int)lroundf(38.0f + 2.0f * exp_t);
+        int br = (int)lroundf(12.0f + 2.0f * exp_t);
 
+        draw_rounded_glow(r, bx, by, bw, bh, br, 6, 201, 24, 74, 150);
+
+        /* Interpolate from silk crimson squircle (collapsed) to dark smoked glass (expanded) */
+        Uint8 bg_r = (Uint8)lroundf(201.0f * (1.0f - exp_t) + 10.0f * exp_t);
+        Uint8 bg_g = (Uint8)lroundf(24.0f * (1.0f - exp_t) + 10.0f * exp_t);
+        Uint8 bg_b = (Uint8)lroundf(74.0f * (1.0f - exp_t) + 16.0f * exp_t);
+        Uint8 bg_a = (Uint8)lroundf(245.0f * (1.0f - exp_t) + 220.0f * exp_t);
+        fill_rounded_rect(r, bx, by, bw, bh, br, bg_r, bg_g, bg_b, bg_a);
+
+        if (exp_t < 0.85f) {
+            Uint8 grad_a = (Uint8)lroundf(110.0f * (1.0f - exp_t));
+            fill_rounded_rect(r, bx + 2, by + 2, bw - 4, bh / 2, SDL_max(4, br - 2), 255, 51, 102, grad_a);
+        }
+
+        if (exp_t > 0.05f) {
+            /* Animated cosmic crimson ribbons circulating inside the smoked glass capsule */
+            float phase = (float)SDL_GetTicks() * 0.0026f;
+            int r1_x = bx + 12 + (int)((bw - 68) * (0.5f + 0.5f * sinf(phase)));
+            int r1_y = by + 6 + (int)(6.0f * cosf(phase * 1.3f));
+            int r2_x = bx + 16 + (int)((bw - 76) * (0.5f + 0.5f * cosf(phase * 0.85f)));
+            int r2_y = by + bh - 18 + (int)(5.0f * sinf(phase * 1.1f));
+            Uint8 rib_a1 = (Uint8)lroundf(78.0f * exp_t);
+            Uint8 rib_a2 = (Uint8)lroundf(64.0f * exp_t);
+            fill_rounded_rect(r, r1_x, r1_y, SDL_min(54, bw - 16), 10, 5, 255, 51, 102, rib_a1);
+            fill_rounded_rect(r, r2_x, r2_y, SDL_min(62, bw - 20), 10, 5, 201, 24, 74, rib_a2);
+            fill_rounded_rect(r, (r1_x + r2_x) / 2, by + bh / 2 - 4, SDL_min(42, bw - 24), 8, 4, 89, 13, 34, rib_a1);
+        }
+
+        Uint8 bdr_g = (Uint8)lroundf(130.0f * (1.0f - exp_t) + 51.0f * exp_t);
+        Uint8 bdr_b = (Uint8)lroundf(150.0f * (1.0f - exp_t) + 102.0f * exp_t);
+        draw_rounded_border(r, bx, by, bw, bh, br, 1, 255, bdr_g, bdr_b, 97);
+
+        /* P and D transition from pure white (collapsed) to silk crimson {255, 51, 102, 255} (expanded) */
+        SDL_Color pd_col = {
+            255,
+            (Uint8)lroundf(255.0f * (1.0f - exp_t) + 51.0f * exp_t),
+            (Uint8)lroundf(255.0f * (1.0f - exp_t) + 102.0f * exp_t),
+            255
+        };
+        SDL_Color glow_col = {201, 24, 74, (Uint8)lroundf(150.0f * exp_t)};
+        TTF_Font *pd_p_font = (exp_t > 0.45f && app->font_row_title) ? app->font_row_title : app->font_small;
+        TTF_Font *pd_tail_font = app->font_micro ? app->font_micro : app->font_small;
+
+        if (exp_t < 0.12f) {
+            SDL_Rect pd_box = {bx, by + 2, bw, bh - 4};
+            draw_fitted_text(app, app->font_micro ? app->font_micro : app->font_small,
+                             "PD", pd_box, (SDL_Color){255, 255, 255, 255}, pd_box, true);
+        } else {
+            Uint8 slide_a = (Uint8)lroundf(255.0f * exp_t);
+            SDL_Color satin_white = {245, 245, 247, slide_a};
+            int tx = bx + (int)lroundf(8.0f + 12.0f * exp_t);
+            int p_y = by + (exp_t > 0.45f ? 5 : 9);
+            int tail_y = by + 13;
+            if (glow_col.a > 10) draw_text(app, pd_p_font, "P", tx + 1, p_y + 2, glow_col, 0);
+            int pw = draw_text(app, pd_p_font, "P", tx, p_y, pd_col, 0);
+            tx += (pw > 0 ? pw - 1 : 14);
+            int ol_w = 0, ol_h = 0;
+            if (pd_tail_font) TTF_SizeUTF8(pd_tail_font, "ol", &ol_w, &ol_h);
+            if (ol_w <= 0) ol_w = 16;
+            if (slide_a > 20) draw_text(app, pd_tail_font, "ol", tx, tail_y, satin_white, 0);
+            tx += (int)lroundf((float)ol_w * exp_t);
+            if (glow_col.a > 10) draw_text(app, pd_tail_font, "D", tx + 1, tail_y + 1, glow_col, 0);
+            int dw = draw_text(app, pd_tail_font, "D", tx, tail_y, pd_col, 0);
+            tx += (dw > 0 ? dw : 12);
+            if (slide_a > 20) draw_text(app, pd_tail_font, "rive", tx, tail_y, satin_white, 0);
+        }
     }
     SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,
                             sb_w - 16, sidebar_target(app->active_row).h - 16};
@@ -2676,6 +2752,33 @@ static void render_library_grid(WolodriveApp *app) {
     render_library_breadcrumb(app);
 }
 
+static int draw_poldrive_premium_logo(WolodriveApp *app, int x, int y,
+                                      TTF_Font *p_font, TTF_Font *tail_font) {
+    SDL_Color crimson = {255, 51, 102, 255};
+    SDL_Color crimson_glow = {201, 24, 74, 150};
+    SDL_Color satin_white = {245, 245, 247, 255};
+    TTF_Font *pf = p_font ? p_font : app->font_logo;
+    TTF_Font *tf = tail_font ? tail_font : app->font_small;
+    int p_h = pf ? TTF_FontHeight(pf) : 34;
+    int t_h = tf ? TTF_FontHeight(tf) : 21;
+    int tail_y = y + SDL_max(0, p_h - t_h - 2);
+
+    draw_text(app, pf, "P", x + 1, y + 2, crimson_glow, 0);
+    int pw = draw_text(app, pf, "P", x, y, crimson, 0);
+    int cur_x = x + (pw > 0 ? pw - 1 : 18);
+
+    int ol_w = draw_text(app, tf, "ol", cur_x, tail_y, satin_white, 0);
+    cur_x += (ol_w > 0 ? ol_w : 18);
+
+    draw_text(app, tf, "D", cur_x + 1, tail_y + 1, crimson_glow, 0);
+    int d_w = draw_text(app, tf, "D", cur_x, tail_y, crimson, 0);
+    cur_x += (d_w > 0 ? d_w : 14);
+
+    int rive_w = draw_text(app, tf, "rive", cur_x, tail_y, satin_white, 0);
+    cur_x += (rive_w > 0 ? rive_w : 32);
+    return cur_x - x;
+}
+
 /* (u)biquity is intentionally a different composition, not recolored
    Netflix controls. The cover row remains bound to the original D-pad state. */
 static void render_ubiquity_home(WolodriveApp *app) {
@@ -2703,9 +2806,22 @@ static void render_ubiquity_home(WolodriveApp *app) {
                                     SCREEN_WIDTH - RAIL_WIDTH, 1019, true);
     }
     render_ubiquity_fades(r);
-    if (!(is_library_view(app->active_row) && app->library_depth == LIBRARY_GAMES))
-        draw_text(app, app->font_small, "PolDrive", CONTENT_X + 24, 34, white, 0);
-    draw_text(app, app->font_micro, "PS5 LIBRARY", SCREEN_WIDTH - 186, 38, subdued, 0);
+    if (!(is_library_view(app->active_row) && app->library_depth == LIBRARY_GAMES)) {
+        draw_poldrive_premium_logo(app, CONTENT_X + 24, 18,
+                                   app->font_logo ? app->font_logo : app->font_row_title,
+                                   app->font_row_title ? app->font_row_title : app->font_small);
+    }
+    {
+        /* Top-right iOS Glass Bubble capsule with scaled PolDrive logo */
+        int cap_w = 136, cap_h = 42, cap_r = 21;
+        int cap_x = SCREEN_WIDTH - 38 - cap_w, cap_y = 18;
+        draw_rounded_glow(r, cap_x, cap_y + 2, cap_w, cap_h, cap_r, 8, 0, 0, 0, 90);
+        fill_rounded_rect(r, cap_x, cap_y, cap_w, cap_h, cap_r, 24, 24, 34, 140);
+        draw_rounded_border(r, cap_x, cap_y, cap_w, cap_h, cap_r, 1, 255, 255, 255, 38);
+        draw_poldrive_premium_logo(app, cap_x + 18, cap_y + 7,
+                                   app->font_small ? app->font_small : app->font_body,
+                                   app->font_micro ? app->font_micro : app->font_small);
+    }
     char upper[sizeof(hero->title)];
     SDL_strlcpy(upper, hero->title, sizeof(upper));
     for (char *p = upper; *p; p++)
