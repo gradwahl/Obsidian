@@ -493,8 +493,12 @@ assert.match(restoredDownloads, /Errors/i);
 assert.match(appSource, /<DownloadsView[\s\S]*?catalog=\{catalog\}/);
 assert.match(appSource, /<FileBrowser/, 'Restoring Downloads must not remove the File Manager');
 assert.match(appSource, /catalogCount=\{catalog\.length\}/);
-assert.match(css, /\.ubq-category-select button \{[^}]*border-radius:\s*16px/,
-  'Bottom category buttons must retain the rounded Backup-version-1 appearance');
+assert.match(css, /\.ubq-category-select button \{[\s\S]*?border-radius:\s*20px/,
+  'Bottom category buttons must use PS5 Library 20px capsule radius');
+assert.match(css, /\.ubq-category-select button \{[\s\S]*?background:\s*rgba\(24,\s*24,\s*34,\s*0\.65\)/,
+  'Inactive bottom category buttons must use PS5 Library Details smoked glass');
+assert.match(css, /\.ubq-category-select \.ubq-category-current \{[\s\S]*?linear-gradient\(135deg,\s*#ff3366 0%,\s*#c9184a 50%,\s*#8f040b 100%\)/,
+  'Active bottom category button must use PS5 Library Download crimson gradient');
 assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'),
   /<span className="tv-meta-pill">\{game\.id_code\}<\/span>/,
   'Ubiquity hero must show game metadata in oval pills');
@@ -517,9 +521,9 @@ const ubiquityExpandedSidebar = render(React.createElement(Sidebar, { ...sidebar
 assert.match(ubiquityCollapsedSidebar, /ubq-pd-bubble-collapsed/);
 assert.match(ubiquityExpandedSidebar, /ubq-pd-bubble-expanded/);
 assert.doesNotMatch(collapsedSidebar, /ubq-pd-bubble/, 'Netflix sidebar keeps its classic layout');
-assert.match(css, /\.ubq-pd-bubble \{[\s\S]*?background:\s*rgba\(10,\s*10,\s*16,\s*0\.88\)/,
-  'Collapsed PD square must have the same dark smoked-glass background as expanded state');
-assert.match(css, /\.ubq-pd-ribbons \{[\s\S]*?opacity:\s*1;/,
+assert.match(css, /\.ubq-pd-bubble \{[\s\S]*?background:\s*rgba\(8,\s*8,\s*12,\s*0\.94\)/,
+  'Sidebar PD capsule must have deep high-contrast rgba(8, 8, 12, 0.94) smoked-glass background');
+assert.match(css, /\.ubq-pd-ribbons \{[\s\S]*?opacity:\s*0\.68;/,
   'Cosmic crimson ribbons must be visible in both collapsed and expanded sidebar states');
 assert.match(css, /\.ubq-pd-bubble-expanded \.ubq-pd-char-p \{[\s\S]*?font-size:\s*50px/,
   'Expanded PolDrive P must scale proportionally to fill the capsule');
@@ -531,7 +535,7 @@ assert.match(css, /0\.5s cubic-bezier\(0\.25,\s*1,\s*0\.5,\s*1\)/,
   'Sidebar PolDrive expansion must use 0.5s cubic-bezier(0.25, 1, 0.5, 1) smooth physics');
 assert.match(native, /draw_poldrive_premium_logo/);
 assert.match(native, /255,\s*51,\s*102,\s*255/);
-assert.match(native, /fill_rounded_rect\(r,\s*bx,\s*by,\s*bw,\s*bh,\s*br,\s*10,\s*10,\s*16,\s*225\)/);
+assert.match(native, /fill_rounded_rect\(r,\s*bx,\s*by,\s*bw,\s*bh,\s*br,\s*8,\s*8,\s*12,\s*240\)/);
 console.log('PASS: layout, Netflix motion, Ubiquity switch, web SSR and native appearance contracts');
 
 

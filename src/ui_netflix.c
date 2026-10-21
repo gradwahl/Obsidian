@@ -2293,10 +2293,10 @@ static void render_sidebar(WolodriveApp *app) {
 
         draw_rounded_glow(r, bx, by, bw, bh, br, 6, 201, 24, 74, 150);
 
-        /* Dark smoked glass background in both collapsed (38x38) and expanded (224x54) states */
-        fill_rounded_rect(r, bx, by, bw, bh, br, 10, 10, 16, 225);
+        /* Deep smoked glass background rgba(8, 8, 12, 0.94) for strong contrast with letters */
+        fill_rounded_rect(r, bx, by, bw, bh, br, 8, 8, 12, 240);
 
-        /* Animated cosmic crimson ribbons circulating inside both collapsed square and expanded capsule */
+        /* Delicate animated cosmic crimson ribbons circulating inside the smoked glass capsule */
         {
             float phase = (float)SDL_GetTicks() * 0.0026f;
             int rib1_w = SDL_max(18, (int)lroundf((float)bw * 0.42f));
@@ -2308,9 +2308,10 @@ static void render_sidebar(WolodriveApp *app) {
             int r1_y = by + 5 + (int)(4.0f * cosf(phase * 1.3f));
             int r2_x = bx + 4 + (int)((float)travel2 * (0.5f + 0.5f * cosf(phase * 0.85f)));
             int r2_y = by + bh - 15 + (int)(4.0f * sinf(phase * 1.1f));
-            fill_rounded_rect(r, r1_x, r1_y, rib1_w, 10, 5, 255, 51, 102, 82);
-            fill_rounded_rect(r, r2_x, r2_y, rib2_w, 10, 5, 201, 24, 74, 72);
-            fill_rounded_rect(r, (r1_x + r2_x) / 2, by + bh / 2 - 4, rib3_w, 8, 4, 89, 13, 34, 84);
+            Uint8 rib_a = (Uint8)lroundf(58.0f * (1.0f - exp_t) + 36.0f * exp_t);
+            fill_rounded_rect(r, r1_x, r1_y, rib1_w, 10, 5, 255, 51, 102, rib_a);
+            fill_rounded_rect(r, r2_x, r2_y, rib2_w, 10, 5, 201, 24, 74, rib_a);
+            fill_rounded_rect(r, (r1_x + r2_x) / 2, by + bh / 2 - 4, rib3_w, 8, 4, 89, 13, 34, rib_a);
         }
 
         draw_rounded_border(r, bx, by, bw, bh, br, 1, 255, 51, 102, 118);
@@ -2991,11 +2992,30 @@ static void render_ubiquity_home(WolodriveApp *app) {
     draw_text(app, app->font_micro, count, SCREEN_WIDTH - 175, 719, subdued, 0);
     if (app->active_row == VIEW_HOME) {
         int pos = CONTENT_X + 24;
+        int pill_y = 982;
+        int pill_h = 38;
+        int pill_r = 19;
         for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
             const char *name = home_category_title(app, cat);
-            SDL_Color label_color = cat == app->home_cat_index ? white : subdued;
-            int width = draw_text(app, app->font_micro, name, pos, 1002, label_color, 0);
-            pos += SDL_max(125, width + 26);
+            int tw = 0, th = 0;
+            if (app->font_micro) TTF_SizeUTF8(app->font_micro, name, &tw, &th);
+            if (tw <= 0) tw = 84;
+            int pill_w = tw + 40;
+            if (cat == app->home_cat_index) {
+                /* Active category: PS5 Library "Download" button style (full crimson gradient + glow) */
+                draw_rounded_glow(r, pos, pill_y, pill_w, pill_h, pill_r, 8, 201, 24, 74, 145);
+                fill_rounded_rect(r, pos, pill_y, pill_w, pill_h, pill_r, 201, 24, 74, 250);
+                fill_rounded_rect(r, pos + 2, pill_y + 2, pill_w - 4, pill_h / 2, pill_r - 2, 255, 51, 102, 135);
+                fill_rounded_rect(r, pos + 2, pill_y + pill_h / 2, pill_w - 4, pill_h / 2 - 2, pill_r - 2, 143, 4, 11, 120);
+                draw_rounded_border(r, pos, pill_y, pill_w, pill_h, pill_r, 1, 255, 140, 165, 145);
+                draw_text(app, app->font_micro, name, pos + 20, pill_y + 10, (SDL_Color){255, 255, 255, 255}, 0);
+            } else {
+                /* Inactive category: PS5 Library "Details" button style (smoked glass + subtle border) */
+                fill_rounded_rect(r, pos, pill_y, pill_w, pill_h, pill_r, 24, 24, 34, 166);
+                draw_rounded_border(r, pos, pill_y, pill_w, pill_h, pill_r, 1, 255, 255, 255, 46);
+                draw_text(app, app->font_micro, name, pos + 20, pill_y + 10, (SDL_Color){240, 240, 246, 220}, 0);
+            }
+            pos += pill_w + 12;
         }
     }
 }
