@@ -2828,6 +2828,7 @@ static void render_ubiquity_home(WolodriveApp *app) {
                 fill_rect(r, card.x, card.y + card.h - 1 - row_i, inset, 1, 0, 0, 0, 255);
                 fill_rect(r, card.x + card.w - inset, card.y + card.h - 1 - row_i, inset, 1, 0, 0, 0, 255);
             }
+        }
         if (col == row->selected_col && !app->sidebar_focus) {
             /* Match web's 2.6-second double-strobe, with a steady single white
                outline. Only the halo pulses; the cover never flashes. */

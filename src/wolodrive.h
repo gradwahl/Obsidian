@@ -142,6 +142,7 @@ typedef struct {
     float scroll_x;
     float target_scroll_x;
     float scroll_velocity;
+    float focus_pill_x; /* Animated position of the Ubiquity selection frame. */
 } CarouselRow;
 
 #define MAX_LIBRARY_ARTWORK 128
