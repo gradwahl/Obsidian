@@ -1,0 +1,8 @@
+{
+  "name": "PolDrive",
+  "description": "TV Netflix-style homebrew catalog interface and Katalogi client for PlayStation 5 and Linux desktop.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
