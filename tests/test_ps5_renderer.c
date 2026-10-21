@@ -22,7 +22,7 @@ int main(void) {
     assert(SDL_Init(SDL_INIT_VIDEO) == 0);
     SDL_Window *window = SDL_CreateWindow("renderer test", 0, 0, 320, 180, 0);
     assert(window);
-    SDL_Renderer *renderer = poldrive_create_ps5_renderer(window);
+    SDL_Renderer *renderer = obsidian_create_ps5_renderer(window);
     assert(renderer && calls == 1);
     assert(SDL_SetRenderDrawColor(renderer, 20, 40, 60, 255) == 0);
     assert(SDL_RenderClear(renderer) == 0);
@@ -33,7 +33,7 @@ int main(void) {
     SDL_RenderPresent(renderer);
     SDL_DestroyRenderer(renderer);
     fail_backend = 1;
-    assert(!poldrive_create_ps5_renderer(window));
+    assert(!obsidian_create_ps5_renderer(window));
     assert(calls == 2);
     assert(strcmp(SDL_GetError(), "sceVideoOutOpen: injected failure") == 0);
     SDL_DestroyWindow(window);

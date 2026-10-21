@@ -158,13 +158,11 @@ export function UbiquityHomeView({
     <div className="tv-home ubq-home" data-layout="ubiquity">
       <CinematicBackground game={game} />
       <div className="ubq-ambient-top">
-        <div className="ubq-system-label ubq-glass-capsule" aria-label="PolDrive">
+        <div className="ubq-system-label ubq-glass-capsule" aria-label="Obsidian">
           <span className="ubq-logo-lockup ubq-logo-capsule">
-            <b className="ubq-logo-p">P</b>
+            <b className="ubq-logo-p">O</b>
             <span className="ubq-logo-tail">
-              <span className="ubq-logo-white">ol</span>
-              <span className="ubq-logo-d">D</span>
-              <span className="ubq-logo-white">rive</span>
+              <span className="ubq-logo-white">bsidian</span>
             </span>
           </span>
         </div>
@@ -173,7 +171,7 @@ export function UbiquityHomeView({
       <div className="ubq-feature" key={game?.id_code || heading}>
         <h1 className="ubq-feature-title">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
         {game && <div className="ubq-feature-metadata">
-          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.source_name || 'PolDrive'}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.source_name || 'Obsidian'}</span>
           <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.id_code}</span>
           <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />v{game.version}</span>
           <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.format.toUpperCase()}</span>

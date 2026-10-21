@@ -41,7 +41,7 @@ Pliki G: `src/components/SlidingHighlight.tsx`, `src/components/Sidebar.tsx`, `s
 ## Weryfikacja
 
 - PASS: npm run lint.
-- PASS: npm run test:web (pełna sekwencja, uruchamiana osobno od buildu; oba polecenia generują public/poldrive-pages i nie mogą działać równolegle).
+- PASS: npm run test:web (pełna sekwencja, uruchamiana osobno od buildu; oba polecenia generują public/obsidian-pages i nie mogą działać równolegle).
 - PASS: npm run build:static; wygenerowany static-preview jest lokalnie aktualny. Ten katalog był już ignorowany przez .gitignore, czego nie zmieniano.
 - PASS: python tests/check_static_preview.py — HTML/JS/CSS, 85 690 rekordów, 472 strony JSON i 16 plików artwork przez zwykły HTTP, bez Node w runtime.
 - Browser HTTP: oglądane 1280×720 i 1920×1080, stan zwinięty i rozwinięty; zmiana języka, sąsiednie/dalekie kategorie, seria szybkich kliknięć, resize, Home, Search (zapytanie Spider), szczegóły, zamknięcie dialogu, biblioteka i Settings. Sprawdzono sterowanie klawiaturą Left/Right. Konsola sprawdzanego buildu: brak wpisów error. Po resize oceniano ustalony obraz, a nie pierwszą klatkę aktualizacji rozmiaru viewportu.

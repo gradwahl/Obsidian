@@ -18,7 +18,7 @@ spec.loader.exec_module(embedding)
 class UnifiedLauncher(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp = tempfile.TemporaryDirectory(prefix='poldrive-unified-')
+        cls.temp = tempfile.TemporaryDirectory(prefix='obsidian-unified-')
         cls.folder = Path(cls.temp.name)
         cls.log = cls.folder/'launcher.log'
         driver = cls.folder/'driver.c'
@@ -28,23 +28,23 @@ class UnifiedLauncher(unittest.TestCase):
 #include <stdlib.h>
 #include <errno.h>
 static int stage;
-int poldrive_shortcut_registered(void) {
+int obsidian_shortcut_registered(void) {
     const char *existing=getenv("ALREADY_REGISTERED");
     const char *completed=getenv("REGISTER_AFTER_DISPATCH");
     return (existing && *existing) ||
         (stage>=1 && completed && *completed && !getenv("FAIL_SHORTCUT"));
 }
-int poldrive_shortcut_prepare(void) {
+int obsidian_shortcut_prepare(void) {
     return getenv("STATUS_PREPARE_FAILED") ? 0 : 1;
 }
-int poldrive_shortcut_status(void) {
+int obsidian_shortcut_status(void) {
     if (getenv("FAIL_SHORTCUT")) return 0;
     if (getenv("HELPER_ALREADY_CURRENT")) return 2;
     if (stage>=1 && getenv("HELPER_CURRENT_AFTER_DISPATCH")) return 2;
     if (stage>=1 && getenv("HELPER_JUST_INSTALLED")) return 1;
     return 0;
 }
-int poldrive_dispatch_shortcut(void) {
+int obsidian_dispatch_shortcut(void) {
     assert(stage==0); stage=1; puts("SHORTCUT"); errno=ECONNREFUSED;
     return getenv("FAIL_SHORTCUT") ? -1 : 0;
 }
@@ -60,10 +60,10 @@ int wolodrive_web_main(void) {
         cls.app_executable = cls.folder/'app'
         cls.executable = cls.folder/'launcher'
         subprocess.run(['gcc', '-Wall', '-Wextra', '-Werror', '-DWOLO_UNIFIED_TEST',
-                        f'-DPOLDRIVE_LAUNCH_LOG="{cls.log}"', str(ROOT/'src/ps5_unified_launcher.c'),
+                        f'-DOBSIDIAN_LAUNCH_LOG="{cls.log}"', str(ROOT/'src/ps5_unified_launcher.c'),
                         str(driver), '-o', str(cls.executable)], check=True)
         subprocess.run(['gcc', '-Wall', '-Wextra', '-Werror', '-DWOLO_UNIFIED_TEST',
-                        '-DPOLDRIVE_APP_ENTRY', f'-DPOLDRIVE_LAUNCH_LOG="{cls.log}"',
+                        '-DOBSIDIAN_APP_ENTRY', f'-DOBSIDIAN_LAUNCH_LOG="{cls.log}"',
                         str(ROOT/'src/ps5_unified_launcher.c'), str(driver),
                         '-o', str(cls.app_executable)], check=True)
 
@@ -134,13 +134,13 @@ int wolodrive_web_main(void) {
     def test_default_build_and_shortcut_alias_are_unified(self):
         make=(ROOT/'Makefile').read_text()
         self.assertIn('ps5-shortcut: ps5',make)
-        self.assertIn('-o build/poldrive.elf',make)
-        self.assertNotIn('cp build/wolodrive-web.elf build/poldrive.elf',make)
-        self.assertIn('src/ps5_unified_launcher.c build/poldrive-native-main.o build/poldrive-web-fallback.o',make)
-        self.assertIn('-DPOLDRIVE_APP_ENTRY',make)
+        self.assertIn('-o build/obsidian.elf',make)
+        self.assertNotIn('cp build/wolodrive-web.elf build/obsidian.elf',make)
+        self.assertIn('src/ps5_unified_launcher.c build/obsidian-native-main.o build/obsidian-web-fallback.o',make)
+        self.assertIn('-DOBSIDIAN_APP_ENTRY',make)
         self.assertIn('build/ps5_app_payload.h app_payload_elf',make)
         self.assertIn('-DWOLO_EMBED_APP',make)
-        self.assertIn('src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/poldrive-shortcut-helper.elf',make)
+        self.assertIn('src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/obsidian-shortcut-helper.elf',make)
         default_recipe=make.split('ps5: ps5-web-assets', 1)[1].split('ps5-native:', 1)[0]
         self.assertIn('src/ps5_single_installer.c', default_recipe)
         self.assertIn('-DWOLO_WEB_NO_BROWSER', default_recipe)
@@ -149,12 +149,12 @@ int wolodrive_web_main(void) {
         self.assertNotIn('wolodrive_native_main', default_recipe)
         fullscreen_recipe=make.split('ps5-fullscreen-test: ps5-web-assets ps5-fullscreen-restore',1)[1].split('ps5-native:',1)[0]
         self.assertIn('-DWOLO_FULLSCREEN_WEBAPP', fullscreen_recipe)
-        self.assertIn('-o build/poldrive-fullscreen-v2.elf', fullscreen_recipe)
-        self.assertNotIn('-o build/poldrive.elf', fullscreen_recipe)
+        self.assertIn('-o build/obsidian-fullscreen-v2.elf', fullscreen_recipe)
+        self.assertNotIn('-o build/obsidian.elf', fullscreen_recipe)
         self.assertNotIn('build/ps5_shortcut_helper.h', fullscreen_recipe)
 
     def test_fallback_serves_root_and_preserves_notice_on_reuse(self):
-        with tempfile.TemporaryDirectory(prefix='poldrive-fallback-') as temporary:
+        with tempfile.TemporaryDirectory(prefix='obsidian-fallback-') as temporary:
             folder=Path(temporary); preview=folder/'preview'; preview.mkdir()
             (preview/'index.html').write_text('<html>fallback fixture</html>')
             subprocess.run(['python3', str(ROOT/'scripts/embed_web_preview.py'), str(preview),

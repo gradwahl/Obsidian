@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 execFileSync(process.execPath, [path.join(root, 'scripts/generate_browser_catalog_pages.cjs')], { cwd: root });
-const dir = path.join(root, 'public/poldrive-pages');
+const dir = path.join(root, 'public/obsidian-pages');
 const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
 assert.equal(manifest.schemaVersion, 2);
 const originals = new Map();
@@ -84,7 +84,7 @@ let yields = 0;
 global.window = { setTimeout(callback) { yields++; return setTimeout(callback, 0); } };
 const served = new Map();
 global.fetch = async (url) => {
-  const name = String(url).replace(/^\/poldrive-pages\//, '');
+  const name = String(url).replace(/^\/obsidian-pages\//, '');
   if (!name || name.includes('/') || name.includes('..')) return { ok: false, status: 404 };
   const filename = path.join(dir, name);
   if (!fs.existsSync(filename)) return { ok: false, status: 404 };

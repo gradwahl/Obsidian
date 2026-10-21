@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const INPUT = path.join(ROOT, 'assets', 'catalogs');
-const OUTPUT = path.join(ROOT, 'public', 'poldrive-pages');
+const OUTPUT = path.join(ROOT, 'public', 'obsidian-pages');
 const COVER_INDEX = path.join(ROOT, 'src', 'archiveSourceCovers.json');
 const ITEMS_PER_PAGE = 384;
 

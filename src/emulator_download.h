@@ -1,5 +1,5 @@
-#ifndef POLDRIVE_EMULATOR_DOWNLOAD_H
-#define POLDRIVE_EMULATOR_DOWNLOAD_H
+#ifndef OBSIDIAN_EMULATOR_DOWNLOAD_H
+#define OBSIDIAN_EMULATOR_DOWNLOAD_H
 #include "wolodrive.h"
 #include "emulator_releases.h"
 

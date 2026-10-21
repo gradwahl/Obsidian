@@ -45,7 +45,7 @@ export const EmulatorReleaseView: React.FC<{
       {system.artwork_path && <img className="tv-emulator-art" src={system.artwork_path}
         alt="" loading="lazy" decoding="async" />}
       <div className="tv-emulator-release-content">
-        <p className="tv-emulator-kicker">PolDrive Emulators · GitHub Releases</p>
+        <p className="tv-emulator-kicker">Obsidian Emulators · GitHub Releases</p>
         <h1>{system.name}</h1>
         {match ? <>
           <p>{match.engine === 'retroarch' ? 'RetroArch release' : 'Dedicated emulator release'}:

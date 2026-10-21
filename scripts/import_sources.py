@@ -35,7 +35,7 @@ def correct_source_title(source, system, page, title):
 
 
 def fetch(url):
-    request = urllib.request.Request(url, headers={"User-Agent": "Poldrive/2.0 catalog metadata importer"})
+    request = urllib.request.Request(url, headers={"User-Agent": "Obsidian/2.0 catalog metadata importer"})
     with urllib.request.urlopen(request, timeout=20) as response:
         data = response.read(MAX_RESPONSE + 1)
     if len(data) > MAX_RESPONSE:

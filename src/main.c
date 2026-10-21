@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
        created by SDL first; no payload can draw earlier than that. */
     startup_log_stage("Initializing SDL video and timer");
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-        fprintf(stderr, "[POLDRIVE ERROR] SDL_Init: %s\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] SDL_Init: %s\n", SDL_GetError());
         free(app);
         return 1;
     }
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     startup_log_stage("Creating catalog mutex");
     app->catalog_mutex = SDL_CreateMutex();
     if (!app->catalog_mutex) {
-        fprintf(stderr, "[POLDRIVE ERROR] SDL_CreateMutex: %s\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] SDL_CreateMutex: %s\n", SDL_GetError());
         SDL_Quit();
         free(app);
         return 1;
@@ -56,13 +56,13 @@ int main(int argc, char *argv[]) {
 
     startup_log_stage("Creating window");
     app->window = SDL_CreateWindow(
-        "PolDrive",
+        "Obsidian",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         win_w, win_h, win_flags
     );
 
     if (!app->window) {
-        fprintf(stderr, "[POLDRIVE ERROR] SDL_CreateWindow: %s\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] SDL_CreateWindow: %s\n", SDL_GetError());
         SDL_DestroyMutex(app->catalog_mutex);
         TTF_Quit();
         IMG_Quit();
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
     startup_log_stage("Initializing curl");
     if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
-        fprintf(stderr, "[POLDRIVE ERROR] curl_global_init failed\n");
+        fprintf(stderr, "[OBSIDIAN ERROR] curl_global_init failed\n");
         goto cleanup;
     }
     startup_splash_draw(app->renderer, 1);
@@ -87,19 +87,19 @@ int main(int argc, char *argv[]) {
     startup_log_stage("Initializing image decoders");
     int img_flags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_WEBP;
     if ((IMG_Init(img_flags) & img_flags) == 0)
-        fprintf(stderr, "[POLDRIVE WARN] IMG_Init: %s\n", IMG_GetError());
+        fprintf(stderr, "[OBSIDIAN WARN] IMG_Init: %s\n", IMG_GetError());
     startup_splash_draw(app->renderer, 2);
 
     startup_log_stage("Initializing font library");
     if (TTF_Init() != 0) {
-        fprintf(stderr, "[POLDRIVE ERROR] TTF_Init: %s\n", TTF_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] TTF_Init: %s\n", TTF_GetError());
         goto cleanup;
     }
     startup_splash_draw(app->renderer, 3);
 
     startup_log_stage("Initializing controllers");
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0)
-        fprintf(stderr, "[POLDRIVE WARN] Gamecontroller initialization: %s\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN WARN] Gamecontroller initialization: %s\n", SDL_GetError());
     else for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             SDL_GameControllerOpen(i);
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
     /* Log measured update/render/present cost on hardware, independently of
        the 60 Hz frame cap. Keep logging off the per-frame hot path. */
     perf_log = fopen("/data/wolodrive-performance.log", "w");
-    if (perf_log) fprintf(perf_log, "PolDrive PS5 native frame timings (ms)\n");
+    if (perf_log) fprintf(perf_log, "Obsidian PS5 native frame timings (ms)\n");
     Uint64 perf_window_start = last_frame;
     Uint64 perf_count = 0;
     double perf_update_sum = 0, perf_render_sum = 0, perf_render_max = 0;

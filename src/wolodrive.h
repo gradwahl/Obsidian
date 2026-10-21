@@ -12,7 +12,7 @@
 
 #define TR(app, id) i18n_text((Language)SDL_AtomicGet(&(app)->language), (id))
 
-#define WOLODRIVE_NAME          "PolDrive"
+#define WOLODRIVE_NAME          "Obsidian"
 #define WOLODRIVE_VERSION       "2.0.0-PRO (PS5 13.60)"
 #define WOLODRIVE_DATA_PATH     "/data/homebrew/wolodrive"
 #define SHADOWMOUNT_PATH        "/data/homebrew"

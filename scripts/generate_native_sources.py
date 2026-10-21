@@ -46,7 +46,7 @@ def main():
                 break
     archive_file = ROOT / "src/archiveSourceCovers.json"
     archive_map = json.loads(archive_file.read_text("utf8")) if archive_file.exists() else {}
-    archive_origin = "https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/"
+    archive_origin = "https://raw.githubusercontent.com/gradwahl/Obsidian-archive/main/"
     rows = []
     for source in sources:
         if source["id"] == "retrogamechampion":
@@ -71,8 +71,8 @@ def main():
     from math import isfinite
     header = [
         "/* Generated source-page metadata; no game package URLs. */",
-        "#ifndef POLDRIVE_NATIVE_SOURCE_INDEX_H",
-        "#define POLDRIVE_NATIVE_SOURCE_INDEX_H",
+        "#ifndef OBSIDIAN_NATIVE_SOURCE_INDEX_H",
+        "#define OBSIDIAN_NATIVE_SOURCE_INDEX_H",
         "typedef struct {",
         " const char *id, *title, *source, *platform, *version, *cover, *boxart, *description, *date;",
         " float size_gb; unsigned char is_game;",

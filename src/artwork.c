@@ -156,7 +156,7 @@ static SDL_Surface *artwork_load(struct ArtworkCache *cache, const ArtworkEntry 
 #endif
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 12L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "PolDrive/2.0 (streamed artwork)");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Obsidian/2.0 (streamed artwork)");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, artwork_write);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, artwork_progress);

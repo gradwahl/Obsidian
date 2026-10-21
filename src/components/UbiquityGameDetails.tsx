@@ -19,7 +19,7 @@ interface Props {
   onActionIndexChange: (index: number) => void;
 }
 
-// Transparent game-logo artwork is not available in PolDrive's metadata.
+// Transparent game-logo artwork is not available in Obsidian's metadata.
 // Text stays legible until a verified per-game logo can be supplied.
 export function UbiquityGameDetails({
   game: summary, catalog, language, onClose, onTriggerAction, onSelectGame,
@@ -96,14 +96,14 @@ export function UbiquityGameDetails({
       </div>
       <div className="ubq-detail-vignette" aria-hidden="true" />
       <div className="ubq-detail-provider">
-        <span className="ubq-detail-provider-mark">◈</span> PolDrive
+        <span className="ubq-detail-provider-mark">◈</span> Obsidian
       </div>
 
       <div className="ubq-detail-content">
         <div className="ubq-detail-main">
           <h1 id="ubq-detail-title" className="ubq-detail-game-title">{game.title}</h1>
           <div className="ubq-detail-byline">
-            <span>{game.source_name || 'PolDrive'}</span>
+            <span>{game.source_name || 'Obsidian'}</span>
             {year && <><span aria-hidden="true">•</span><span>{year}</span></>}
             <span aria-hidden="true">•</span>
             <span>{game.platform || (/^PPSA/i.test(game.id_code) ? 'PS5' : /^CUSA/i.test(game.id_code) ? 'PS4' : 'Game')}</span>

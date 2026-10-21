@@ -49,10 +49,10 @@ exercise PS5 VideoOut. Rollback removes the PS5-specific helper call and restore
 the previous automatic selection; no SDK install or user files are modified.
 
 For native renderer investigation, use `make ps5-native` and run its
-`build/poldrive-native-installer.elf` through Payload Manager once, then use the
+`build/obsidian-native-installer.elf` through Payload Manager once, then use the
 restored native-first Media tile. This recovery route retains the intermediate
 loader response. Retrieve `/data/wolodrive-startup.log` and
-`/data/poldrive-launcher.log` for native startup errors. PS5 display, storage
+`/data/obsidian-launcher.log` for native startup errors. PS5 display, storage
 access and parity remain unverified until device testing.
 
 Local verification for this change: `make test-ps5-renderer`, `make build-linux`,
@@ -66,26 +66,26 @@ full `make test` remains blocked by obsolete symbols in
 and `load_additional_catalog`. No PS5 device or native/browser visual parity
 verification was performed for this startup change.
 
-## One distributable: poldrive.elf
+## One distributable: obsidian.elf
 
 For the separate, opt-in fullscreen launch experiment, see
 [PS5 fullscreen web-app test](ps5-fullscreen-test.md). The normal installer and
 its confirmed browser-card launch remain the default.
 
 Run `make ps5` (or `make ps5-shortcut`) with the SDK available. Distribute only
-`build/poldrive.elf`. Embedded service/helper ELFs are generated in
+`build/obsidian.elf`. Embedded service/helper ELFs are generated in
 `build/.internal/`; users do not copy or run them separately. Other top-level
 payload variants are produced only by their explicitly requested targets.
 
-1. Copy it to `/data/pldmgr/payloads/poldrive/poldrive.elf` and run it through
+1. Copy it to `/data/pldmgr/payloads/obsidian/obsidian.elf` and run it through
    Payload Manager with the ELF loader active.
 2. The installer saves its bundled quiet service at
-   `/data/pldmgr/payloads/poldrive/poldrive-web-service.elf`, starts it through
+   `/data/pldmgr/payloads/obsidian/obsidian-web-service.elf`, starts it through
    the loopback loader, and checks its exact health identity/build checksum.
 3. It preserves the existing autoload sequence and unrelated configuration,
    appends the service path once, enables `AUTOLOAD_ENABLED`, and registers the
    owned `WOLO00001` Media tile at `http://127.0.0.1:8098/`.
-4. The installer exits without opening native UI or a browser. Open PolDrive
+4. The installer exits without opening native UI or a browser. Open Obsidian
    from **Home / Media**. The tile goes directly to the existing React UI;
    it never visits `/loadpayload:` and needs no second browser window.
 
@@ -105,8 +105,8 @@ sequence starts the service. No payload can run on an unjailbroken PS5 boot.
 The installer preserves Payload Manager's own browser preference, delay,
 favorites and other settings; its own UI never opens during installation or
 autoload. Enabling autoload also enables the existing entries. Startup-file
-backups are saved once as `/data/pldmgr/autoload.txt.poldrive-backup` and
-`/data/pldmgr/pldmgr_config.txt.poldrive-backup`. Text, entry order and `!N`
+backups are saved once as `/data/pldmgr/autoload.txt.obsidian-backup` and
+`/data/pldmgr/pldmgr_config.txt.obsidian-backup`. Text, entry order and `!N`
 millisecond delays are preserved; duplicate active service entries are not
 added. Oversized/binary configuration or malformed delay entries cause failure
 without changing the startup files or dashboard. Close configuration editors
@@ -126,14 +126,14 @@ this packaging change does not claim renderer/controller parity or fix VideoOut.
 
 ### Logs and rollback
 
-- `/data/poldrive-install.log`: service persistence, loader, health and startup configuration.
-- `/data/poldrive-launcher.log`: fresh shortcut-helper dispatch/result.
+- `/data/obsidian-install.log`: service persistence, loader, health and startup configuration.
+- `/data/obsidian-launcher.log`: fresh shortcut-helper dispatch/result.
 - `/data/wolodrive-shortcut.log`: Media metadata and AppInstUtil result.
 - `/data/wolodrive-web.log`: quiet service and filesystem-bridge startup.
-- `/data/poldrive-service.endpoint`: current direct service endpoint and PID.
+- `/data/obsidian-service.endpoint`: current direct service endpoint and PID.
 
 To undo startup configuration, remove only the service path from autoload and
-restore the prior enabled value. The `.poldrive-backup` files record the original
+restore the prior enabled value. The `.obsidian-backup` files record the original
 contents; restore whole backups only if later unrelated edits can be discarded.
 Use `make ps5-native` to build a separate native-first recovery installer; run it
 once to restore its owned Media link and installed native app. This keeps the
@@ -152,7 +152,7 @@ their PS5 on this date. This confirms the reported installation/launch flow on
 that console; fresh-jailbreak autoload, full controller/visual parity and other
 firmware/loader combinations have not been separately verified.
 
-The PS5 SDK built `build/poldrive.elf` (7,124,560 bytes). Its exact embedded
+The PS5 SDK built `build/obsidian.elf` (7,124,560 bytes). Its exact embedded
 quiet-service and shortcut-helper ELF bytes, direct 8098 URL, and absence of
 native/browser-opener payloads were checked. The output includes the current
 autoload validation. The service uses the same generated static preview; no
@@ -180,12 +180,12 @@ made; sliding-rail motion and full native/browser/controller visual parity
 were not compared on device. **AI Studio deployment not verified.**
 
 Manual PS5 validation: copy only the new installer and run it once with the
-loader active. Confirm no PolDrive UI opens, and inspect the installation,
-shortcut and service logs. Select Media/PolDrive and confirm a single direct
+loader active. Confirm no Obsidian UI opens, and inspect the installation,
+shortcut and service logs. Select Media/Obsidian and confirm a single direct
 open without `OK`, closing or reopening. Close/reopen the tile, rerun the
 installer, and verify both remain quiet until the tile is selected. After a
 fresh jailbreak, start Payload Manager and confirm its autoload starts only
-the quiet service for PolDrive; verify the tile works without reinstalling.
+the quiet service for Obsidian; verify the tile works without reinstalling.
 Existing Payload Manager entries/preferences must still match their backups.
 For AI Studio, serve the refreshed `static-preview/` at the URL root and repeat
 startup, Home/sidebar, search, categories, dialogs, artwork/fallbacks, keyboard/
@@ -196,7 +196,7 @@ mouse and Settings checks on the deployed host before claiming deployment.
 These results describe the previous launcher lifecycle, before the installer/app
 entry points were separated. See the installation fix verification below.
 
-The combined `poldrive.elf` builds with the PS5 SDK. Local launcher tests cover
+The combined `obsidian.elf` builds with the PS5 SDK. Local launcher tests cover
 installer-only first launch, failed registration, existing shortcut launch,
 registration-helper dispatch order, native success without browser launch,
 native startup failure followed by web launch, helper-transfer failure without
@@ -212,7 +212,7 @@ was observed in the actual browser preview. Existing native full-suite blockers
 listed below remain. **AI Studio deployment not verified; the combined ELF has
 not been tested on a PS5 device.**
 
-Manual device validation: replace only the saved poldrive.elf, run it through
+Manual device validation: replace only the saved obsidian.elf, run it through
 Payload Manager with the loader active, check the three startup/shortcut logs,
 confirm the Media tile and relaunch from it. Check whether native reached its
 first frame or the explicit web-fallback notice appeared. Native Files must be
@@ -250,10 +250,10 @@ service must not be advertised as a completed remote installer.
 
 To roll back this additive browser build, remove its new targets, generators,
 source and tests; keep the existing make ps5 and npm run build:static workflows.
-Deleting PolDrive through the console UI removes its registered shortcut;
+Deleting Obsidian through the console UI removes its registered shortcut;
 retain saved ELF files if it will be installed again.
 
-Branding uses PolDrive in the native/web UI, metadata and the Media tile. The
+Branding uses Obsidian in the native/web UI, metadata and the Media tile. The
 existing WOLO00001 title identity and internal data/cache paths remain compatible
 so this update keeps preferences and does not create a second dashboard app.
 
@@ -261,7 +261,7 @@ so this update keeps preferences and does not create a second dashboard app.
 
 The current PS5 SDK build succeeded. The generated installer contains the exact
 helper ELF, that helper contains the exact app ELF, and its dashboard deeplink
-targets `/data/pldmgr/payloads/poldrive/poldrive-app.elf`. Nine launcher tests cover installer-only
+targets `/data/pldmgr/payloads/obsidian/obsidian-app.elf`. Nine launcher tests cover installer-only
 invocations with existing/cached registration, stale-status cancellation,
 registration failure and the independent dashboard native/web entry point.
 Eleven shortcut tests cover runtime persistence, repeated registration repair,
@@ -281,24 +281,24 @@ interaction and native/browser visual comparison were not repeated for this
 installer-only fix; PS5 registration and controller behavior remain unverified.
 
 Manual console check: replace the saved installer ELF, run it in Payload Manager,
-confirm it returns without opening PolDrive, and check the Media tile. Run the
+confirm it returns without opening Obsidian, and check the Media tile. Run the
 installer again to verify repair also stays closed. Select the Media tile and
 confirm it opens the app. If the icon is absent, inspect
 `/data/wolodrive-shortcut.log` for the registration result and
-`/data/poldrive-launcher.log` for fresh helper confirmation. On AI Studio, host
+`/data/obsidian-launcher.log` for fresh helper confirmation. On AI Studio, host
 `static-preview/` at the URL root and check startup, Home, sidebar, Search,
 category navigation, dialogs, artwork/fallbacks, keyboard/mouse and Settings.
 
 ## Historical follow-up: Invalid payload name — 2026-10-21
 
-The first installer/app separation used `/data/poldrive-app.elf`. Payload
+The first installer/app separation used `/data/obsidian-app.elf`. Payload
 Manager's `slot_validate_payload_path` permits its `/data/pldmgr` root (and
 configured USB roots), so that location is rejected by `/loadpayload:` with
 `Invalid payload name`. The installer now saves the runtime at
-`/data/pldmgr/payloads/poldrive/poldrive-app.elf`, creates the parent directories
+`/data/pldmgr/payloads/obsidian/obsidian-app.elf`, creates the parent directories
 if needed, and updates the dashboard deeplink to the same path. This keeps the
 installer and runtime separate without placing the app outside managed storage.
-The runtime may now also appear in Payload Manager's list; select `poldrive.elf`
+The runtime may now also appear in Payload Manager's list; select `obsidian.elf`
 to install/repair, and use the dashboard tile to open the app.
 
 The PS5 SDK installer and legacy-shortcut builds succeeded; exact embedded

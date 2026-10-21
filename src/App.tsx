@@ -109,11 +109,11 @@ function App() {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
-  // Initial welcome notification matching C code: Started PolDrive (2.0.0-PRO (PS5 13.60))
+  // Initial welcome notification matching C code: Started Obsidian (2.0.0-PRO (PS5 13.60))
   useEffect(() => {
     showToast(window.location.hash === '#native-unavailable'
       ? t(language, 'TXT_NATIVE_FALLBACK')
-      : t(language, 'TXT_STARTED', 'PolDrive', '2.0.0-PRO (PS5 13.60)'));
+      : t(language, 'TXT_STARTED', 'Obsidian', '2.0.0-PRO (PS5 13.60)'));
   }, []);
 
   // Update document title on language change

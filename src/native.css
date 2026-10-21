@@ -233,7 +233,7 @@
 .tv-settings input, .tv-settings button[role="checkbox"] { width: 24px; height: 24px; }
 @media (prefers-reduced-motion: reduce) { .tv-stage *, .tv-stage *::before, .tv-stage *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
-/* Ujednolicenie Web Preview z silnikiem C/SDL2 PolDrive */
+/* Ujednolicenie Web Preview z silnikiem C/SDL2 Obsidian */
 .tv-sidebar svg, .sidebar svg {
     stroke: currentColor;
     stroke-width: 2.4px;
@@ -399,7 +399,7 @@
 
 
 /* Faithful structural (u)biquity home: unlike Netflix/Glass this is its own
-   composition, adapted to PolDrive's data and controller controls. */
+   composition, adapted to Obsidian's data and controller controls. */
 .tv-theme-ubiquity .tv-main { margin-left: 92px; width: 1828px; }
 .tv-theme-ubiquity .tv-sidebar { width: 92px;  border-right: 0; }
 .tv-theme-ubiquity .tv-sidebar-collapsed { width: 92px; }
@@ -419,7 +419,7 @@
 .tv-theme-ubiquity .tv-nav-focused { outline: 2px solid rgba(255,100,112,.95); outline-offset: -3px; border-radius: 14px; }
 .tv-theme-ubiquity .tv-status { display: none; }
 
-/* Ubiquity Sidebar "PD" -> "PolDrive" Smoked Glass & Cosmic Crimson Ribbons Emblem */
+/* Ubiquity Sidebar "O" -> "Obsidian" Smoked Glass & Cosmic Crimson Ribbons Emblem */
 .ubq-pd-bubble {
   position: absolute;
   top: 58px;
@@ -626,73 +626,6 @@
     transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
     margin 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
-.ubq-pd-char-d {
-  color: #ffffff;
-  background-image: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(248, 249, 255, 0.98) 22%,
-    rgba(235, 232, 244, 0.95) 40%,
-    rgba(255, 238, 244, 1) 55%,
-    rgba(255, 68, 118, 0.99) 68%,
-    rgba(230, 28, 84, 0.98) 84%,
-    rgba(255, 105, 148, 1) 100%
-  );
-  background-size: 100% 250%;
-  background-position: 0% 0%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.42);
-  filter:
-    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.92))
-    drop-shadow(0 0 10px rgba(255, 51, 102, 0.52));
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-  line-height: 0.88;
-  display: inline-block;
-  transform-origin: left bottom;
-  transition:
-    font-size 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-    background-position 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-    -webkit-text-stroke-color 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-    filter 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-}
-.ubq-pd-slide-rive {
-  display: inline-block;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  color: #ffffff;
-  background-image: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(246, 247, 252, 0.98) 52%,
-    rgba(222, 224, 235, 0.94) 84%,
-    rgba(255, 235, 242, 0.98) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.4px rgba(255, 255, 255, 0.35);
-  filter:
-    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.92))
-    drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  line-height: 0.88;
-  white-space: nowrap;
-  transform: translateX(-4px) scale(0.35);
-  transform-origin: left bottom;
-  transition:
-    max-width 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-    font-size 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1),
-    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-}
 .ubq-pd-bubble-expanded .ubq-pd-char-p {
   font-size: 50px;
   line-height: 0.82;
@@ -704,29 +637,12 @@
     drop-shadow(0 0 12px rgba(255, 51, 102, 0.68));
 }
 .ubq-pd-bubble-expanded .ubq-pd-slide-ol {
-  max-width: 48px;
-  font-size: 36px;
+  max-width: 170px;
+  font-size: 31px;
   line-height: 0.86;
   opacity: 1;
   margin-left: -1px;
   margin-right: 1px;
-  transform: translateX(0) scale(1);
-}
-.ubq-pd-bubble-expanded .ubq-pd-char-d {
-  font-size: 38px;
-  line-height: 0.86;
-  letter-spacing: 0px;
-  background-position: 0% 100%;
-  -webkit-text-stroke-color: rgba(255, 195, 212, 0.52);
-  filter:
-    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 12px rgba(255, 51, 102, 0.68));
-}
-.ubq-pd-bubble-expanded .ubq-pd-slide-rive {
-  max-width: 92px;
-  font-size: 36px;
-  line-height: 0.86;
-  opacity: 1;
   transform: translateX(0) scale(1);
 }
 

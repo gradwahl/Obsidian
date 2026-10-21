@@ -55,7 +55,7 @@ class SourceCoverMatches(unittest.TestCase):
 
     def test_native_seed_embeds_public_cover_url_not_images(self):
         data = (ROOT / "src/native_source_index.h").read_text("utf8")
-        self.assertIn("raw.githubusercontent.com/PolDrive/PolDrive-archive", data)
+        self.assertIn("raw.githubusercontent.com/gradwahl/Obsidian-archive", data)
         self.assertIn("const char *id, *title, *source", data)
         self.assertNotIn("Authorization:", data)
         self.assertNotIn("github_pat_", data)

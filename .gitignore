@@ -1,6 +1,7 @@
 build/
 node_modules/
-dist/
+# Keep the production bundle versioned; catalogue pages are regenerated during builds.
+dist/obsidian-pages/
 __pycache__/
 assets/covers/*.art
 assets/covers/*.tmp
@@ -13,4 +14,4 @@ assets/artwork/*
 .cache/wolodrive-artwork/
 assets/screenshots/
 /static-preview
-/public/poldrive-pages/
+/public/obsidian-pages/manifest.json

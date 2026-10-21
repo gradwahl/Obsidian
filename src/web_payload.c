@@ -20,7 +20,7 @@
 
 #ifndef WOLO_WEB_PORT
 #ifdef WOLO_SINGLE_SERVICE
-#define WOLO_WEB_PORT POLDRIVE_DIRECT_PORT
+#define WOLO_WEB_PORT OBSIDIAN_DIRECT_PORT
 #else
 #define WOLO_WEB_PORT 8097
 #endif
@@ -44,7 +44,7 @@
 #endif
 static char web_url[64]; /* Set once from getsockname, before starting the worker. */
 #if defined(__PS5__) && defined(WOLO_SINGLE_SERVICE)
-#define ENDPOINT_RECORD "/data/poldrive-service.endpoint"
+#define ENDPOINT_RECORD "/data/obsidian-service.endpoint"
 #elif defined(__PS5__)
 #define ENDPOINT_RECORD "/data/wolodrive-web.endpoint"
 #else
@@ -64,15 +64,15 @@ extern int sceSystemServiceLaunchWebBrowser(const char *uri);
 #if (defined(__PS5__) || defined(WOLO_WEB_TEST_BROWSER)) && !defined(WOLO_WEB_NO_BROWSER)
 static void *launch_browser(void *unused) {
     (void)unused;
-    fprintf(stderr, "[POLDRIVE WEB] Requesting isolated browser helper at %s\n", web_url);
+    fprintf(stderr, "[OBSIDIAN WEB] Requesting isolated browser helper at %s\n", web_url);
 #ifdef WOLO_WEB_TEST_BROWSER
     int result = sceSystemServiceLaunchWebBrowser(web_url);
-    fprintf(stderr, "[POLDRIVE WEB] Browser launch returned 0x%x\n", (unsigned)result);
+    fprintf(stderr, "[OBSIDIAN WEB] Browser launch returned 0x%x\n", (unsigned)result);
     if (result)
-        fprintf(stderr, "[POLDRIVE WEB] Browser launch failed; server remains available at %s\n", web_url);
+        fprintf(stderr, "[OBSIDIAN WEB] Browser launch failed; server remains available at %s\n", web_url);
 #else
     unsigned char *payload = malloc(sizeof(browser_helper_elf));
-    if (!payload) { fprintf(stderr, "[POLDRIVE WEB] Browser helper allocation failed\n"); return NULL; }
+    if (!payload) { fprintf(stderr, "[OBSIDIAN WEB] Browser helper allocation failed\n"); return NULL; }
     memcpy(payload, browser_helper_elf, sizeof(browser_helper_elf));
     memset(payload + BROWSER_URL_OFFSET, 0, BROWSER_URL_SIZE);
     memcpy(payload + BROWSER_URL_OFFSET, web_url, strlen(web_url));
@@ -88,10 +88,10 @@ static void *launch_browser(void *unused) {
         loader.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         if (connect(fd, (struct sockaddr *)&loader, sizeof(loader)) ||
             send_all(fd, payload, sizeof(browser_helper_elf))) {
-            perror("[POLDRIVE WEB] Browser helper transfer");
-        } else fprintf(stderr, "[POLDRIVE WEB] Browser helper sent; see /data/wolodrive-browser.log\n");
+            perror("[OBSIDIAN WEB] Browser helper transfer");
+        } else fprintf(stderr, "[OBSIDIAN WEB] Browser helper sent; see /data/wolodrive-browser.log\n");
         close(fd);
-    } else perror("[POLDRIVE WEB] Browser helper socket");
+    } else perror("[OBSIDIAN WEB] Browser helper socket");
     free(payload);
 #endif
     return NULL;
@@ -104,11 +104,11 @@ static void request_browser(void) {
     pthread_t browser_thread;
     int error = pthread_create(&browser_thread, NULL, launch_browser, NULL);
     if (error) {
-        fprintf(stderr, "[POLDRIVE WEB] Browser thread failed: %s; open %s manually\n",
+        fprintf(stderr, "[OBSIDIAN WEB] Browser thread failed: %s; open %s manually\n",
                 strerror(error), web_url);
     } else {
         error = pthread_detach(browser_thread);
-        if (error) fprintf(stderr, "[POLDRIVE WEB] Browser thread detach: %s\n", strerror(error));
+        if (error) fprintf(stderr, "[OBSIDIAN WEB] Browser thread detach: %s\n", strerror(error));
     }
 #endif
 }
@@ -182,7 +182,7 @@ static void respond_policy(int fd, int status, const char *reason, const char *m
         "Connection: close\r\nCache-Control: %s\r\n"
         "X-Content-Type-Options: nosniff\r\n"
 #ifdef WOLO_FILE_BRIDGE
-        "X-PolDrive-Files: 3\r\n"
+        "X-Obsidian-Files: 3\r\n"
 #endif
         "%s\r\n",
         status, reason, mime, length, cache_policy,
@@ -212,7 +212,7 @@ static void respond_asset(int fd, const WoloWebAsset *asset, int head, int accep
         "Connection: close\r\nCache-Control: %s\r\n"
         "X-Content-Type-Options: nosniff\r\nVary: Accept-Encoding\r\n"
 #ifdef WOLO_FILE_BRIDGE
-        "X-PolDrive-Files: 3\r\n"
+        "X-Obsidian-Files: 3\r\n"
 #endif
         "%s\r\n", asset->mime, accepts_gzip ? asset->size : asset->raw_size,
         policy, accepts_gzip ? "Content-Encoding: gzip\r\n" : "");
@@ -385,17 +385,17 @@ static void handle_client(int fd) {
         const WoloWebAsset *asset = &web_assets[i];
         if (!strcmp(lookup, asset->path)) {
             if (static_request_log_count < 96) {
-                fprintf(stderr, "[POLDRIVE WEB] Static %s %s | type=%s | bytes=%zu | gzip=%d\n",
+                fprintf(stderr, "[OBSIDIAN WEB] Static %s %s | type=%s | bytes=%zu | gzip=%d\n",
                         head ? "HEAD" : "GET", lookup, asset->mime, asset->size,
                         asset->is_gzip && accepts_gzip);
                 if (++static_request_log_count == 96)
-                    fprintf(stderr, "[POLDRIVE WEB] Static request tracing limit reached\n");
+                    fprintf(stderr, "[OBSIDIAN WEB] Static request tracing limit reached\n");
             }
             /* Cache immutable-in-this-build static files, not API responses. */
             /* Content-addressed generated pages can be cached; always
                revalidate manifest.json to discover a new build's page hashes. */
-            const int cached_pages = strncmp(lookup, "/poldrive-pages/", 16) == 0 &&
-                strcmp(lookup, "/poldrive-pages/manifest.json") != 0;
+            const int cached_pages = strncmp(lookup, "/obsidian-pages/", 16) == 0 &&
+                strcmp(lookup, "/obsidian-pages/manifest.json") != 0;
             const char *policy = strncmp(lookup, "/assets/", 8) == 0 || cached_pages ?
                 "public, max-age=86400" : "no-store";
             respond_asset(fd, asset, head, accepts_gzip, policy);
@@ -409,7 +409,7 @@ static void handle_client(int fd) {
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     if (reuse_running_server()) {
-        fprintf(stderr, "[POLDRIVE WEB] Reusing running server at %s\n", web_url);
+        fprintf(stderr, "[OBSIDIAN WEB] Reusing running server at %s\n", web_url);
 #if (defined(__PS5__) || defined(WOLO_WEB_TEST_BROWSER)) && !defined(WOLO_WEB_NO_BROWSER)
         /* Wait for helper transfer before this short-lived launcher exits. */
         launch_browser(NULL);
@@ -425,8 +425,8 @@ int main(void) {
     } else perror("open /data/wolodrive-web.log");
 #endif
     setvbuf(stderr, NULL, _IONBF, 0);
-    fprintf(stderr, "[POLDRIVE WEB] Entered main (%s); %zu embedded files\n", WOLO_SERVER_ID, web_asset_count);
-    fprintf(stderr, "[POLDRIVE WEB] Process ID: %ld\n", (long)getpid());
+    fprintf(stderr, "[OBSIDIAN WEB] Entered main (%s); %zu embedded files\n", WOLO_SERVER_ID, web_asset_count);
+    fprintf(stderr, "[OBSIDIAN WEB] Process ID: %ld\n", (long)getpid());
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, stop_server);
     signal(SIGTERM, stop_server);
@@ -453,51 +453,51 @@ int main(void) {
 #ifdef WOLO_WEB_FIXED_PORT
         /* The Media tile points to exactly this port. A random fallback port
            would silently send it to an old/wrong server. Fail clearly. */
-        fprintf(stderr, "[POLDRIVE WEB] Web-first port %d is busy. Stop the old server and retry; no random port fallback.\n",
+        fprintf(stderr, "[OBSIDIAN WEB] Web-first port %d is busy. Stop the old server and retry; no random port fallback.\n",
                 WOLO_WEB_PORT);
 #else
-        fprintf(stderr, "[POLDRIVE WEB] Port %d occupied; requesting a free port\n", WOLO_WEB_PORT);
+        fprintf(stderr, "[OBSIDIAN WEB] Port %d occupied; requesting a free port\n", WOLO_WEB_PORT);
         address.sin_port = 0;
         bound = bind(listener, (struct sockaddr *)&address, sizeof(address));
 #endif
     }
     if (bound < 0 || listen(listener, 16)) {
-        perror("[POLDRIVE WEB] bind/listen");
+        perror("[OBSIDIAN WEB] bind/listen");
         close(listener);
         return 1;
     }
     socklen_t address_size = sizeof(address);
     if (getsockname(listener, (struct sockaddr *)&address, &address_size)) {
-        perror("[POLDRIVE WEB] getsockname");
+        perror("[OBSIDIAN WEB] getsockname");
         close(listener);
         return 1;
     }
 #ifdef WOLO_FILE_BRIDGE
     if (files_bridge_init((unsigned)ntohs(address.sin_port)))
-        fprintf(stderr, "[POLDRIVE FILES] Session randomness unavailable; bridge disabled\n");
-    else fprintf(stderr, "[POLDRIVE FILES] Filesystem bridge ready; code-free LAN access enabled; initial path /data\n");
+        fprintf(stderr, "[OBSIDIAN FILES] Session randomness unavailable; bridge disabled\n");
+    else fprintf(stderr, "[OBSIDIAN FILES] Filesystem bridge ready; code-free LAN access enabled; initial path /data\n");
 #endif
     snprintf(web_url, sizeof(web_url), "http://127.0.0.1:%u/" WOLO_WEB_SUFFIX, (unsigned)ntohs(address.sin_port));
     FILE *record = fopen(ENDPOINT_RECORD, "w");
     if (record) {
         fprintf(record, "%u %ld\n", (unsigned)ntohs(address.sin_port), (long)getpid());
         fclose(record);
-    } else perror("[POLDRIVE WEB] Save endpoint record");
-    fprintf(stderr, "[POLDRIVE WEB] Listening at %s\n", web_url);
-    fprintf(stderr, "[POLDRIVE WEB] Listener descriptor: %d\n", listener);
+    } else perror("[OBSIDIAN WEB] Save endpoint record");
+    fprintf(stderr, "[OBSIDIAN WEB] Listening at %s\n", web_url);
+    fprintf(stderr, "[OBSIDIAN WEB] Listener descriptor: %d\n", listener);
 #ifdef WOLO_WEB_LOCAL_ONLY
-    fprintf(stderr, "[POLDRIVE WEB] Loopback-only: http://127.0.0.1:%u/ (no LAN file access)\n",
+    fprintf(stderr, "[OBSIDIAN WEB] Loopback-only: http://127.0.0.1:%u/ (no LAN file access)\n",
             (unsigned)ntohs(address.sin_port));
 #else
-    fprintf(stderr, "[POLDRIVE WEB] LAN catalogue: http://<PS5-IP>:%u/ (Files accessible to trusted LAN clients; package installation unavailable)\n",
+    fprintf(stderr, "[OBSIDIAN WEB] LAN catalogue: http://<PS5-IP>:%u/ (Files accessible to trusted LAN clients; package installation unavailable)\n",
             (unsigned)ntohs(address.sin_port));
 #endif
 #ifdef WOLO_WEB_AUTOSTART
-    fprintf(stderr, "[POLDRIVE WEB] Web-first background service ready; browser launch disabled.\n");
+    fprintf(stderr, "[OBSIDIAN WEB] Web-first background service ready; browser launch disabled.\n");
 #else
     request_browser();
 #endif
-    fprintf(stderr, "[POLDRIVE WEB] HTTP request loop active\n");
+    fprintf(stderr, "[OBSIDIAN WEB] HTTP request loop active\n");
     unsigned consecutive_accept_errors = 0;
     while (!stopping) {
         struct pollfd readable = {listener, POLLIN, 0};
@@ -510,7 +510,7 @@ int main(void) {
         }
         if (!ready) continue;
         if (!(readable.revents & POLLIN)) {
-            fprintf(stderr, "[POLDRIVE WEB] Listener poll error: 0x%x\n", readable.revents);
+            fprintf(stderr, "[OBSIDIAN WEB] Listener poll error: 0x%x\n", readable.revents);
             close(listener);
             return 1;
         }
@@ -536,10 +536,10 @@ int main(void) {
                lines. A persistent error cannot be repaired by retrying
                accept() on the same descriptor forever. */
             if (++consecutive_accept_errors == 1 || consecutive_accept_errors == 4)
-                fprintf(stderr, "[POLDRIVE WEB] accept failed: errno=0x%x (%d), attempt=%u\n",
+                fprintf(stderr, "[OBSIDIAN WEB] accept failed: errno=0x%x (%d), attempt=%u\n",
                         (unsigned)error, error, consecutive_accept_errors);
             if (consecutive_accept_errors >= 8) {
-                fprintf(stderr, "[POLDRIVE WEB] Fatal: listener repeatedly failed; stopping instead of spinning. Restart the payload.\n");
+                fprintf(stderr, "[OBSIDIAN WEB] Fatal: listener repeatedly failed; stopping instead of spinning. Restart the payload.\n");
                 close(listener);
                 return 1;
             }
@@ -552,6 +552,6 @@ int main(void) {
         close(client);
     }
     close(listener);
-    fprintf(stderr, "[POLDRIVE WEB] Stopped\n");
+    fprintf(stderr, "[OBSIDIAN WEB] Stopped\n");
     return 0;
 }

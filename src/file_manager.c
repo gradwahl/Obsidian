@@ -102,7 +102,7 @@ int fm_write(const char *root, const char *rel, const unsigned char *bytes, size
     if (!S_ISREG(original.st_mode)) return fail(EINVAL);
     char temporary[FM_PATH];
     strcpy(temporary,path); char *slash=strrchr(temporary,'/');
-    if (!slash || snprintf(slash+1,FM_PATH-(size_t)(slash+1-temporary),".poldrive-save-XXXXXX") >=
+    if (!slash || snprintf(slash+1,FM_PATH-(size_t)(slash+1-temporary),".obsidian-save-XXXXXX") >=
         (int)(FM_PATH-(size_t)(slash+1-temporary))) return fail(ENAMETOOLONG);
     int fd=mkstemp(temporary);
     if (fd<0) return -1;

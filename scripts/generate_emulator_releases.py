@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate pinned emulator release links from the public PolDrive GitHub releases.
+"""Generate pinned emulator release links from the public Obsidian GitHub releases.
 
 Standalone systems use their existing dedicated release files. RetroArch
 systems listed by the project owner use the single RetroArch v4 release asset.
@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REPO = "PolDrive/PolDrive-Emulators"
+REPO = "gradwahl/Obsidian-Emulators"
 API = "https://api.github.com/repos/" + REPO + "/releases?per_page=100"
 HUB = "https://github.com/" + REPO + "/releases"
 # A release is not proof of an emulator's working status on specific PS5 firmware.
@@ -28,7 +28,7 @@ TARGETS = {
     "nintendo-switch": ("v5", "PS5-ECAM-v5.0.0.zip"),
 }
 
-# User-specified systems. Exact current PolDrive console titles are used so
+# User-specified systems. Exact current Obsidian console titles are used so
 # systems without catalog platform IDs (SG-1000, Neo Geo, etc.) work too.
 # Repeated Game Boy Color / Game Boy Advance in the request are deduplicated.
 RETROARCH_SYSTEMS = (
@@ -48,7 +48,7 @@ RETROARCH_ASSET = "PS5_RetroArch-v4.0.0-beta-4.zip"
 
 
 def main():
-    request = urllib.request.Request(API, headers={"User-Agent": "PolDrive-Release-Index/1.0",
+    request = urllib.request.Request(API, headers={"User-Agent": "Obsidian-Release-Index/1.0",
                                                     "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(request, timeout=30) as res:
         releases = json.load(res)
@@ -99,7 +99,7 @@ def main():
     (ROOT / "src/emulatorReleases.json").write_text(
         json.dumps(output, indent=2, ensure_ascii=False)+"\n", encoding="utf8", newline="\n")
     header = ["/* Generated from public GitHub Releases by scripts/generate_emulator_releases.py */",
-              "#ifndef POLDRIVE_EMULATOR_RELEASES_H", "#define POLDRIVE_EMULATOR_RELEASES_H",
+              "#ifndef OBSIDIAN_EMULATOR_RELEASES_H", "#define OBSIDIAN_EMULATOR_RELEASES_H",
               '#define EMULATOR_RELEASES_URL "'+HUB+'"',
               "typedef struct { const char *platform, *label, *asset_url, *filename, *sha256; unsigned long long size; } EmulatorReleaseAsset;",
               "static const EmulatorReleaseAsset EMULATOR_RELEASE_ASSETS[] = {"]

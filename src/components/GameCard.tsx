@@ -20,7 +20,7 @@ export function CoverArt({ game: summary, className = '' }: { game: GameItem; cl
       <div className="tv-rating-badge">★ {game.rating_score.toFixed(1)}</div>
     ) : null}
     <div className="tv-cover-image">
-      {!source && <div className="tv-cover-placeholder"><strong>PolDrive</strong><span>{game.title}</span></div>}
+      {!source && <div className="tv-cover-placeholder"><strong>Obsidian</strong><span>{game.title}</span></div>}
       {source && <MemoryImage src={source} alt={game.title}
         onError={() => setFailedSources(values => [...values, source])} />}
     </div>

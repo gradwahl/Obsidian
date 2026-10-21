@@ -1,6 +1,6 @@
-# Streaming artwork from PolDrive-archive
+# Streaming artwork from Obsidian-archive
 
-The now-public PolDrive-archive repository serves PolDrive game covers, company
+The now-public Obsidian-archive repository serves Obsidian game covers, company
 logos, console artwork and emulator logos **on demand**. No binary artwork or
 GitHub credentials are embedded in the app.
 
@@ -13,7 +13,7 @@ Anonymous HTTP requests and a headless Chrome decode test succeeded for:
 - assets/covers/Sony/PlayStation%205/63%20Days.art (JPEG cover)
 
 Archive paths are served at:
-https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/
+https://raw.githubusercontent.com/gradwahl/Obsidian-archive/main/
 
 The archive contains 9 company images, 53 console images and 56 console and
 emulator logos. The Games/Roms and Emulators screens in React and SDL2 now use
@@ -41,7 +41,7 @@ these URLs instead of looking for local library image files.
 - Remote company, emulator, and console art does NOT go into a persistent disk
   cache. Local user artwork overrides remain supported.
 - React library images use lazy loading and decoding. Browsers may still use
-  their own normal HTTP cache; PolDrive never fetches the entire artwork repo.
+  their own normal HTTP cache; Obsidian never fetches the entire artwork repo.
 - Previously created cache files are not automatically removed. Old files under
   /data/homebrew/wolodrive/covers can be cleared after verifying they are
   unneeded. Do not remove custom /data/homebrew/wolodrive/artwork overrides.
@@ -50,7 +50,7 @@ these URLs instead of looking for local library image files.
 
 ## Regenerate metadata after archive changes
 
-From the PolDrive repository root, run in this order:
+From the Obsidian repository root, run in this order:
 
     python scripts/generate_archive_artwork.py
     python scripts/generate_source_cover_matches.py

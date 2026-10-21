@@ -13,7 +13,7 @@ export class ConsoleFileBridge {
   private async request(query: string, fields?: Record<string, string>) {
     const response = await fetch(ENDPOINT + query, {
       method: fields ? 'POST' : 'GET', credentials: 'omit', cache: 'no-store', redirect: 'error',
-      headers: { 'X-PolDrive-Bridge': '1', 'X-PolDrive-Token': this.token,
+      headers: { 'X-Obsidian-Bridge': '1', 'X-Obsidian-Token': this.token,
         ...(fields ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
       body: fields ? new URLSearchParams(fields).toString() : undefined,
     });
@@ -40,14 +40,14 @@ export class ConsoleFileBridge {
     if (info?.session !== this || info.kind !== 'file') throw new Error('Select a console file.');
     const response = await fetch(ENDPOINT + '/content?path=' + encodeURIComponent(info.path), {
       method: head ? 'HEAD' : 'GET', credentials: 'omit', cache: 'no-store', redirect: 'error',
-      headers: {'X-PolDrive-Bridge':'1','X-PolDrive-Token':this.token},
+      headers: {'X-Obsidian-Bridge':'1','X-Obsidian-Token':this.token},
     });
     if (!response.ok) {
       const result = head ? null : await response.json();
       throw new Error(result?.error || 'Cannot read this console file (8 MiB limit).');
     }
-    const revision = response.headers.get('X-PolDrive-Revision');
-    if (!revision || !/^[a-f0-9-]+$/.test(revision)) throw new Error('Missing file revision. Reload PolDrive.');
+    const revision = response.headers.get('X-Obsidian-Revision');
+    if (!revision || !/^[a-f0-9-]+$/.test(revision)) throw new Error('Missing file revision. Reload Obsidian.');
     return {bytes: head ? new ArrayBuffer(0) : await response.arrayBuffer(), revision};
   }
   async writeFile(handle: EntryHandle, bytes: Uint8Array, revision: string) {
@@ -56,8 +56,8 @@ export class ConsoleFileBridge {
     if (bytes.byteLength > 8 * 1024 * 1024) throw new Error('File transfer limit is 8 MiB.');
     const response = await fetch(ENDPOINT + '/content?path=' + encodeURIComponent(info.path), {
       method:'POST', credentials:'omit',cache:'no-store',redirect:'error',
-      headers:{'X-PolDrive-Bridge':'1','X-PolDrive-Token':this.token,
-        'X-PolDrive-Revision':revision,'Content-Type':'application/octet-stream'},
+      headers:{'X-Obsidian-Bridge':'1','X-Obsidian-Token':this.token,
+        'X-Obsidian-Revision':revision,'Content-Type':'application/octet-stream'},
       body:new Blob([bytes as Uint8Array<ArrayBuffer>]),
     });
     const result = await response.json();
@@ -131,11 +131,11 @@ export async function connectConsoleFiles(): Promise<ConsoleFileBridge | null> {
     if (typeof window === 'undefined' ||
         !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|127\.(?!0\.0\.1$))/.test(window.location.hostname)) return null;
     const probe = await fetch('/', {method: 'HEAD', credentials: 'omit', cache: 'no-store', redirect: 'error'});
-    if (probe.headers.get('X-PolDrive-Files') !== '3') return null;
+    if (probe.headers.get('X-Obsidian-Files') !== '3') return null;
   }
   const response = await fetch(ENDPOINT + '/session', {
     method: 'GET', credentials: 'omit', cache: 'no-store', redirect: 'error',
-    headers: {'X-PolDrive-Bridge': '1'},
+    headers: {'X-Obsidian-Bridge': '1'},
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Console file bridge is unavailable. Relaunch the updated payload.');

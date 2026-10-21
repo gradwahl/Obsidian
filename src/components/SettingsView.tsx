@@ -312,7 +312,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </button>
         </div>
 
-        {/* Right Column: Glass Info Card "PolDrive System" (5 Cols) */}
+        {/* Right Column: Glass Info Card "Obsidian System" (5 Cols) */}
         <div className="lg:col-span-5">
           <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/12 rounded-[18px] p-6 shadow-xl relative overflow-hidden">
             {/* Ambient Background Glow */}
@@ -325,7 +325,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   P
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-white tracking-tight">PolDrive System</h3>
+                  <h3 className="text-base font-black text-white tracking-tight">Obsidian System</h3>
                   <div className="text-xs text-[#a0a0b2] font-mono">{t(language, 'TXT_SYSTEM_STATUS')}</div>
                 </div>
               </div>

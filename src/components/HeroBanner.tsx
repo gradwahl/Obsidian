@@ -87,8 +87,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         onError={(failed) => setFailedSources((values) => values.includes(failed) ? values : [...values, failed])} />
       <div className="tv-hero-shade" />
       <div className="tv-wordmark">
-        <strong>P</strong>
-        <span>olDrive</span>
+        <strong>O</strong>
+        <span>bsidian</span>
       </div>
       <h1 key={game?.id_code || heading} className="tv-hero-info-appear">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
       {game && (

@@ -17,7 +17,7 @@ static void render_ubiquity_game_details(WolodriveApp *app) {
     }
     fill_vertical_gradient(r, 0, 675, SCREEN_WIDTH, 405,
                            4, 5, 9, 0, 4, 5, 9, 255, 48);
-    draw_text(app, app->font_row_title, "PolDrive",
+    draw_text(app, app->font_row_title, "Obsidian",
               SCREEN_WIDTH - 255, 45, muted, 210);
     draw_text(app, app->font_small, "X", 48, 47, white, 0);
 
@@ -34,7 +34,7 @@ static void render_ubiquity_game_details(WolodriveApp *app) {
         snprintf(year, sizeof(year), "%04u",
                  (unsigned)((item->catalog_added_at / 10000000000ULL) % 10000ULL));
     snprintf(metadata, sizeof(metadata), "%s   %s%s%s   %s",
-             item->source_name[0] ? item->source_name : "PolDrive",
+             item->source_name[0] ? item->source_name : "Obsidian",
              year, year[0] ? "   |" : "", year[0] ? "   " : "",
              item->platform[0] ? item->platform :
                  (strncmp(item->id_code, "PPSA", 4) == 0 ? "PS5" : "PS4"));

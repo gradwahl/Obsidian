@@ -1,5 +1,5 @@
-#ifndef POLDRIVE_WEBAPP_LAYOUT_H
-#define POLDRIVE_WEBAPP_LAYOUT_H
+#ifndef OBSIDIAN_WEBAPP_LAYOUT_H
+#define OBSIDIAN_WEBAPP_LAYOUT_H
 
 /* Full app-mode titles have a system_ex launch scaffold as well as their user
  * metadata. Never replace an unowned system title or uninstall an application. */
@@ -14,8 +14,8 @@
 #endif
 #define WEBAPP_DIR WOLO_SYSTEM_APP_ROOT "/" TITLE_ID
 #define WEBAPP_SYS WEBAPP_DIR "/sce_sys"
-#define WEBAPP_OWNER WEBAPP_DIR "/poldrive-webapp.owner"
-static const char webapp_owner[] = "poldrive-webapp-layout-v2\n";
+#define WEBAPP_OWNER WEBAPP_DIR "/obsidian-webapp.owner"
+static const char webapp_owner[] = "obsidian-webapp-layout-v2\n";
 
 #if defined(__PS5__) && !defined(WOLO_WEBAPP_MOUNT_TEST)
 #include <sys/mount.h>
@@ -139,7 +139,7 @@ static int webapp_only_expected(const char *path, int system_dir) {
         const char *name = entry->d_name;
         if (!strcmp(name, ".") || !strcmp(name, "..")) continue;
         if (system_dir ? strcmp(name, "param.json") :
-            (strcmp(name, "eboot.bin") && strcmp(name, "sce_sys") && strcmp(name, "poldrive-webapp.owner"))) {
+            (strcmp(name, "eboot.bin") && strcmp(name, "sce_sys") && strcmp(name, "obsidian-webapp.owner"))) {
             failed = 1; break;
         }
         errno = 0;

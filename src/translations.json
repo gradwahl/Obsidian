@@ -308,15 +308,15 @@
     "ru": "Загрузки и установки"
   },
   "TXT_SOURCE": {
-    "en": "POLDRIVE STORE   •   SOURCE: %s",
-    "pl": "SKLEP POLDRIVE   •   ŹRÓDŁO: %s",
-    "es": "TIENDA POLDRIVE   •   FUENTE: %s",
-    "fr": "BOUTIQUE POLDRIVE   •   SOURCE : %s",
-    "nl": "POLDRIVE-WINKEL   •   BRON: %s",
-    "de": "POLDRIVE-SHOP   •   QUELLE: %s",
-    "it": "NEGOZIO POLDRIVE   •   FONTE: %s",
-    "zh": "POLDRIVE 商店   •   来源：%s",
-    "ru": "МАГАЗИН POLDRIVE   •   ИСТОЧНИК: %s"
+    "en": "OBSIDIAN STORE   •   SOURCE: %s",
+    "pl": "SKLEP OBSIDIAN   •   ŹRÓDŁO: %s",
+    "es": "TIENDA OBSIDIAN   •   FUENTE: %s",
+    "fr": "BOUTIQUE OBSIDIAN   •   SOURCE : %s",
+    "nl": "OBSIDIAN-WINKEL   •   BRON: %s",
+    "de": "OBSIDIAN-SHOP   •   QUELLE: %s",
+    "it": "NEGOZIO OBSIDIAN   •   FONTE: %s",
+    "zh": "OBSIDIAN 商店   •   来源：%s",
+    "ru": "МАГАЗИН OBSIDIAN   •   ИСТОЧНИК: %s"
   },
   "TXT_SIZE": {
     "en": "SIZE: %.1f GB",
@@ -748,15 +748,15 @@
     "ru": "Полный установщик .pkg (PS4 FPKG) с разблокированной частотой кадров на PlayStation 5."
   },
   "TXT_DESC_GHOST_OF_TSUSHIMA": {
-    "en": ".pkg version ready for direct installation using Package Installer or a PolDrive download.",
-    "pl": "Wersja .pkg gotowa do bezpośredniej instalacji przez Package Installer lub strumieniowego pobrania PolDrive.",
-    "es": "Versión .pkg lista para instalar con Package Installer o mediante descarga de PolDrive.",
-    "fr": "Version .pkg prête à installer avec Package Installer ou par téléchargement PolDrive.",
-    "nl": ".pkg-versie klaar voor installatie met Package Installer of een PolDrive-download.",
-    "de": ".pkg-Version zur Installation mit Package Installer oder über einen PolDrive-Download.",
-    "it": "Versione .pkg da installare con Package Installer o tramite download PolDrive.",
-    "zh": ".pkg 版本，可通过 Package Installer 或 PolDrive 下载后直接安装。",
-    "ru": "Версия .pkg для установки через Package Installer или загрузку PolDrive."
+    "en": ".pkg version ready for direct installation using Package Installer or a Obsidian download.",
+    "pl": "Wersja .pkg gotowa do bezpośredniej instalacji przez Package Installer lub strumieniowego pobrania Obsidian.",
+    "es": "Versión .pkg lista para instalar con Package Installer o mediante descarga de Obsidian.",
+    "fr": "Version .pkg prête à installer avec Package Installer ou par téléchargement Obsidian.",
+    "nl": ".pkg-versie klaar voor installatie met Package Installer of een Obsidian-download.",
+    "de": ".pkg-Version zur Installation mit Package Installer oder über einen Obsidian-Download.",
+    "it": "Versione .pkg da installare con Package Installer o tramite download Obsidian.",
+    "zh": ".pkg 版本，可通过 Package Installer 或 Obsidian 下载后直接安装。",
+    "ru": "Версия .pkg для установки через Package Installer или загрузку Obsidian."
   },
   "TXT_DESC_DRIVECLUB": {
     "en": "Classic PS4 FPKG (.pkg) edition including all season passes and an unlocked frame rate.",
@@ -781,15 +781,15 @@
     "ru": "Скачивание и установка пакетов в этой версии пока недоступны."
   },
   "TXT_WINDOW_TITLE": {
-    "en": "PolDrive — PS5 Homebrew Store & Katalogi",
-    "pl": "PolDrive — Sklep homebrew PS5 i Katalogi",
-    "es": "PolDrive — Tienda homebrew PS5 y Katalogi",
-    "fr": "PolDrive — Boutique homebrew PS5 et Katalogi",
-    "nl": "PolDrive — PS5-homebrewwinkel en Katalogi",
-    "de": "PolDrive — PS5-Homebrew-Shop und Katalogi",
-    "it": "PolDrive — Negozio homebrew PS5 e Katalogi",
-    "zh": "PolDrive — PS5 自制软件商店与 Katalogi",
-    "ru": "PolDrive — Магазин homebrew PS5 и Katalogi"
+    "en": "Obsidian — PS5 Homebrew Store & Katalogi",
+    "pl": "Obsidian — Sklep homebrew PS5 i Katalogi",
+    "es": "Obsidian — Tienda homebrew PS5 y Katalogi",
+    "fr": "Obsidian — Boutique homebrew PS5 et Katalogi",
+    "nl": "Obsidian — PS5-homebrewwinkel en Katalogi",
+    "de": "Obsidian — PS5-Homebrew-Shop und Katalogi",
+    "it": "Obsidian — Negozio homebrew PS5 e Katalogi",
+    "zh": "Obsidian — PS5 自制软件商店与 Katalogi",
+    "ru": "Obsidian — Магазин homebrew PS5 и Katalogi"
   },
   "TXT_FORMAT_FOLDER": {
     "en": ".ffpkg (Folder package)",
@@ -1573,15 +1573,15 @@
     "ru": "Заменить выбранный файл загруженным файлом?"
   },
   "TXT_DOWNLOADS_HELP": {
-    "en": "Manage PolDrive game downloading, unpacking, and installation tasks",
-    "pl": "Zarządzanie zadaniami pobierania, rozpakowywania i instalacji gier PolDrive",
-    "es": "Gestionar tareas de descarga, desempaquetado e instalación de juegos PolDrive",
-    "fr": "Gérer les tâches de téléchargement, dépaquetage et installation de jeux PolDrive",
-    "nl": "Beheer PolDrive game-download, uitpak- en installatietaken",
-    "de": "Verwalten Sie PolDrive-Spieledownloads, Entpack- und Installationsaufgaben",
-    "it": "Gestisci le attività di download, estrazione e installazione dei giochi PolDrive",
-    "zh": "管理 PolDrive 游戏下载、解包和安装任务",
-    "ru": "Управление задачами загрузки, распаковки и установки игр PolDrive"
+    "en": "Manage Obsidian game downloading, unpacking, and installation tasks",
+    "pl": "Zarządzanie zadaniami pobierania, rozpakowywania i instalacji gier Obsidian",
+    "es": "Gestionar tareas de descarga, desempaquetado e instalación de juegos Obsidian",
+    "fr": "Gérer les tâches de téléchargement, dépaquetage et installation de jeux Obsidian",
+    "nl": "Beheer Obsidian game-download, uitpak- en installatietaken",
+    "de": "Verwalten Sie Obsidian-Spieledownloads, Entpack- und Installationsaufgaben",
+    "it": "Gestisci le attività di download, estrazione e installazione dei giochi Obsidian",
+    "zh": "管理 Obsidian 游戏下载、解包和安装任务",
+    "ru": "Управление задачами загрузки, распаковки и установки игр Obsidian"
   },
   "TXT_STATUS_ACTIVE": {
     "en": "Active",
@@ -1837,26 +1837,26 @@
     "ru": "Включено"
   },
   "TXT_POLDERIVE_VER": {
-    "en": "PolDrive Version",
-    "pl": "Wersja PolDrive",
-    "es": "Versión de PolDrive",
-    "fr": "Version PolDrive",
-    "nl": "PolDrive-versie",
-    "de": "PolDrive-Version",
-    "it": "Versione PolDrive",
-    "zh": "PolDrive 版本",
-    "ru": "Версия PolDrive"
+    "en": "Obsidian Version",
+    "pl": "Wersja Obsidian",
+    "es": "Versión de Obsidian",
+    "fr": "Version Obsidian",
+    "nl": "Obsidian-versie",
+    "de": "Obsidian-Version",
+    "it": "Versione Obsidian",
+    "zh": "Obsidian 版本",
+    "ru": "Версия Obsidian"
   },
   "TXT_POLDERIVE_VER_SUB": {
-    "en": "PolDrive software version",
-    "pl": "Wersja oprogramowania PolDrive",
-    "es": "Versión del software PolDrive",
-    "fr": "Version du logiciel PolDrive",
-    "nl": "PolDrive softwareversie",
-    "de": "PolDrive Softwareversion",
-    "it": "Versione software PolDrive",
-    "zh": "PolDrive 软件版本",
-    "ru": "Версия ПО PolDrive"
+    "en": "Obsidian software version",
+    "pl": "Wersja oprogramowania Obsidian",
+    "es": "Versión del software Obsidian",
+    "fr": "Version du logiciel Obsidian",
+    "nl": "Obsidian softwareversie",
+    "de": "Obsidian Softwareversion",
+    "it": "Versione software Obsidian",
+    "zh": "Obsidian 软件版本",
+    "ru": "Версия ПО Obsidian"
   },
   "TXT_STATUS_CURRENT": {
     "en": "2.0.0-PRO · Current",
@@ -2013,15 +2013,15 @@
     "ru": "v1.4.2 [Активен]"
   },
   "TXT_SYS_FOOTER": {
-    "en": "PolDrive is an integrated homebrew catalog client for PlayStation 5 and Linux desktop. All settings changes are saved automatically.",
-    "pl": "PolDrive to zintegrowany klient katalogów homebrew i gier dla konsoli PlayStation 5 oraz systemu Linux desktop. Wszelkie zmiany parametrów są automatycznie zapisywane.",
-    "es": "PolDrive es un cliente integrado de catálogos de homebrew para PlayStation 5 y Linux desktop. Los cambios se guardan automáticamente.",
-    "fr": "PolDrive est un client de catalogue homebrew intégré pour PlayStation 5 et Linux desktop. Toutes les modifications sont enregistrées automatiquement.",
-    "nl": "PolDrive is een geïntegreerde homebrew-catalogusclient voor PlayStation 5 en Linux desktop. Alle instellingen worden automatisch opgeslagen.",
-    "de": "PolDrive ist ein integrierter Homebrew-Katalog-Client für PlayStation 5 und Linux Desktop. Alle Änderungen werden automatisch gespeichert.",
-    "it": "PolDrive è un client di catalogo homebrew integrato per PlayStation 5 e Linux desktop. Tutte le modifiche vengono salvate automaticamente.",
-    "zh": "PolDrive 是面向 PlayStation 5 和 Linux 桌面的集成自制程序目录客户端。所有设置更改都会自动保存。",
-    "ru": "PolDrive — это интегрированный клиент каталога homebrew для PlayStation 5 и Linux desktop. Все изменения параметров сохраняются автоматически."
+    "en": "Obsidian is an integrated homebrew catalog client for PlayStation 5 and Linux desktop. All settings changes are saved automatically.",
+    "pl": "Obsidian to zintegrowany klient katalogów homebrew i gier dla konsoli PlayStation 5 oraz systemu Linux desktop. Wszelkie zmiany parametrów są automatycznie zapisywane.",
+    "es": "Obsidian es un cliente integrado de catálogos de homebrew para PlayStation 5 y Linux desktop. Los cambios se guardan automáticamente.",
+    "fr": "Obsidian est un client de catalogue homebrew intégré pour PlayStation 5 et Linux desktop. Toutes les modifications sont enregistrées automatiquement.",
+    "nl": "Obsidian is een geïntegreerde homebrew-catalogusclient voor PlayStation 5 en Linux desktop. Alle instellingen worden automatisch opgeslagen.",
+    "de": "Obsidian ist ein integrierter Homebrew-Katalog-Client für PlayStation 5 und Linux Desktop. Alle Änderungen werden automatisch gespeichert.",
+    "it": "Obsidian è un client di catalogo homebrew integrato per PlayStation 5 e Linux desktop. Tutte le modifiche vengono salvate automaticamente.",
+    "zh": "Obsidian 是面向 PlayStation 5 和 Linux 桌面的集成自制程序目录客户端。所有设置更改都会自动保存。",
+    "ru": "Obsidian — это интегрированный клиент каталога homebrew для PlayStation 5 и Linux desktop. Все изменения параметров сохраняются автоматически."
   },
   "TXT_PAUSE": {
     "en": "Pause",

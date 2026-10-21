@@ -1,4 +1,4 @@
-# (u)biquity visual adaptation for PolDrive
+# (u)biquity visual adaptation for Obsidian
 
 Original theme: **(u)biquity v2.0.4**, by **Red Schism** (Playnite Fullscreen).
 Original project: https://github.com/RedSchism/ubiquity
@@ -18,12 +18,12 @@ Switch back with Settings -> Appearance / Wygląd -> Netflix / Glass.
 
 Theme selection persists independently of format/source filters:
 - Native: `filters.theme` stored beside the existing `filters` settings file.
-- Web: `localStorage['poldrive-ui-theme']`.
+- Web: `localStorage['obsidian-ui-theme']`.
 
 Legacy installations without a theme preference default to Netflix / Glass.
 
 Visual fidelity note: Playnite's optional Extra MetaData Loader supplies transparent
-per-game logo art and additional metadata. PolDrive currently uses game titles as
+per-game logo art and additional metadata. Obsidian currently uses game titles as
 typographic fallbacks; when a game's backdrop already contains a logo it may also
 appear within the background. Matching the sample image exactly requires a separate
 logo-artwork pipeline and suitable images for each game.
@@ -33,13 +33,13 @@ logo-artwork pipeline and suitable images for each game.
 Selecting a game while (u)biquity is enabled opens the dedicated full-screen
 cinematic detail page (`UbiquityGameDetails.tsx` and `ui_ubiquity_details.h`).
 The separate Netflix/Glass detail modal remains unchanged. The primary button
-uses PolDrive's existing action handler; the secondary `...` menu exposes
+uses Obsidian's existing action handler; the secondary `...` menu exposes
 packages, DLC and screenshots. Escape/Circle closes overlays before leaving
 this page.
 
 The original theme's transparent per-game logos, real playtime, achievement
 progress, genre classifications and audio controls cannot be populated
-without corresponding catalogue/console data. PolDrive shows its available
+without corresponding catalogue/console data. Obsidian shows its available
 source, year, platform, rating, size, version and status instead.
 
 ## Reference-sized square library tiles

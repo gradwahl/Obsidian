@@ -26,7 +26,7 @@ export interface SourceLoadResult {
 // Do not import the original multi-megabyte indexes or the 6MB artwork
 // mapping in the PS5 browser: evaluating those JS modules can freeze the
 // browser thread and trigger "This page isn't responding".
-const PAGES = '/poldrive-pages/';
+const PAGES = '/obsidian-pages/';
 const YIELD_RECORDS = 96;
 const NOTIFY_RECORDS = 1536;
 

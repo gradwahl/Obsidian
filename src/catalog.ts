@@ -43,7 +43,7 @@ function computeDeterministicMetadata(item: GameItem): GameItem {
   };
 }
 
-/* Verified filename matches from PolDrive-archive; images are requested only
+/* Verified filename matches from Obsidian-archive; images are requested only
    when rendered. Existing source covers remain an automatic failure fallback. */
 const archiveImages = archiveArtUrls as Record<string, string>;
 export function withArchiveArtwork(game: GameItem): GameItem {

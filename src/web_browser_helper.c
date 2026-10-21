@@ -20,14 +20,14 @@ int main(void) {
     FILE *log = fopen("/data/wolodrive-browser.log", "w");
     int initialized = sceUserServiceInitialize(NULL);
     if (log) {
-        fprintf(log, "[POLDRIVE BROWSER] UserService initialize returned 0x%x\n", (unsigned)initialized);
-        fprintf(log, "[POLDRIVE BROWSER] Requesting %s\n", wolodrive_browser_url);
+        fprintf(log, "[OBSIDIAN BROWSER] UserService initialize returned 0x%x\n", (unsigned)initialized);
+        fprintf(log, "[OBSIDIAN BROWSER] Requesting %s\n", wolodrive_browser_url);
         fclose(log);
     }
     int result = sceSystemServiceLaunchWebBrowser(wolodrive_browser_url, NULL);
     log = fopen("/data/wolodrive-browser.log", "a");
     if (log) {
-        fprintf(log, "[POLDRIVE BROWSER] Browser API returned 0x%x\n", (unsigned)result);
+        fprintf(log, "[OBSIDIAN BROWSER] Browser API returned 0x%x\n", (unsigned)result);
         fclose(log);
     }
     if (!initialized) sceUserServiceTerminate();

@@ -108,7 +108,7 @@ def libretro_index(platform, offline=False, cache=CACHE):
     if not file.exists() or (not offline and time.time() - file.stat().st_mtime > 604800):
         if offline:
             return None
-        req = Request(directory, headers={"User-Agent": "Poldrive-Artwork/1.0"})
+        req = Request(directory, headers={"User-Agent": "Obsidian-Artwork/1.0"})
         with urlopen(req, timeout=25) as response:
             data = response.read(20 * 1024 * 1024 + 1)
         if len(data) > 20 * 1024 * 1024:

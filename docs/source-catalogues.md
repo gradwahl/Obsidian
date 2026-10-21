@@ -1,6 +1,6 @@
-# PolDrive additional source catalogues
+# Obsidian additional source catalogues
 
-PolDrive stores public **game metadata only**: titles, platform, optional
+Obsidian stores public **game metadata only**: titles, platform, optional
 version/cover, and a source-page URL. None of the indexes contain games,
 license keys, direct package-download links or credentials.
 
@@ -76,6 +76,6 @@ Importers reject unexpected/incomplete pagination and keep metadata only.
 Never replace a verified full source index with a bounded sample without
 explicitly updating its status. The source websites may change their APIs.
 
-Art assets are separate: `PolDrive-archive` contains artwork, not source
+Art assets are separate: `Obsidian-archive` contains artwork, not source
 catalogues, and anonymous access to that archive must be enabled before
 remote cover streaming works on PS5.

@@ -746,7 +746,7 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
         SDL_SetTextureAlphaMod(texture, 255);
         SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
     } else {
-        /* Elegancki, stylowy Placeholder z logo PolDrive i gradientem bazowym */
+        /* Elegancki, stylowy Placeholder z logo Obsidian i gradientem bazowym */
         fill_vertical_gradient(r, x, y, w, h,
                                it->cover_r, it->cover_g, it->cover_b, alpha,
                                (uint8_t)(it->cover_r / 3), (uint8_t)(it->cover_g / 3), (uint8_t)(it->cover_b / 3), alpha,
@@ -762,8 +762,8 @@ static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
             TTF_Font *ph_f = is_hero ? app->font_row_title : app->font_small;
             int ph_y = y + h / 2 - (is_hero ? 28 : 22);
             SDL_Color ph_red = { 229, 9, 20, (Uint8)((210 * alpha) / 255) };
-            int ph_pw = draw_text(app, ph_f, "P", x + 18, ph_y, ph_red, 0);
-            draw_text(app, ph_f, "oldrive", x + 18 + (ph_pw > 0 ? ph_pw + 1 : 14), ph_y, watermark_col, 0);
+            int ph_pw = draw_text(app, ph_f, "O", x + 18, ph_y, ph_red, 0);
+            draw_text(app, ph_f, "bsidian", x + 18 + (ph_pw > 0 ? ph_pw + 1 : 14), ph_y, watermark_col, 0);
         }
 
         draw_text(app, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
@@ -780,7 +780,7 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
 bool ui_create_renderer(WolodriveApp *app) {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #ifdef __PS5__
-    app->renderer = poldrive_create_ps5_renderer(app->window);
+    app->renderer = obsidian_create_ps5_renderer(app->window);
 #else
     Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     /* WSLg can create an accelerated renderer successfully but present only black.
@@ -791,23 +791,23 @@ bool ui_create_renderer(WolodriveApp *app) {
     }
     app->renderer = SDL_CreateRenderer(app->window, -1, flags);
     if (!app->renderer && flags != SDL_RENDERER_SOFTWARE) {
-        fprintf(stderr, "[POLDRIVE WARN] Accelerated renderer: %s; trying software\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN WARN] Accelerated renderer: %s; trying software\n", SDL_GetError());
         app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_SOFTWARE);
     }
 #endif
     if (!app->renderer) {
-        fprintf(stderr, "[POLDRIVE ERROR] SDL_CreateRenderer: %s\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] SDL_CreateRenderer: %s\n", SDL_GetError());
         return false;
     }
     if (SDL_RenderSetLogicalSize(app->renderer, SCREEN_WIDTH, SCREEN_HEIGHT) != 0) {
-        fprintf(stderr, "[POLDRIVE ERROR] SDL_RenderSetLogicalSize: %s\n", SDL_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] SDL_RenderSetLogicalSize: %s\n", SDL_GetError());
         return false;
     }
     SDL_RendererInfo info;
     app->vsync_enabled = false;
     if (SDL_GetRendererInfo(app->renderer, &info) == 0) {
         app->vsync_enabled = (info.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
-        printf("[POLDRIVE DISPLAY] Video: %s; renderer: %s\n",
+        printf("[OBSIDIAN DISPLAY] Video: %s; renderer: %s\n",
                SDL_GetCurrentVideoDriver(), info.name);
     }
     /* Also request VSync on the final renderer, including the WSL/software
@@ -815,7 +815,7 @@ bool ui_create_renderer(WolodriveApp *app) {
 #if SDL_VERSION_ATLEAST(2, 0, 18)
     if (SDL_RenderSetVSync(app->renderer, 1) == 0) app->vsync_enabled = true;
 #endif
-    printf("[POLDRIVE DISPLAY] VSync: %s; frame limit: 60 FPS\n",
+    printf("[OBSIDIAN DISPLAY] VSync: %s; frame limit: 60 FPS\n",
            app->vsync_enabled ? "enabled" : "unavailable (using frame pacing)");
     return true;
 }
@@ -842,11 +842,11 @@ bool ui_init(WolodriveApp *app) {
         if (!app->font_small) app->font_small = fallback_font;
         if (!app->font_micro) app->font_micro = fallback_font;
     } else {
-        fprintf(stderr, "[POLDRIVE ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
+        fprintf(stderr, "[OBSIDIAN ERROR] UI fonts could not be loaded: %s\n", TTF_GetError());
         return false;
     }
     if (!TTF_GlyphIsProvided(app->font_body, 0x4e2d)) {
-        fprintf(stderr, "[POLDRIVE WARN] Install Noto Sans CJK or provide assets/font_cjk.ttc for Chinese text.\n");
+        fprintf(stderr, "[OBSIDIAN WARN] Install Noto Sans CJK or provide assets/font_cjk.ttc for Chinese text.\n");
     }
 
     app->active_row = 0;
@@ -1940,8 +1940,8 @@ static void render_hero_banner(WolodriveApp *app) {
     {
         int logo_y = app->ui_theme == UI_THEME_UBIQUITY ? 46 : 100;
         int logo_x = app->ui_theme == UI_THEME_UBIQUITY ? CONTENT_X + 10 : CONTENT_X;
-        int p_w = draw_text(app, app->font_logo, "P", logo_x, logo_y, (SDL_Color){229, 9, 20, 255}, 0);
-        draw_text(app, app->font_logo, "olDrive", logo_x + (p_w > 0 ? p_w + 1 : 22), logo_y, white, 0);
+        int p_w = draw_text(app, app->font_logo, "O", logo_x, logo_y, (SDL_Color){229, 9, 20, 255}, 0);
+        draw_text(app, app->font_logo, "bsidian", logo_x + (p_w > 0 ? p_w + 1 : 22), logo_y, white, 0);
     }
     /* Two title lines fit without displacing metadata or description. */
     SDL_Rect title_clip = app->ui_theme == UI_THEME_UBIQUITY ?
@@ -2275,8 +2275,8 @@ static void render_sidebar(WolodriveApp *app) {
     int brand_y = 82;
     TTF_Font *p_font = app->font_logo ? app->font_logo : app->font_row_title;
     if (app->ui_theme != UI_THEME_UBIQUITY) {
-    draw_text(app, p_font, "P", 33, brand_y + 2, (SDL_Color){90, 0, 5, 220}, 0);
-    draw_text(app, p_font, "P", 31, brand_y, (SDL_Color){229, 9, 20, 255}, 0);
+    draw_text(app, p_font, "O", 33, brand_y + 2, (SDL_Color){90, 0, 5, 220}, 0);
+    draw_text(app, p_font, "O", 31, brand_y, (SDL_Color){229, 9, 20, 255}, 0);
     fill_rect(r, 29, brand_y + 38, 24, 3, 229, 9, 20, 255);
     fill_rect(r, 33, brand_y + 42, 16, 2, 160, 10, 18, 200);
 
@@ -2284,24 +2284,24 @@ static void render_sidebar(WolodriveApp *app) {
         Uint8 brand_alpha = (Uint8)SDL_min(255, (int)(app->sidebar_expand * 255.0f));
         if (brand_alpha > 0) {
             TTF_Font *sub_font = app->font_row_title ? app->font_row_title : app->font_body;
-            draw_text(app, sub_font, "oldrive", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
+            draw_text(app, sub_font, "bsidian", 58, brand_y + 8, (SDL_Color){245, 245, 245, brand_alpha}, 0);
         }
     }
 
     }
     if (app->ui_theme == UI_THEME_UBIQUITY) {
-        /* Edge-aligned miniature PD emblem, unfolding with the translucent rail. */
+        /* Edge-aligned miniature O emblem, unfolding with the translucent rail. */
         bool expanded = sb_w > SIDEBAR_COLLAPSED_W + 8;
         int bx = expanded ? 10 : 13, by = expanded ? 77 : 80;
         int bw = expanded ? 198 : 38, bh = expanded ? 54 : 38;
         fill_rounded_rect(r, bx, by, bw, bh, 12, 21, 18, 37, 168);
         draw_rounded_border(r, bx, by, bw, bh, 12, 1, 255, 114, 152, 138);
         if (expanded) {
-            draw_text(app, app->font_small, "PolDrive", bx + 18, by + 15,
+            draw_text(app, app->font_small, "Obsidian", bx + 18, by + 15,
                       (SDL_Color){249, 241, 247, 255}, 0);
         } else {
             draw_text(app, app->font_micro ? app->font_micro : app->font_small,
-                      "PD", bx + 8, by + 11, (SDL_Color){255, 169, 192, 255}, 0);
+                      "O", bx + 14, by + 11, (SDL_Color){255, 169, 192, 255}, 0);
         }
     }
     SDL_Rect nav_target=sidebar_target(app->active_row);
@@ -2537,8 +2537,8 @@ static void render_top_bar(WolodriveApp *app) {
     draw_single_line(app, app->font_micro, telemetry, 1225, 1041, muted, (SDL_Rect){1225, 1036, 520, 28});
 
     {
-        int fp_w = draw_text(app, app->font_small, "P", SCREEN_WIDTH - 135, 1039, red, 0);
-        draw_text(app, app->font_small, "oldrive", SCREEN_WIDTH - 135 + (fp_w > 0 ? fp_w + 1 : 14), 1039, white, 0);
+        int fp_w = draw_text(app, app->font_small, "O", SCREEN_WIDTH - 135, 1039, red, 0);
+        draw_text(app, app->font_small, "bsidian", SCREEN_WIDTH - 135 + (fp_w > 0 ? fp_w + 1 : 14), 1039, white, 0);
     }
 }
 
@@ -2607,14 +2607,14 @@ static void render_library_breadcrumb(WolodriveApp *app) {
 }
 
 /* Library company tiles, console images and emulator logos all reside in the
-   public PolDrive-archive. Use the existing asynchronous 48 MiB texture cache
+   public Obsidian-archive. Use the existing asynchronous 48 MiB texture cache
    instead of synchronous IMG_Load / writing image files to PS5 storage. */
 static bool render_library_artwork(WolodriveApp *app, const char *path, SDL_Rect bounds) {
     if (!path || !path[0] || strncmp(path, "assets/library/", 15) != 0 ||
         strstr(path, "..") || strlen(path) > 180) return false;
     char url[320];
     snprintf(url, sizeof(url),
-             "https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/%s", path);
+             "https://raw.githubusercontent.com/gradwahl/Obsidian-archive/main/%s", path);
     int width = 0, height = 0;
     bool failed = false;
     SDL_Texture *texture = artwork_get_media(app, url, 95, &width, &height, &failed);
@@ -2719,13 +2719,13 @@ static void render_ubiquity_home(WolodriveApp *app) {
                                     SCREEN_WIDTH, SCREEN_HEIGHT, true);
     }
     render_ubiquity_fades(r);
-    /* Upper-right translucent PolDrive capsule, matching the web Home header. */
+    /* Upper-right translucent Obsidian capsule, matching the web Home header. */
     {
         const int cap_w = 144, cap_h = 42, cap_x = SCREEN_WIDTH - 30 - cap_w, cap_y = 18;
         draw_rounded_glow(r, cap_x, cap_y, cap_w, cap_h, 21, 6, 8, 8, 14, 70);
         fill_rounded_rect(r, cap_x, cap_y, cap_w, cap_h, 21, 35, 40, 62, 116);
         draw_rounded_border(r, cap_x, cap_y, cap_w, cap_h, 21, 1, 255, 255, 255, 76);
-        draw_text(app, app->font_small, "PolDrive", cap_x + 18, cap_y + 10, white, 0);
+        draw_text(app, app->font_small, "Obsidian", cap_x + 18, cap_y + 10, white, 0);
     }
     char upper[sizeof(hero->title)];
     SDL_strlcpy(upper, hero->title, sizeof(upper));
@@ -2901,7 +2901,7 @@ static void render_ubiquity_home(WolodriveApp *app) {
 }
 
 /* Emulators are listed by console; specific builds come from validated
-   PolDrive GitHub release assets. Unmatched consoles link to the hub only. */
+   Obsidian GitHub release assets. Unmatched consoles link to the hub only. */
 static void render_emulator_release_screen(WolodriveApp *app) {
     SDL_Renderer *renderer = app->renderer;
     SDL_Color white={246,246,249,255}, muted={184,186,194,255};
@@ -2916,7 +2916,7 @@ static void render_emulator_release_screen(WolodriveApp *app) {
         draw_fitted_text(app,app->font_body,console->name,image,white,image,true);
     SDL_Rect name={CONTENT_X+430,176,980,100};
     draw_fitted_text(app,app->font_hero_title,console->name,name,white,name,false);
-    draw_text(app,app->font_small,"PolDrive-Emulators / GitHub Releases",
+    draw_text(app,app->font_small,"Obsidian-Emulators / GitHub Releases",
               CONTENT_X+430,300,muted,930);
     if(match) {
         draw_text(app,app->font_row_title,match->filename,CONTENT_X+430,375,white,1060);

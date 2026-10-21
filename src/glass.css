@@ -114,7 +114,7 @@ button.glass-pill:active { transform: translateY(0) scale(.98); }
   .glass-pill::before, .glass-surface::before { background: none; border: 1px solid var(--pill-border); padding: 0; }
 }
 
-/* PD-branding glass restoration: depth without hiding the selected artwork.
+/* Obsidian-branding glass restoration: depth without hiding the selected artwork.
    These are optically layered surfaces, not opaque red/black plates. */
 .tv-theme-ubiquity {
   --pill-bg-top: rgba(92, 98, 116, .28);
@@ -311,7 +311,7 @@ button.glass-pill:active { transform: translateY(0) scale(.98); }
 .ubq-logo-lockup, .ubq-logo-tail { display: inline-flex; align-items: baseline; white-space: nowrap; }
 .ubq-logo-lockup { letter-spacing: normal; text-transform: none; user-select: none; }
 .ubq-logo-tail { margin-left: -1px; font-weight: 800; letter-spacing: -.02em; }
-.ubq-logo-p, .ubq-logo-d {
+.ubq-logo-p {
   font-weight: 900;
   background: linear-gradient(135deg, #ff789d, #de315f 60%, #ad1c46);
   -webkit-background-clip: text;
@@ -328,7 +328,7 @@ button.glass-pill:active { transform: translateY(0) scale(.98); }
   .tv-theme-ubiquity .glass-pill { animation: none; transition-duration: .01ms; }
 }
 
-/* Leave the upper-right PolDrive capsule visible while notifications appear. */
+/* Leave the upper-right Obsidian capsule visible while notifications appear. */
 .tv-theme-ubiquity .tv-toast { top: 82px; }
 
 /* Full-bleed widescreen: scale the 1080px TV controls uniformly while
@@ -436,7 +436,7 @@ button.glass-pill:active { transform: translateY(0) scale(.98); }
   box-shadow: inset 0 -1px 3px rgba(0, 0, 0, .30),
     0 4px 12px rgba(0, 0, 0, .20);
 }
-/* Put the whole language stacking context above the animated PD branding.
+/* Put the whole language stacking context above the animated Obsidian branding.
    Giving only the dropdown a high z-index cannot escape its parent. */
 .tv-theme-ubiquity .tv-sidebar .tv-language { z-index: 30; }
 .tv-theme-ubiquity .tv-sidebar .ubq-pd-bubble { z-index: 3; }

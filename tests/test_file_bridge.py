@@ -20,7 +20,7 @@ spec.loader.exec_module(embed)
 class FileBridge(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp = tempfile.TemporaryDirectory(prefix='poldrive-bridge-')
+        cls.temp = tempfile.TemporaryDirectory(prefix='obsidian-bridge-')
         cls.folder = Path(cls.temp.name)
         cls.storage = cls.folder/'storage'
         (cls.storage/'data').mkdir(parents=True)
@@ -52,8 +52,8 @@ class FileBridge(unittest.TestCase):
 
     @classmethod
     def request(cls, suffix='', fields=None, headers=None, method=None):
-        default = {'X-PolDrive-Bridge':'1'}
-        if hasattr(cls, 'token'): default['X-PolDrive-Token'] = cls.token
+        default = {'X-Obsidian-Bridge':'1'}
+        if hasattr(cls, 'token'): default['X-Obsidian-Token'] = cls.token
         if fields is not None: default['Content-Type'] = 'application/x-www-form-urlencoded'
         default.update(headers or {})
         conn = http.client.HTTPConnection('127.0.0.1', cls.port, timeout=5)
@@ -92,9 +92,9 @@ class FileBridge(unittest.TestCase):
 
     def test_access_boundary(self):
         for headers in ({'Host':'attacker.invalid'}, {'Origin':'https://attacker.invalid'},
-                        {'Origin':'null'}, {'Sec-Fetch-Site':'cross-site'}, {'X-PolDrive-Bridge':''}):
+                        {'Origin':'null'}, {'Sec-Fetch-Site':'cross-site'}, {'X-Obsidian-Bridge':''}):
             self.assertEqual(self.request('/session', headers=headers)[0], 403)
-        self.assertEqual(self.request('?path=data', headers={'X-PolDrive-Token':'wrong'})[0], 403)
+        self.assertEqual(self.request('?path=data', headers={'X-Obsidian-Token':'wrong'})[0], 403)
         for method in ('PUT', 'OPTIONS', 'DELETE', 'POST'):
             status, _ = self.request('/session', method=method)
             self.assertNotEqual(status, 200)
@@ -109,7 +109,7 @@ class FileBridge(unittest.TestCase):
         if not address.startswith('127.'):
             conn = http.client.HTTPConnection(address, self.port)
             conn.request('GET','/api/wolodrive/files/session',headers={
-                'Host':f'127.0.0.1:{self.port}', 'X-PolDrive-Bridge':'1'})
+                'Host':f'127.0.0.1:{self.port}', 'X-Obsidian-Bridge':'1'})
             response = conn.getresponse(); self.assertEqual(response.status,403); response.read(); conn.close()
             self.assertEqual(self.lan_request('/session',host=address)[0],200)
 
@@ -131,7 +131,7 @@ class FileBridge(unittest.TestCase):
         body = b'action=delete&source=data%2Fmust-not-be-deleted'
         target = self.storage/'data/must-not-be-deleted'; target.write_text('keep')
         common = (f'POST /api/wolodrive/files HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n'
-                  f'X-PolDrive-Bridge: 1\r\nX-PolDrive-Token: {self.token}\r\n'
+                  f'X-Obsidian-Bridge: 1\r\nX-Obsidian-Token: {self.token}\r\n'
                   'Content-Type: application/x-www-form-urlencoded\r\n').encode()
         for framing in (b'Content-Length: -1\r\n', b'Content-Length: 999999\r\n',
                         b'Content-Length: 0\r\nContent-Length: 0\r\n',
@@ -149,7 +149,7 @@ class FileBridge(unittest.TestCase):
 
     def lan_request(self,suffix='',body=None,headers=None,method='GET',host='127.0.0.2'):
         conn=http.client.HTTPConnection(host,self.port,timeout=5)
-        conn.request(method,'/api/wolodrive/files'+suffix,body,{'X-PolDrive-Bridge':'1',**(headers or {})})
+        conn.request(method,'/api/wolodrive/files'+suffix,body,{'X-Obsidian-Bridge':'1',**(headers or {})})
         response=conn.getresponse(); data=response.read(); result=(response.status,dict(response.getheaders()),data); conn.close()
         return result
 
@@ -160,19 +160,19 @@ class FileBridge(unittest.TestCase):
         token=json.loads(data)['token']
         self.assertEqual(len(token),64)
         self.assertEqual(self.lan_request('?path=data')[0],403)
-        headers={'X-PolDrive-Token':token}
+        headers={'X-Obsidian-Token':token}
         self.assertEqual(self.lan_request('?path=data',headers=headers)[0],200)
         target=self.storage/'data/remote.ini'; target.write_bytes(b'value=1\r\n')
         status,meta,data=self.lan_request('/content?path=data%2Fremote.ini',headers=headers)
         self.assertEqual((status,data),(200,b'value=1\r\n'))
-        revision=meta['X-PolDrive-Revision']
-        write_headers={**headers,'X-PolDrive-Revision':revision,'Content-Type':'application/octet-stream'}
+        revision=meta['X-Obsidian-Revision']
+        write_headers={**headers,'X-Obsidian-Revision':revision,'Content-Type':'application/octet-stream'}
         self.assertEqual(self.lan_request('/content?path=data%2Fremote.ini',b'value=2\r\n',write_headers,'POST')[0],200)
         self.assertEqual(target.read_bytes(),b'value=2\r\n')
         self.assertEqual(self.lan_request('/content?path=data%2Fremote.ini',b'stale',write_headers,'POST')[0],409)
         self.assertEqual(target.read_bytes(),b'value=2\r\n')
         binary=bytes(range(256))*600 # Exceeds the old 32 KiB request buffer.
-        upload_headers={**write_headers,'X-PolDrive-Revision':'new'}
+        upload_headers={**write_headers,'X-Obsidian-Revision':'new'}
         self.assertEqual(self.lan_request('/content?path=data%2Fremote.bin',binary,upload_headers,'POST')[0],200)
         self.assertEqual(self.lan_request('/content?path=data%2Fremote.bin',headers=headers)[2],binary)
         self.assertEqual(self.lan_request('/content?path=data%2Fremote.bin',b'overwrite',upload_headers,'POST')[0],409)

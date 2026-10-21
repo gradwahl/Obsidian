@@ -14,7 +14,7 @@ def embed_service(source, assets, target):
         raise ValueError("Missing embedded preview build identity")
     embed(source, target, "service_payload_elf")
     with Path(target).open("a", encoding="ascii", newline="\n") as stream:
-        stream.write('#define POLDRIVE_EXPECTED_HEALTH "wolodrive-webfirst-v2-files-lan '
+        stream.write('#define OBSIDIAN_EXPECTED_HEALTH "wolodrive-webfirst-v2-files-lan '
                      + match[1] + '\\n"\n')
 
 

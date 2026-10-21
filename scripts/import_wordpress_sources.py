@@ -18,7 +18,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 PLATFORM_CONFIG = ROOT / "config/wordpress_sources.json"
-USER_AGENT = "Poldrive/2.0 public catalog metadata importer"
+USER_AGENT = "Obsidian/2.0 public catalog metadata importer"
 
 def page(url):
     """Retrieve a public API page, obeying Retry-After on temporary failures."""

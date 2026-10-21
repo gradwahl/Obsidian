@@ -55,7 +55,7 @@ can still change what a later operation addresses, as in native Files.
 
 Local bridge discovery uses the launcher's `#ps5-files` or `#native-unavailable`
 URL marker. LAN browsers visiting the root URL probe root HEAD for the payload's
-`X-PolDrive-Files: 2` response header before attempting pairing. A normal static
+`X-Obsidian-Files: 2` response header before attempting pairing. A normal static
 host has no such header; AI Studio needs no bridge and retains its permissioned
 picker/unavailable state. Use the PS5's numeric IPv4 address and actual server port.
 Existing servers without the current protocol are not reused by the new ELF.
@@ -160,7 +160,7 @@ it references `DESCRIPTION_BUTTON`, `load_library_artwork`,
 which were already removed by other working-tree changes. These unrelated tests
 were not rewritten as part of Files. The full native test gate has not passed.
 
-The unified `make ps5` now produces `build/poldrive.elf`: it dispatches the Media
+The unified `make ps5` now produces `build/obsidian.elf`: it dispatches the Media
 shortcut helper, starts the native UI, and falls back to the embedded browser on
 a reported native startup failure. See [ps5-build.md](ps5-build.md). Both interfaces
 now call the native file backend, with LAN access requiring pairing.
@@ -177,7 +177,7 @@ unavailable state. These device/host gates remain required before release.
 
 ## Console bridge verification (2026-10-21)
 
-The updated `build/poldrive.elf` includes the bridge and a freshly embedded static
+The updated `build/obsidian.elf` includes the bridge and a freshly embedded static
 preview. Local checks passed: lint, web/bridge client tests, `build:static`, the
 plain-HTTP static checker, Linux build, native catalog snapshot, native Files
 backend/input tests, and `make test-web-payload` (including real HTTP bridge tests,
@@ -264,7 +264,7 @@ operations permitted by the payload's filesystem privileges. Do not use this
 on shared/public Wi-Fi; keep the PS5 off untrusted networks. The standalone static
 AI Studio preview still has no PS5 filesystem access.
 
-Rebuild `static-preview/` and `build/poldrive.elf`, copy the new ELF to the
+Rebuild `static-preview/` and `build/obsidian.elf`, copy the new ELF to the
 console, and start it again through Payload Manager. Port assignment may change;
 read `/data/wolodrive-web.endpoint`. Rebuild/test locally and validate on device
 before relying on it.

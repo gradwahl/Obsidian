@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PolDrive / Liquid Glass Capsule States</title>
+  <title>Obsidian / Liquid Glass Capsule States</title>
   <style>
     :root{color-scheme:dark}*{box-sizing:border-box}
     body{margin:0;min-height:100vh;font:16px "Segoe UI",Arial,sans-serif;background:#08090f;color:#f5f5f5}
@@ -32,7 +32,7 @@
 </head>
 <body class="tv-theme-ubiquity">
 <main class="preview">
-<h1>Liquid glass / PolDrive</h1>
+<h1>Liquid glass / Obsidian</h1>
 <p>Same capsule geometry, typography, and base graphite-plum. Hover, focus or press any sample to compare its live response.</p>
 <div class="sheet" id="sheet"></div>
 <div class="helper">Original-size samples: 30px and 40px. The colorful background is deliberately visible through every capsule.</div>
@@ -53,7 +53,7 @@ for(const size of [30,40]){
   pill.type='button';
   pill.className='glass-pill '+(size===30?'glass-pill--sm':'glass-pill--md')+
     (state==='Hover'?' is-demo-hover':state==='Active'?' is-demo-active':state==='Pressed'?' is-demo-pressed':'');
-  pill.innerHTML=lens+'<span>Pegasus-DL / PolDrive</span>';
+  pill.innerHTML=lens+'<span>Pegasus-DL / Obsidian</span>';
   const name=document.createElement('div');name.className='sample-title';name.textContent=state;
   cell.append(name,pill);row.lastChild.append(cell);
  }

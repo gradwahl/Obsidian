@@ -96,7 +96,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
     </div>
     {isEmulatorsView && <a className="tv-emulator-all tv-emulator-library-link"
       href={EMULATOR_RELEASES_URL} target="_blank" rel="noopener noreferrer">
-      Browse PolDrive emulator releases ↗</a>}
+      Browse Obsidian emulator releases ↗</a>}
     <p className="tv-library-hint">{t(language, 'TXT_LIBRARY_NAV_HINT')}</p>
   </section>;
 };

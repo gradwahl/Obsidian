@@ -9,7 +9,7 @@ Recovery takes priority over collecting logs; do not reproduce the failure for
 diagnostics. The recovery ELF has local tests but recovery following this
 failure has not been verified on device.
 
-The ordinary `poldrive.elf` installer is confirmed working on the reporting
+The ordinary `obsidian.elf` installer is confirmed working on the reporting
 console, but its `deeplinkUri` opens a PS5 browser card with Sony's title/URL
 banner. This experiment tests registration as a web application instead.
 **Version 1 failed on the reporting PS5 with CE-105773-3 ("Can't start the
@@ -58,16 +58,16 @@ Build with the configured PS5 Payload SDK:
 make ps5-fullscreen-test
 ```
 
-1. Keep `poldrive.elf` and the generated `build/poldrive-fullscreen-restore.elf`
+1. Keep `obsidian.elf` and the generated `build/obsidian-fullscreen-restore.elf`
    available. The restore ELF is recovery-only; it is not part of normal setup.
    Copy **only**
-   `build/poldrive-fullscreen-v2.elf` to the console, for example
-   `/data/pldmgr/payloads/poldrive/poldrive-fullscreen-v2.elf`.
-2. Close the currently open PolDrive/browser window. Run the test ELF once
+   `build/obsidian-fullscreen-v2.elf` to the console, for example
+   `/data/pldmgr/payloads/obsidian/obsidian-fullscreen-v2.elf`.
+2. Close the currently open Obsidian/browser window. Run the test ELF once
    through Payload Manager with the ELF loader active. It contains the same
    quiet service and installer lifecycle; no helper ELF needs copying. It also
    creates its owned system launch scaffold, as described below.
-3. Select the existing **PolDrive** icon under **Home / Media**. The installer
+3. Select the existing **Obsidian** icon under **Home / Media**. The installer
    changes that owned tile, without creating another title or opening the UI.
 4. Check whether it fills the display without the browser title/URL banner.
    Verify the complete navigation rail, Home/cards, details/back, Search,
@@ -100,41 +100,41 @@ mount option. It verifies `/system_ex` is the expected exfatfs mount/device,
 temporarily makes it writable only if currently read-only, and restores that
 read-only state after both successful and failed file operations.
 
-Only `/system_ex/app/WOLO00001/` is written. A new `poldrive-webapp.owner` marker
+Only `/system_ex/app/WOLO00001/` is written. A new `obsidian-webapp.owner` marker
 identifies files created by this test; an existing unowned directory, symlink or
 unexpected executable is refused before changing user metadata. The system
 `eboot.bin` intentionally has zero bytes, and both metadata copies match. The
 mount/file operations require real-device verification even when the SDK links.
 
-Their examples use HTTPS entry URLs, so PolDrive's direct local HTTP URL remains
+Their examples use HTTPS entry URLs, so Obsidian's direct local HTTP URL remains
 an explicit part of this experiment. No unsupported fullscreen JS API, new
 runtime service, external redirect or renderer rewrite is introduced.
 
 The test has its own helper/service build headers and output files. It does not
-overwrite `build/poldrive.elf`. Service readiness, title ownership, configuration
+overwrite `build/obsidian.elf`. Service readiness, title ownership, configuration
 preservation and quiet installation retain the existing single-file checks.
 Its shared service/autoload paths are the same as the working installer.
 
 ## Logs and rollback
 
-- `/data/poldrive-fullscreen-install.log`: service and startup setup.
-- `/data/poldrive-fullscreen-launcher.log`: helper dispatch and confirmation.
-- `/data/poldrive-fullscreen-shortcut.log`: experimental metadata and AppInstUtil result.
+- `/data/obsidian-fullscreen-install.log`: service and startup setup.
+- `/data/obsidian-fullscreen-launcher.log`: helper dispatch and confirmation.
+- `/data/obsidian-fullscreen-shortcut.log`: experimental metadata and AppInstUtil result.
 - `/data/wolodrive-web.log`: shared quiet service and HTTP requests.
 
-To restore the working browser-card launch after **v2**, close PolDrive and run
-**`poldrive-fullscreen-restore.elf` through Payload Manager**. It removes only
+To restore the working browser-card launch after **v2**, close Obsidian and run
+**`obsidian-fullscreen-restore.elf` through Payload Manager**. It removes only
 its owned, expected system scaffold, then restores category 65536 and
 `deeplinkUri` on the same user tile. It does not uninstall the app, delete
 preferences, remove the quiet service or change autoload. It refuses cleanup
 if extra files, unowned objects or links appear in the system title directory.
-Select PolDrive under Media afterward. The existing service must still be running.
+Select Obsidian under Media afterward. The existing service must still be running.
 
-The original `poldrive.elf` can restore the **v1 metadata-only test**, but it
+The original `obsidian.elf` can restore the **v1 metadata-only test**, but it
 predates the system scaffold and cannot clean up v2's system files by itself.
 Use the new restore ELF for v2. Do not use the native-first or port-8097 rollback
-installers. Recovery logs are `/data/poldrive-fullscreen-restore.log` and
-`/data/poldrive-fullscreen-restore-launcher.log`.
+installers. Recovery logs are `/data/obsidian-fullscreen-restore.log` and
+`/data/obsidian-fullscreen-restore-launcher.log`.
 
 Local tests validate metadata, fresh/repeated installation, service reuse,
 failure paths and restoring the original metadata. They cannot verify the PS5
@@ -144,7 +144,7 @@ new host must be checked on the device. **AI Studio deployment not verified.**
 
 ## Earlier v1 local verification — 21 October 2026
 
-The SDK built `poldrive-fullscreen-test.elf` (7,124,560 bytes). Its embedded
+The SDK built `obsidian-fullscreen-test.elf` (7,124,560 bytes). Its embedded
 service/helper bytes and app-mode JSON were checked. The working installer's
 SHA256 remained `cc96d16c816596e2025553609edbe64772c12421b6f16df0693162d7753a74d2`.
 The installer suite exercises both variants through real loopback sockets;

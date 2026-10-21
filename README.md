@@ -1,6 +1,6 @@
 <div align="center">
 
-![PolDrive banner](docs/poldrive-banner.svg)
+![Obsidian banner](docs/obsidian-banner.svg)
 
 **A console-first game catalogue, built for PlayStation 5, Linux and the web.**
 
@@ -11,20 +11,20 @@ Browse games and ROM listings in a TV-style interface with cover art, search, pl
 ![Linux](https://img.shields.io/badge/Linux-SDL2-20232a?style=flat-square)
 ![PS5](https://img.shields.io/badge/PS5-Single%20ELF%20installer-20232a?style=flat-square)
 
-[What is PolDrive?](#what-is-poldrive) · [Features](#features) · [Get started](#get-started) · [Supported systems](#supported-systems) · [Documentation](#documentation)
+[What is Obsidian?](#what-is-obsidian) · [Features](#features) · [Get started](#get-started) · [Supported systems](#supported-systems) · [Documentation](#documentation)
 
 </div>
 
 > [!IMPORTANT]
-> **PolDrive browses catalogues and manages accessible files; game installation is still in development.** It does **not** yet download game packages, install PKGs, mount games or launch games. The single-ELF installer installs **PolDrive itself**, not the games listed in its catalogue.
+> **Obsidian browses catalogues and manages accessible files; game installation is still in development.** It does **not** yet download game packages, install PKGs, mount games or launch games. The single-ELF installer installs **Obsidian itself**, not the games listed in its catalogue.
 
-## What is PolDrive?
+## What is Obsidian?
 
-**PolDrive** is an in-development, controller-friendly interface for exploring game and homebrew catalogue metadata. It presents games, ROM listings, artwork and available source/package information through a dark, console-inspired UI.
+**Obsidian** is an in-development, controller-friendly interface for exploring game and homebrew catalogue metadata. It presents games, ROM listings, artwork and available source/package information through a dark, console-inspired UI.
 
 The project contains three related experiences:
 
-- **PS5 app** — one installer ELF that sets up PolDrive, configures its quiet background service and creates a dashboard icon under **Home / Media**. Installation stays closed; selecting the icon opens the app directly.
+- **PS5 app** — one installer ELF that sets up Obsidian, configures its quiet background service and creates a dashboard icon under **Home / Media**. Installation stays closed; selecting the icon opens the app directly.
 - **Native app** — the C/SDL2 PS5 implementation is the UI reference, with a Linux build for development and comparison. Native PS5 rendering remains experimental; the default installer uses the working browser UI.
 - **Web app** — a React/TypeScript preview that runs in a desktop browser or from static hosting, including AI Studio.
 
@@ -44,13 +44,13 @@ The native app and browser use related catalogue data, but **do not yet have ide
 | 🌐 | **Nine UI languages** | English, Polish, French, Dutch, German, Spanish, Italian, Simplified Chinese and Russian. |
 | 🕹️ | **Multiple input methods** | Keyboard and mouse in the web preview; controller-oriented navigation in the native interface. Input parity is still being checked. |
 | 📁 | **PS5 file manager** | Browse accessible console/USB folders and use file operations through the native filesystem bridge. The default PS5 service supports console and LAN access. |
-| 📺 | **Direct dashboard launch** | Install PolDrive from one ELF, then open its Media icon without the interim `OK` page or a second browser window. |
+| 📺 | **Direct dashboard launch** | Install Obsidian from one ELF, then open its Media icon without the interim `OK` page or a second browser window. |
 
 Bundled source snapshots load progressively as small catalogue pages. They are not a live, complete mirror of every source website; artwork and source links may require internet access. **Not implemented yet:** game-package downloads, download queues, game installation, mounting, game launching, and remote control of those actions. See [remote-install-workflow.md](docs/remote-install-workflow.md) for the outstanding work.
 
 ## Get started
 
-Choose how you want to run PolDrive.
+Choose how you want to run Obsidian.
 
 ### 1. Web preview (Windows, Linux or macOS)
 
@@ -59,8 +59,8 @@ The easiest way to explore the interface is in a browser.
 **Requirements:** [Node.js](https://nodejs.org/) 20 or newer (22 recommended) and npm.
 
 ```bash
-git clone https://github.com/PolDrive/PolDrive.git
-cd PolDrive
+git clone https://github.com/gradwahl/Obsidian.git
+cd Obsidian
 npm ci
 npm run dev
 ```
@@ -107,7 +107,7 @@ With the SDK installed and `PS5_PAYLOAD_SDK` configured, build the installer:
 make ps5
 ```
 
-The normal build produces one payload to copy: `build/poldrive.elf`. Embedded
+The normal build produces one payload to copy: `build/obsidian.elf`. Embedded
 service/helper files are generated inside `build/.internal/`; leave them there.
 
 The browser uses compact catalogue indexes, loads full metadata for visible
@@ -116,23 +116,23 @@ entries remain searchable. See [memory behavior and verification](docs/ps5-perfo
 for cache limits and image compatibility fallbacks. PS5 memory savings still
 require a device test.
 
-1. Copy **only** `build/poldrive.elf` to `/data/pldmgr/payloads/poldrive/poldrive.elf` on the console.
-2. Run it once through Payload Manager. It installs PolDrive, configures background startup and creates/repairs the **PolDrive** icon under **Home / Media**, then exits without opening the app.
-3. Select **PolDrive** under Media to open it directly. No second ELF needs copying, no manual service setup is required, and the old `OK` → close → reopen sequence is removed.
+1. Copy **only** `build/obsidian.elf` to `/data/pldmgr/payloads/obsidian/obsidian.elf` on the console.
+2. Run it once through Payload Manager. It installs Obsidian, configures background startup and creates/repairs the **Obsidian** icon under **Home / Media**, then exits without opening the app.
+3. Select **Obsidian** under Media to open it directly. No second ELF needs copying, no manual service setup is required, and the old `OK` → close → reopen sequence is removed.
 
 **Confirmed working on one PS5 setup on 21 October 2026:** the single-ELF setup and direct dashboard launch. Fresh-jailbreak autoload and full controller/native-browser parity have not been separately confirmed; firmware and loader compatibility may vary.
 
-The service listens on all IPv4 interfaces. From another device on the same LAN, open `http://<PS5-IP>:8098/` (for example, `http://192.168.0.137:8098/`). The Media tile still uses the console loopback URL. Files uses the same native bridge with existing same-origin/session checks; LAN clients can use it too, so use a trusted LAN. To upgrade from the loopback-only build, stop the old service before running the new installer; closing the app tile alone does not stop it. After each jailbreak, start Payload Manager so its autoload sequence starts the service. Autoload does not run on an unjailbroken PS5 boot. Existing entries, their ordering/delays and unrelated settings are preserved; enabling autoload also enables the existing sequence. Original startup files are backed up with `.poldrive-backup` suffixes before editing.
+The service listens on all IPv4 interfaces. From another device on the same LAN, open `http://<PS5-IP>:8098/` (for example, `http://192.168.0.137:8098/`). The Media tile still uses the console loopback URL. Files uses the same native bridge with existing same-origin/session checks; LAN clients can use it too, so use a trusted LAN. To upgrade from the loopback-only build, stop the old service before running the new installer; closing the app tile alone does not stop it. After each jailbreak, start Payload Manager so its autoload sequence starts the service. Autoload does not run on an unjailbroken PS5 boot. Existing entries, their ordering/delays and unrelated settings are preserved; enabling autoload also enables the existing sequence. Original startup files are backed up with `.obsidian-backup` suffixes before editing.
 
-An ELF loader is required during installation. The installer checks the exact service/build before changing the Media icon; failure details are in `/data/poldrive-install.log`, `/data/poldrive-launcher.log` and `/data/wolodrive-shortcut.log`. The service writes `/data/wolodrive-web.log`. [Setup, verification and rollback](docs/ps5-build.md).
+An ELF loader is required during installation. The installer checks the exact service/build before changing the Media icon; failure details are in `/data/obsidian-install.log`, `/data/obsidian-launcher.log` and `/data/wolodrive-shortcut.log`. The service writes `/data/wolodrive-web.log`. [Setup, verification and rollback](docs/ps5-build.md).
 
-`make ps5-shortcut` builds the same single-file installer. Native PS5 SDL rendering remains **experimental** and available through `make ps5-native`, which produces `build/poldrive-native-installer.elf`. The existing renderer failure is not fixed by this packaging change. Browser-only diagnostics (`make ps5-web`) and the earlier manual two-file mode (`make ps5-webfirst`) remain available for recovery; neither is needed for normal installation.
+`make ps5-shortcut` builds the same single-file installer. Native PS5 SDL rendering remains **experimental** and available through `make ps5-native`, which produces `build/obsidian-native-installer.elf`. The existing renderer failure is not fixed by this packaging change. Browser-only diagnostics (`make ps5-web`) and the earlier manual two-file mode (`make ps5-webfirst`) remain available for recovery; neither is needed for normal installation.
 
 ## Supported systems
 
-There is a difference between **devices that run PolDrive** and **consoles represented in its catalogue**.
+There is a difference between **devices that run Obsidian** and **consoles represented in its catalogue**.
 
-### Where PolDrive runs
+### Where Obsidian runs
 
 | Environment | Experience | Status |
 | :-- | :-- | :-- |
@@ -146,7 +146,7 @@ There is a difference between **devices that run PolDrive** and **consoles repre
 
 The library UI includes platform groupings such as **PS1, PS2, PS3, PS4, PS5, PSP; Xbox and Xbox 360; Nintendo NES through Switch and handhelds; Sega consoles; Atari; SNK; NEC; and select arcade and other systems**.
 
-These are **catalogue categories, not a claim that PolDrive can emulate or run those systems**. Some console tiles have no connected catalogue data. Games and ROMs appear only when relevant source metadata is available; the Emulators section is not a bundled emulator.
+These are **catalogue categories, not a claim that Obsidian can emulate or run those systems**. Some console tiles have no connected catalogue data. Games and ROMs appear only when relevant source metadata is available; the Emulators section is not a bundled emulator.
 
 ## Controls
 

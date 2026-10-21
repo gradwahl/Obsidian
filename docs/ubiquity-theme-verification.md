@@ -3,7 +3,7 @@
 Appearance and its Netflix/Glass and Ubiquity buttons are removed from native
 and browser Settings. Native startup selects Ubiquity without loading the old
 `.theme` preference. Browser startup no longer reads or writes the old
-`poldrive-ui-theme` key. Home, console libraries, navigation and details always
+`obsidian-ui-theme` key. Home, console libraries, navigation and details always
 use Ubiquity. Filter reset does not change the interface.
 
 The removed native rows no longer receive pointer, keyboard or controller

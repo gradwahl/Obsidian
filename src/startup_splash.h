@@ -1,5 +1,5 @@
-#ifndef POLDRIVE_STARTUP_SPLASH_H
-#define POLDRIVE_STARTUP_SPLASH_H
+#ifndef OBSIDIAN_STARTUP_SPLASH_H
+#define OBSIDIAN_STARTUP_SPLASH_H
 
 /* Lightweight splash that can be drawn as soon as the SDL renderer exists.
    It deliberately uses no fonts, images, file access, catalogue or threads.
@@ -10,7 +10,7 @@
 
 static void startup_splash_letters(SDL_Renderer *renderer, const char *label,
                                    int x, int y, int pixel, SDL_Color color) {
-    /* 5x7 pixel glyphs for "POLDRIVE" and "LOADING" (no TTF dependency). */
+    /* 5x7 pixel glyphs for "OBSIDIAN" and "LOADING" (no TTF dependency). */
     static const uint8_t glyphs[][7] = {
         {30,17,17,30,16,16,16}, /* P */
         {14,17,17,17,17,17,14}, /* O */
@@ -24,7 +24,7 @@ static void startup_splash_letters(SDL_Renderer *renderer, const char *label,
         {17,25,21,19,17,17,17}, /* N */
         {14,17,16,23,17,17,14}  /* G */
     };
-    const char *alphabet = "POLDRIVEANG";
+    const char *alphabet = "OBSIDIANANG";
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     for (const char *ch = label; *ch; ++ch, x += 6 * pixel) {
@@ -57,7 +57,7 @@ static void startup_splash_draw(SDL_Renderer *renderer, unsigned stage) {
     const int cx = w / 2, cy = h / 2;
     const int glyph_px = SDL_max(2, w / 640);
     int text_width = 8 * 6 * glyph_px;
-    startup_splash_letters(renderer, "POLDRIVE", cx - text_width / 2,
+    startup_splash_letters(renderer, "OBSIDIAN", cx - text_width / 2,
                            cy - 130, glyph_px, (SDL_Color){246, 247, 251, 255});
     SDL_Rect accent = {cx - text_width / 2, cy - 130 + 8 * glyph_px,
                        SDL_max(44, text_width / 4), SDL_max(3, glyph_px)};

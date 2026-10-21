@@ -49,7 +49,7 @@ def fetch_database(platform, refresh=False):
     if path.is_file() and not refresh:
         return path
     with urlopen(Request(f"https://www.gametdb.com/{console}tdb.zip?LANG=EN&TIME=1",
-                         headers={"User-Agent": "Poldrive-Artwork/1.0"}), timeout=60) as response:
+                         headers={"User-Agent": "Obsidian-Artwork/1.0"}), timeout=60) as response:
         data = response.read(32 * 1024 * 1024 + 1)
     if len(data) > 32 * 1024 * 1024:
         raise ValueError("GameTDB archive exceeds 32 MiB")

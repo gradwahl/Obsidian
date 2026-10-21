@@ -16,14 +16,14 @@ static void startup_log_init(void) {
         fflush(stdout);
         fflush(stderr);
         if (dup2(fileno(log), STDERR_FILENO) < 0)
-            perror("[POLDRIVE STARTUP] redirect stderr");
+            perror("[OBSIDIAN STARTUP] redirect stderr");
         if (dup2(fileno(log), STDOUT_FILENO) < 0)
-            perror("[POLDRIVE STARTUP] redirect stdout");
+            perror("[OBSIDIAN STARTUP] redirect stdout");
         fclose(log);
         setvbuf(stdout, NULL, _IONBF, 0);
         setvbuf(stderr, NULL, _IONBF, 0);
     } else {
-        perror("[POLDRIVE STARTUP] open /data/wolodrive-startup.log");
+        perror("[OBSIDIAN STARTUP] open /data/wolodrive-startup.log");
     }
 }
 
@@ -32,7 +32,7 @@ static void startup_log_stage(const char *stage) {
     gettimeofday(&now, NULL);
     long long ms = (long long)(now.tv_sec - startup_boot_clock.tv_sec) * 1000 +
                    (now.tv_usec - startup_boot_clock.tv_usec) / 1000;
-    fprintf(stderr, "[POLDRIVE STARTUP] %s | +%lld ms since native entry\n", stage, ms);
+    fprintf(stderr, "[OBSIDIAN STARTUP] %s | +%lld ms since native entry\n", stage, ms);
     fflush(stderr);
 }
 #else

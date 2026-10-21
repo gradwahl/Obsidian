@@ -4,7 +4,7 @@
 
 The default payload is now the quiet service plus browser Media shortcut, not
 the older native-first installer discussed in the historical sections below.
-It still has one distributable, `build/poldrive.elf`; internal helpers stay in
+It still has one distributable, `build/obsidian.elf`; internal helpers stay in
 `build/.internal/`. These changes do not re-enable the failed fullscreen host.
 
 - Catalogue schema 2 retains all 85,690 source records in compact browsing
@@ -53,7 +53,7 @@ limits, shared requests/cancellation, thumbnail dimensions/cleanup and a
 checks cover Home, details, Search and resized artwork. Actual PS5 memory and
 launch behavior require a device test. **AI Studio deployment not verified.**
 
-For the next console test, close PolDrive and restart the console/jailbroken
+For the next console test, close Obsidian and restart the console/jailbroken
 environment before running the updated installer so the previous service is
 not still occupying port 8098. The installer refuses a different build at that
 port. Use the restored browser-card tile; do not rerun the fullscreen experiment.
@@ -63,7 +63,7 @@ The final SDK output is 9,958,992 bytes (SHA256
 It is larger than the previous 7,124,560-byte payload because both browsing
 indexes and full details are packaged offline. Smaller retained browser data
 does not imply a smaller ELF. The embedded service/helper bytes and ordinary
-`deeplinkUri` metadata were checked; only `poldrive.elf` is at the build root.
+`deeplinkUri` metadata were checked; only `obsidian.elf` is at the build root.
 Lint, web/memory tests, 23 installer tests, nine launcher tests, SDK build and
 plain-HTTP preview checking passed. Browser checks included a catalogue-only
 Search result, details, Settings, library counts, resized image dimensions and
@@ -106,7 +106,7 @@ reduction is not evidence of equivalent runtime frame-time improvement.
 **Direct memory allocation:** earlier device logs reported
 `sceKernelAllocateMainDirectMemory: Resource temporarily unavailable`.
 This operation is implemented in the PS5 SDK SDL video backend, not by
-PolDrive's C renderer. Shrinking the embedded payload may reduce general memory
+Obsidian's C renderer. Shrinking the embedded payload may reduce general memory
 pressure but does **not** guarantee a successful SDL/VideoOut allocation.
 The SDK has to be checked for framebuffer allocation size, lifetime, and
 the actual failing service on the console before changing its allocation.
@@ -125,9 +125,9 @@ does not add GPU acceleration or guarantee a 60 Hz display.
 ## Device verification
 
 1. Build with `make ps5` in the configured PS5 SDK environment and install
-   only `build/poldrive.elf`. Keep a backup of the previous known-working ELF.
+   only `build/obsidian.elf`. Keep a backup of the previous known-working ELF.
 2. Launch through Payload Manager, including an existing registered shortcut
-   if applicable. Retrieve `/data/poldrive-launcher.log` and
+   if applicable. Retrieve `/data/obsidian-launcher.log` and
    `/data/wolodrive-startup.log` to confirm native startup versus browser fallback.
 3. If native displays, navigate Home, carousel and Files, then retrieve
    `/data/wolodrive-performance.log`. Compare stationary and navigation
@@ -160,9 +160,9 @@ simple HTML loading placeholder is displayed until React replaces the root;
 it can distinguish a JavaScript bootstrap failure from a completely different
 page. These safeguards do **not** prove the console's networking fault is fixed.
 
-When retrying, use the newly rebuilt `build/poldrive.elf`, not an earlier
+When retrying, use the newly rebuilt `build/obsidian.elf`, not an earlier
 copy. Confirm v11 in `/data/wolodrive-web.log` and inspect the first few
-`[POLDRIVE WEB] Static GET` lines. Requests for `/index.html` but no
+`[OBSIDIAN WEB] Static GET` lines. Requests for `/index.html` but no
 `/assets/index-*.js` suggest browser loading or HTML parsing problems.
 Successful JS/CSS requests with an unmounted UI suggest browser compatibility
 or JavaScript runtime errors. Compare to the LAN URL printed in the log by
@@ -172,7 +172,7 @@ process networking environment rather than altering the catalogue.
 Do not share the LAN file bridge on an untrusted network.
 
 Also retrieve `/data/wolodrive-startup.log` on the same launch to establish
-the **native** startup reason. `/data/poldrive-launcher.log` can be
+the **native** startup reason. `/data/obsidian-launcher.log` can be
 overwritten by a separate installer-only invocation; do not infer the native
 reason from a log generated on a different launch.
 
@@ -183,7 +183,7 @@ The Media shortcut's configured `deeplinkUri` calls Payload Manager's
 white `OK` page is consistent with Payload Manager acknowledging that HTTP
 request; it is **not** evidence that the native app initialized.
 
-In the reported session `poldrive-launcher.log` said the shortcut registration
+In the reported session `obsidian-launcher.log` said the shortcut registration
 was unconfirmed while the helper's `wolodrive-shortcut.log` said
 `Shortcut already current; no registration required`. The launcher checked
 `/user/app/WOLO00001/sce_sys/wolodrive-shortcut.registered`, a path which
@@ -198,10 +198,10 @@ the helper says `CURRENT`, even if the marker is invisible to the launcher.
 confirmation does not bypass registration checks.
 
 To test, replace the Payload Manager copy at
-`/data/pldmgr/payloads/poldrive/poldrive.elf` with the newly built
-`build/poldrive.elf`, reboot to clear old payload/browser processes, and
+`/data/pldmgr/payloads/obsidian/obsidian.elf` with the newly built
+`build/obsidian.elf`, reboot to clear old payload/browser processes, and
 launch from Media. On the new attempt collect the logs
-`/data/poldrive-launcher.log`, `/data/wolodrive-shortcut.log`,
+`/data/obsidian-launcher.log`, `/data/wolodrive-shortcut.log`,
 `/data/wolodrive-startup.log`, and, if fallback is used,
 `/data/wolodrive-web.log`. Specifically look for
 `Shortcut helper confirmed CURRENT via /data; starting native UI.`.
@@ -225,7 +225,7 @@ Manager loading time or the native SDL/VideoOut initialization time.
 
 The native executable now creates SDL video and its renderer before
 initializing curl, images, fonts and controllers; after the renderer starts,
-it immediately renders a minimalist **POLDRIVE** startup screen with a red
+it immediately renders a minimalist **OBSIDIAN** startup screen with a red
 12-segment spinner and progress bar. Progress frames are rendered between
 initialization stages, on the main SDL thread. A blocking SDK call can still
 hold the display on the last frame; no unsupported background SDL rendering
@@ -253,8 +253,8 @@ JSON-as-JavaScript modules on the browser's main thread and converted
 ~85,000 records before publishing one UI update. The native SDL loading
 screen is separate: the screenshot shows the *browser* fallback.
 
-The HTML bootstrap now contains only the PolDrive name, a vendor-prefixed
-CSS spinner (compositor transform) and "Starting PolDrive...". The
+The HTML bootstrap now contains only the Obsidian name, a vendor-prefixed
+CSS spinner (compositor transform) and "Starting Obsidian...". The
 diagnostic "If this message stays..." paragraph has been removed.
 
 Browser startup now has these changes:
@@ -281,7 +281,7 @@ Browser startup now has these changes:
   the ELF and are requested over local loopback.
 
 The build runs the page generator automatically before `npm run dev`,
-`npm run build` and `npm run build:static`. `public/poldrive-pages/`
+`npm run build` and `npm run build:static`. `public/obsidian-pages/`
 is generated and ignored by Git; do not copy that directory manually.
 Native snapshot generation still consumes the original source indexes.
 The web tests verify source counts, source precedence, archive artwork

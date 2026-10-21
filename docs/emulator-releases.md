@@ -1,7 +1,7 @@
-# PolDrive emulator releases
+# Obsidian emulator releases
 
-PolDrive's **Emulators** screen links to the public repository:
-https://github.com/PolDrive/PolDrive-Emulators/releases
+Obsidian's **Emulators** screen links to the public repository:
+https://github.com/gradwahl/Obsidian-Emulators/releases
 
 The Games/Roms library lists **58 console/system tiles**, but the Emulators
 section now shows **56**, since PlayStation 4 and PlayStation 5 are excluded.
@@ -56,7 +56,7 @@ Choosing a console under **Emulators** opens a release details view. A
 verified mapping provides the exact GitHub release asset download URL, its
 file size, SHA-256 digest, and any companion/helper files from the same
 release. The emulator detail page has **one primary download action**, with
-no separate "View release" or "Browse all PolDrive emulator releases" buttons.
+no separate "View release" or "Browse all Obsidian emulator releases" buttons.
 The 13 unmatched consoles show an informational message, not an arbitrary ZIP.
 The top-level emulator library still provides a general repository link.
 

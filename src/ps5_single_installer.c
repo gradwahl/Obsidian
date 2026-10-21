@@ -19,29 +19,29 @@
 #include "ps5_service_payload.h"
 #endif
 
-#ifndef POLDRIVE_INSTALL_LOG
+#ifndef OBSIDIAN_INSTALL_LOG
 #ifdef WOLO_FULLSCREEN_WEBAPP
-#define POLDRIVE_INSTALL_LOG "/data/poldrive-fullscreen-install.log"
+#define OBSIDIAN_INSTALL_LOG "/data/obsidian-fullscreen-install.log"
 #else
-#define POLDRIVE_INSTALL_LOG "/data/poldrive-install.log"
+#define OBSIDIAN_INSTALL_LOG "/data/obsidian-install.log"
 #endif
 #endif
-#ifndef POLDRIVE_TITLE_ROOT
-#define POLDRIVE_TITLE_ROOT "/user/app/WOLO00001"
+#ifndef OBSIDIAN_TITLE_ROOT
+#define OBSIDIAN_TITLE_ROOT "/user/app/WOLO00001"
 #endif
-#ifndef POLDRIVE_LOADER_PORT
-#define POLDRIVE_LOADER_PORT 9021
+#ifndef OBSIDIAN_LOADER_PORT
+#define OBSIDIAN_LOADER_PORT 9021
 #endif
-#ifndef POLDRIVE_HEALTH_PORT
-#define POLDRIVE_HEALTH_PORT POLDRIVE_DIRECT_PORT
+#ifndef OBSIDIAN_HEALTH_PORT
+#define OBSIDIAN_HEALTH_PORT OBSIDIAN_DIRECT_PORT
 #endif
-#ifndef POLDRIVE_READY_ATTEMPTS
-#define POLDRIVE_READY_ATTEMPTS 150
+#ifndef OBSIDIAN_READY_ATTEMPTS
+#define OBSIDIAN_READY_ATTEMPTS 150
 #endif
-#ifndef POLDRIVE_READY_DELAY_US
-#define POLDRIVE_READY_DELAY_US 100000
+#ifndef OBSIDIAN_READY_DELAY_US
+#define OBSIDIAN_READY_DELAY_US 100000
 #endif
-extern int poldrive_install_shortcut(int argc, char **argv);
+extern int obsidian_install_shortcut(int argc, char **argv);
 
 static int atomic_write(const char *path, const void *data, size_t size, int executable) {
     char temporary[768];
@@ -80,7 +80,7 @@ static char *read_text(const char *path, size_t limit, size_t *size) {
  * an empty backup; repeated installation never replaces that rollback copy. */
 static int save_backup(const char *path, const char *text, size_t size) {
     char backup[768];
-    int n = snprintf(backup, sizeof(backup), "%s.poldrive-backup", path);
+    int n = snprintf(backup, sizeof(backup), "%s.obsidian-backup", path);
     if (n < 0 || (size_t)n >= sizeof(backup)) return -1;
     struct stat info;
     if (lstat(backup, &info) == 0) return S_ISREG(info.st_mode) ? 0 : -1;
@@ -90,13 +90,13 @@ static int save_backup(const char *path, const char *text, size_t size) {
 
 static int configure_autoload(FILE *log) {
     size_t list_size, config_size;
-    char *list = read_text(POLDRIVE_AUTOLOAD_PATH, 4095, &list_size);
-    char *config = read_text(POLDRIVE_CONFIG_PATH, 65536, &config_size);
+    char *list = read_text(OBSIDIAN_AUTOLOAD_PATH, 4095, &list_size);
+    char *config = read_text(OBSIDIAN_CONFIG_PATH, 65536, &config_size);
     if (!list || !config) {
         fprintf(log, "Cannot read Payload Manager startup files; leaving them unchanged.\n");
         free(list); free(config); return -1;
     }
-    const size_t path_size = strlen(POLDRIVE_SERVICE_PATH);
+    const size_t path_size = strlen(OBSIDIAN_SERVICE_PATH);
     int present = 0;
     for (char *line = list; *line;) {
         char *end = strchr(line, '\n');
@@ -123,13 +123,13 @@ static int configure_autoload(FILE *log) {
             free(list); free(config); return -1;
         }
         if ((size_t)(trimmed_end - start) == path_size &&
-            !memcmp(start, POLDRIVE_SERVICE_PATH, path_size)) present = 1;
+            !memcmp(start, OBSIDIAN_SERVICE_PATH, path_size)) present = 1;
         line = *end ? end + 1 : end;
     }
     char updated_list[4096];
     int list_length = snprintf(updated_list, sizeof(updated_list), "%s%s%s%s", list,
         !present && list_size && list[list_size-1] != '\n' ? "\n" : "",
-        present ? "" : POLDRIVE_SERVICE_PATH, present ? "" : "\n");
+        present ? "" : OBSIDIAN_SERVICE_PATH, present ? "" : "\n");
     /* Append a final enabled setting after removing previous copies of only
      * that key. Everything else (including unknown settings) stays intact. */
     char *updated_config = malloc(config_size + 32);
@@ -157,14 +157,14 @@ static int configure_autoload(FILE *log) {
     used += sizeof(enabled)-1;
     /* No writes until both inputs and both resulting file sizes are valid. */
     int failed = list_length < 0 || (size_t)list_length >= sizeof(updated_list) || used > 65536;
-    if (!failed && (save_backup(POLDRIVE_AUTOLOAD_PATH, list, list_size) ||
-                    save_backup(POLDRIVE_CONFIG_PATH, config, config_size))) failed = 1;
+    if (!failed && (save_backup(OBSIDIAN_AUTOLOAD_PATH, list, list_size) ||
+                    save_backup(OBSIDIAN_CONFIG_PATH, config, config_size))) failed = 1;
     /* Publish the sequence before enabling it. Do not alter browser, delay,
      * USB, favorites, existing entry order, or other Payload Manager settings. */
     if (!failed && ((list_size != (size_t)list_length || memcmp(list, updated_list, list_size)) &&
-        atomic_write(POLDRIVE_AUTOLOAD_PATH, updated_list, (size_t)list_length, 0))) failed = 1;
+        atomic_write(OBSIDIAN_AUTOLOAD_PATH, updated_list, (size_t)list_length, 0))) failed = 1;
     if (!failed && ((config_size != used || memcmp(config, updated_config, used)) &&
-        atomic_write(POLDRIVE_CONFIG_PATH, updated_config, used, 0))) failed = 1;
+        atomic_write(OBSIDIAN_CONFIG_PATH, updated_config, used, 0))) failed = 1;
     free(list); free(config); free(updated_config);
     fprintf(log, failed ? "Could not configure startup; dashboard update cancelled.\n" :
         "Service added to Payload Manager autoload; existing entries/settings preserved.\n");
@@ -202,7 +202,7 @@ static int send_bytes(int fd, const void *data, size_t size) {
 /* 1: exact service/build; 0: nothing listening; -1: occupied/untrusted service.
  * Never terminate the previous server or replace an unrelated listener. */
 static int service_ready(void) {
-    int fd = connect_local(POLDRIVE_HEALTH_PORT, 250000);
+    int fd = connect_local(OBSIDIAN_HEALTH_PORT, 250000);
     if (fd < 0) return 0;
     const char request[] = "GET /api/wolodrive/health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
     char response[2048];
@@ -218,22 +218,22 @@ static int service_ready(void) {
     close(fd); response[used] = 0;
     char *body = strstr(response, "\r\n\r\n");
     return !failed && !strncmp(response, "HTTP/1.1 200 ", 13) && body &&
-        used == (size_t)(body+4-response) + sizeof(POLDRIVE_EXPECTED_HEALTH)-1 &&
-        !memcmp(body+4, POLDRIVE_EXPECTED_HEALTH, sizeof(POLDRIVE_EXPECTED_HEALTH)-1) ? 1 : -1;
+        used == (size_t)(body+4-response) + sizeof(OBSIDIAN_EXPECTED_HEALTH)-1 &&
+        !memcmp(body+4, OBSIDIAN_EXPECTED_HEALTH, sizeof(OBSIDIAN_EXPECTED_HEALTH)-1) ? 1 : -1;
 }
 
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
-    FILE *log = fopen(POLDRIVE_INSTALL_LOG, "w");
+    FILE *log = fopen(OBSIDIAN_INSTALL_LOG, "w");
     if (!log) return 1;
     setvbuf(log, NULL, _IONBF, 0);
     struct stat info;
-    if (!stat(POLDRIVE_TITLE_ROOT, &info) &&
-        stat(POLDRIVE_TITLE_ROOT "/sce_sys/wolodrive-shortcut.marker", &info)) {
+    if (!stat(OBSIDIAN_TITLE_ROOT, &info) &&
+        stat(OBSIDIAN_TITLE_ROOT "/sce_sys/wolodrive-shortcut.marker", &info)) {
         fprintf(log, "Refusing to change an unowned WOLO00001 title.\n"); fclose(log); return 1;
     }
-#ifdef POLDRIVE_CREATE_SERVICE_DIRS
-    const char *parents[] = {"/data/pldmgr", "/data/pldmgr/payloads", "/data/pldmgr/payloads/poldrive"};
+#ifdef OBSIDIAN_CREATE_SERVICE_DIRS
+    const char *parents[] = {"/data/pldmgr", "/data/pldmgr/payloads", "/data/pldmgr/payloads/obsidian"};
     for (size_t i=0; i<sizeof(parents)/sizeof(parents[0]); ++i) {
         if (mkdir(parents[i], 0755) && errno != EEXIST) {
             fprintf(log, "Cannot create service directory: %s\n", strerror(errno)); fclose(log); return 1;
@@ -242,29 +242,29 @@ int main(void) {
 #endif
     int ready = service_ready();
     if (ready < 0) {
-        fprintf(log, "Port %d has a different service/build. Stop that service or restart the jailbroken environment, then retry. No dashboard/config changes.\n", POLDRIVE_HEALTH_PORT);
+        fprintf(log, "Port %d has a different service/build. Stop that service or restart the jailbroken environment, then retry. No dashboard/config changes.\n", OBSIDIAN_HEALTH_PORT);
         fclose(log); return 1;
     }
-    if (atomic_write(POLDRIVE_SERVICE_PATH, service_payload_elf, sizeof(service_payload_elf), 1)) {
+    if (atomic_write(OBSIDIAN_SERVICE_PATH, service_payload_elf, sizeof(service_payload_elf), 1)) {
         fprintf(log, "Cannot save bundled service: %s\n", strerror(errno)); fclose(log); return 1;
     }
     if (!ready) {
-        int fd = connect_local(POLDRIVE_LOADER_PORT, 3000000);
+        int fd = connect_local(OBSIDIAN_LOADER_PORT, 3000000);
         int failed = fd < 0 || send_bytes(fd, service_payload_elf, sizeof(service_payload_elf));
         if (fd >= 0) close(fd);
         if (failed) { fprintf(log, "Cannot send quiet service to ELF loader.\n"); fclose(log); return 1; }
-        for (int i=0; i<POLDRIVE_READY_ATTEMPTS; ++i) {
+        for (int i=0; i<OBSIDIAN_READY_ATTEMPTS; ++i) {
             ready = service_ready();
             if (ready) break;
-            usleep(POLDRIVE_READY_DELAY_US);
+            usleep(OBSIDIAN_READY_DELAY_US);
         }
         if (ready != 1) { fprintf(log, "Quiet service readiness unconfirmed; dashboard/config unchanged.\n"); fclose(log); return 1; }
     }
-    fprintf(log, "Exact quiet service ready at " POLDRIVE_DIRECT_URL "; no UI opened.\n");
+    fprintf(log, "Exact quiet service ready at " OBSIDIAN_DIRECT_URL "; no UI opened.\n");
     if (configure_autoload(log)) { fclose(log); return 1; }
-    int result = poldrive_install_shortcut(0, NULL);
+    int result = obsidian_install_shortcut(0, NULL);
     fprintf(log, result ? "Dashboard registration unconfirmed; see shortcut logs.\n" :
-        "Installed. Open PolDrive under Media. No browser/native UI started by installer.\n");
+        "Installed. Open Obsidian under Media. No browser/native UI started by installer.\n");
     fclose(log);
     return result;
 }

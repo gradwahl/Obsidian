@@ -72,7 +72,7 @@ class NativeFiles(unittest.TestCase):
         self.assertEqual(ctypes.get_errno(),errno.EEXIST)
         self.assertEqual(self.write_file('empty',b'',b'new'),0)
         self.assertEqual(self.read_file('empty')[1],b'')
-        self.assertFalse(list(self.root.glob('.poldrive-save-*')))
+        self.assertFalse(list(self.root.glob('.obsidian-save-*')))
 
     def test_file_transfer_refuses_links_special_files_and_limits(self):
         (self.root/'link').symlink_to(self.root/'source/sub/file.txt')

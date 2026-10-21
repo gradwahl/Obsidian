@@ -71,12 +71,12 @@ static int files_request_allowed(int fd, const char *headers, int *local) {
     if (present < 0 || (present && strcmp(origin, expected))) return 0;
     present = files_header(headers, "Sec-Fetch-Site", site, sizeof(site));
     if (present < 0 || (present && strcmp(site, "same-origin") && strcmp(site, "none"))) return 0;
-    return files_header(headers, "X-PolDrive-Bridge", marker, sizeof(marker)) == 1 && !strcmp(marker, "1");
+    return files_header(headers, "X-Obsidian-Bridge", marker, sizeof(marker)) == 1 && !strcmp(marker, "1");
 }
 static int files_authorized(int fd, const char *headers) {
     int local; char token[80];
     return files_token[0] && files_request_allowed(fd,headers,&local) &&
-        files_header(headers,"X-PolDrive-Token",token,sizeof(token))==1 && !strcmp(token,files_token);
+        files_header(headers,"X-Obsidian-Token",token,sizeof(token))==1 && !strcmp(token,files_token);
 }
 static int files_hex(char c) {
     if (c >= '0' && c <= '9') return c-'0';
@@ -143,7 +143,7 @@ static void files_handle(int fd, const char *method, const char *path, const cha
         return;
     }
     if (!files_authorized(fd,headers)) {
-        files_failure(fd, 403, "File session expired; reload PolDrive", head); return;
+        files_failure(fd, 403, "File session expired; reload Obsidian", head); return;
     }
     if (!strcmp(path,"/api/wolodrive/files/content")) {
         char relative[FM_PATH], revision[FM_REVISION];
@@ -156,14 +156,14 @@ static void files_handle(int fd, const char *method, const char *path, const cha
             char header[512];
             int n=snprintf(header,sizeof(header),"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n"
                 "Content-Length: %zu\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n"
-                "Content-Disposition: attachment\r\nX-PolDrive-Revision: %s\r\n\r\n",length,revision);
+                "Content-Disposition: attachment\r\nX-Obsidian-Revision: %s\r\n\r\n",length,revision);
             if (send_all(fd,header,(size_t)n)==0 && !head) send_all(fd,bytes,length);
             free(bytes); return;
         }
         if (!strcmp(method,"POST")) {
             char type[80];
             if (files_header(headers,"Content-Type",type,sizeof(type))!=1 || strcmp(type,"application/octet-stream") ||
-                files_header(headers,"X-PolDrive-Revision",revision,sizeof(revision))!=1) {
+                files_header(headers,"X-Obsidian-Revision",revision,sizeof(revision))!=1) {
                 files_failure(fd,400,"Missing file revision or content type",head); return;
             }
             if (fm_write(WOLO_FILES_ROOT,relative,(const unsigned char *)body,body_length,revision)) {

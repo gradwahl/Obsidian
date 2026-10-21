@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
-  <title id="title">PolDrive</title>
-  <desc id="desc">Dark console-inspired banner with a red P icon and stylized game covers.</desc>
+  <title id="title">Obsidian</title>
+  <desc id="desc">Dark console-inspired banner with a red O icon and stylized game covers.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#171821"/>
@@ -39,9 +39,10 @@
     <circle cx="1116" cy="52" r="185" fill="none" stroke="#e50914" stroke-opacity=".11" stroke-width="1"/>
     <g filter="url(#shadow)">
       <rect x="65" y="88" width="118" height="140" rx="26" fill="#e50914"/>
-      <path d="M98 119 H139 C160 119 167 133 167 150 C167 167 154 181 132 181 H118 V199 H98 Z M118 139 V163 H132 C144 163 147 158 147 151 C147 144 143 139 132 139 Z" fill="white"/>
+      <circle cx="124" cy="158" r="39" fill="white"/>
+      <circle cx="124" cy="158" r="21" fill="#e50914"/>
     </g>
-    <text x="211" y="164" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800" letter-spacing="-3">PolDrive</text>
+    <text x="211" y="164" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800" letter-spacing="-3">Obsidian</text>
     <rect x="214" y="186" width="274" height="3" rx="1.5" fill="#e50914"/>
     <text x="214" y="215" fill="#c4c6d0" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="1.25">YOUR CATALOGUE. YOUR CONSOLE.</text>
     <text x="214" y="249" fill="#777b89" font-family="Arial, Helvetica, sans-serif" font-size="16">PLAYSTATION 5  /  LINUX  /  WEB</text>

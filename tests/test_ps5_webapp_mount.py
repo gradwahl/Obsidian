@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class WebAppMount(unittest.TestCase):
     def test_readonly_scope_preserves_security_flags_and_reports_failures(self):
-        with tempfile.TemporaryDirectory(prefix="poldrive-mount-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="obsidian-mount-") as temporary:
             folder = Path(temporary)
             (folder / "sys").mkdir()
             (folder / "sys/mount.h").write_text('''

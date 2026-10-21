@@ -59,7 +59,7 @@ title ID alone does not establish that an archive is the base game rather than D
 
 The user has confirmed website-derived links, both PS4 and PS5 workflows, and
 browser-assisted host interactions. A user completes the host page/countdown or
-CAPTCHA, then PolDrive continues. This requires an explicit handoff of a usable
+CAPTCHA, then Obsidian continues. This requires an explicit handoff of a usable
 file URL or provider-supported session; opening a separate host tab alone does
 not supply the download URL to the native worker. Browser cookies and successful
 CAPTCHA sessions must not be assumed to exist in a PS5 HTTP client. The initial
@@ -69,7 +69,7 @@ This handoff and the install/download backend are not implemented yet.
 
 The PS5 LAN service has been checked directly: HTML, JavaScript and CSS returned
 successfully, and the corrected isolated browser helper returned 0. The user
-confirmed the catalogue visible and confirmed the new PolDrive Media shortcut
+confirmed the catalogue visible and confirmed the new Obsidian Media shortcut
 reopens it. The console's LAN address is used only for diagnostics, never as an
 app default.
 

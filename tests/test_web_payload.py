@@ -32,9 +32,9 @@ class WebPayloadTest(unittest.TestCase):
         (cls.preview / "assets/binary.png").write_bytes(bytes(range(256)) * 4096)
         (cls.preview / "assets/empty.bin").write_bytes(b"")
         (cls.preview / 'assets/caf\u00e9 "test".json').write_bytes(b'{"ok":true}')
-        (cls.preview / "poldrive-pages").mkdir()
-        (cls.preview / "poldrive-pages/manifest.json").write_bytes(b'{"schemaVersion":1,"sources":[]}')
-        (cls.preview / "poldrive-pages/fixture-abcdef123456-000-0123456789.json").write_bytes(
+        (cls.preview / "obsidian-pages").mkdir()
+        (cls.preview / "obsidian-pages/manifest.json").write_bytes(b'{"schemaVersion":1,"sources":[]}')
+        (cls.preview / "obsidian-pages/fixture-abcdef123456-000-0123456789.json").write_bytes(
             b'[{"id":"PPSA12345","title":"Fixture"}]' * 200)
         cls.compile_server(cls.preview, cls.directory)
         cls.process, cls.port = cls.start_server(cls.directory)
@@ -134,9 +134,9 @@ class WebPayloadTest(unittest.TestCase):
                                   headers={"Accept-Encoding": "GZIP, deflate"})
         self.assertEqual(gzip.decompress(compressed[2]), original)
         self.assertEqual(self.request("/")[1]["Cache-Control"], "no-store")
-        self.assertEqual(self.request("/poldrive-pages/manifest.json")[1]["Cache-Control"], "no-store")
+        self.assertEqual(self.request("/obsidian-pages/manifest.json")[1]["Cache-Control"], "no-store")
         self.assertIn("max-age", self.request(
-            "/poldrive-pages/fixture-abcdef123456-000-0123456789.json")[1]["Cache-Control"])
+            "/obsidian-pages/fixture-abcdef123456-000-0123456789.json")[1]["Cache-Control"])
         status, headers, body = self.request("/assets/large.js", method="HEAD",
                                              headers={"Accept-Encoding": "gzip"})
         self.assertEqual(status, 200)
@@ -227,7 +227,7 @@ class WebPayloadTest(unittest.TestCase):
             self.assertIn("wolodrive-webfirst", self.request(
                 "/api/wolodrive/health", port=port)[2].decode("utf8"))
             self.assertIn("max-age", self.request(
-                "/poldrive-pages/fixture-abcdef123456-000-0123456789.json", port=port)[1]["Cache-Control"])
+                "/obsidian-pages/fixture-abcdef123456-000-0123456789.json", port=port)[1]["Cache-Control"])
             # The recovery service must also accept connections beyond 127.0.0.1.
             self.assertEqual(self.request("/", port=port, host="127.0.0.2")[0], 200)
             duplicate = subprocess.run([str(directory / "server")], cwd=directory,

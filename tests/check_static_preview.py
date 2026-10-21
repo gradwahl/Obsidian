@@ -49,17 +49,17 @@ def main():
                 "nopaystation", "psn-content", "alvro", "maelly-pooh", "romstime"
             )
             assert not (PREVIEW / "assets/catalogs").exists(), "No duplicate raw catalog JSON in preview"
-            with urllib.request.urlopen(base + "/poldrive-pages/manifest.json") as response:
+            with urllib.request.urlopen(base + "/obsidian-pages/manifest.json") as response:
                 manifest_bytes = response.read()
                 assert response.headers.get_content_type() == "application/json"
-            generated = ROOT / "public/poldrive-pages"
+            generated = ROOT / "public/obsidian-pages"
             assert manifest_bytes == (generated / "manifest.json").read_bytes()
             manifest = json.loads(manifest_bytes)
             assert manifest["schemaVersion"] == 2
             source_ids = [source["id"] for source in manifest["sources"]]
             assert len(source_ids) == len(set(source_ids)), "Duplicate source metadata"
             assert set(full_sources).issubset(source_ids), "Missing full source indexes"
-            links.append("/poldrive-pages/manifest.json")
+            links.append("/obsidian-pages/manifest.json")
             page_names = set()
             records = 0
             covered = 0
@@ -69,31 +69,31 @@ def main():
                     assert re.fullmatch(r"[a-z0-9-]+-[a-f0-9]{12}-index-\d{3}-[a-f0-9]{10}\.json", index_name), index_name
                     assert index_name not in page_names
                     page_names.add(index_name)
-                    data = (PREVIEW / "poldrive-pages" / index_name).read_bytes()
+                    data = (PREVIEW / "obsidian-pages" / index_name).read_bytes()
                     assert data == (generated / index_name).read_bytes()
                     assert hashlib.sha256(data).hexdigest()[:10] == index_name[-15:-5]
                     assert len(data) < 400000
                     index_rows = json.loads(data)
                     assert 0 < len(index_rows) <= 384
-                    links.append("/poldrive-pages/" + index_name)
+                    links.append("/obsidian-pages/" + index_name)
                 for name in source["pages"]:
                     assert re.fullmatch(r"[a-z0-9-]+-[a-f0-9]{12}-\d{3}-[a-f0-9]{10}\.json", name), name
                     assert name not in page_names, f"Duplicate catalog page: {name}"
                     page_names.add(name)
-                    data = (PREVIEW / "poldrive-pages" / name).read_bytes()
+                    data = (PREVIEW / "obsidian-pages" / name).read_bytes()
                     assert data == (generated / name).read_bytes(), name
                     assert hashlib.sha256(data).hexdigest()[:10] == name[-15:-5], name
                     assert len(data) < 400000, f"Oversized catalog page: {name}"
                     entries = json.loads(data)
                     assert isinstance(entries, list) and 0 < len(entries) <= 384, name
-                    index = json.loads((PREVIEW / "poldrive-pages" / source["indexes"][source["pages"].index(name)]).read_bytes())
+                    index = json.loads((PREVIEW / "obsidian-pages" / source["indexes"][source["pages"].index(name)]).read_bytes())
                     assert [row[:2] for row in index] == [[entry["id"], entry["title"]] for entry in entries]
                     records += len(entries)
                     covered += sum(bool(entry.get("archiveCoverPath")) for entry in entries)
-                    links.append("/poldrive-pages/" + name)
+                    links.append("/obsidian-pages/" + name)
             assert records >= 80000, "Missing published catalog records"
             assert covered >= 40000, "Missing bundled artwork mappings"
-            assert {p.name for p in (PREVIEW / "poldrive-pages").glob("*.json")} == page_names | {"manifest.json"}
+            assert {p.name for p in (PREVIEW / "obsidian-pages").glob("*.json")} == page_names | {"manifest.json"}
             assert not (PREVIEW / "assets/artwork/cover-matches.json").exists()
             assert not (PREVIEW / "assets/artwork/cover-matches.tsv").exists()
             for name in sorted(set(links + ["/" + path for path in artwork])):

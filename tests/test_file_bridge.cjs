@@ -12,7 +12,7 @@ const { listFolder, pasteEntry, extractZip } = require('../src/fileManager.ts');
   global.fetch = async (url, options) => {
     calls.push({url, options});
     if (url.endsWith('/session')) return { ok: true, json: async () => ({version: 3, token}) };
-    assert.equal(options.headers['X-PolDrive-Token'], token);
+    assert.equal(options.headers['X-Obsidian-Token'], token);
     if (options.method === 'POST') return { ok: true, json: async () => ({ok: true}) };
     return { ok: true, json: async () => ({entries: [
       {name:'Destination', kind:'directory', size:0}, {name:'hello.txt', kind:'file', size:3},
@@ -26,7 +26,7 @@ const { listFolder, pasteEntry, extractZip } = require('../src/fileManager.ts');
   assert.equal(calls.length, 0, 'Static previews require no bridge calls');
   global.window.location.hash = '#native-unavailable';
   const bridge = await connectConsoleFiles();
-  assert.equal(calls[0].options.headers['X-PolDrive-Bridge'], '1');
+  assert.equal(calls[0].options.headers['X-Obsidian-Bridge'], '1');
   const trail = bridge.initialTrail();
   assert.deepEqual(trail.map(consoleFilePath), ['/', '/data']);
   const folder = trail[1], entries = await listFolder(folder);
@@ -52,10 +52,10 @@ const { listFolder, pasteEntry, extractZip } = require('../src/fileManager.ts');
   calls=[];
   global.fetch=async (url,options)=> {
     calls.push({url,options});
-    if (url==='/') return {headers:new Headers({'X-PolDrive-Files':'3'})};
+    if (url==='/') return {headers:new Headers({'X-Obsidian-Files':'3'})};
     if (url.endsWith('/session')) {
       assert.equal(options.method,'GET');
-      assert.equal(options.headers['X-PolDrive-Bridge'],'1');
+      assert.equal(options.headers['X-Obsidian-Bridge'],'1');
       return {ok:true,json:async()=>({version:3,token})};
     }
     throw new Error('Unexpected LAN request');
@@ -68,11 +68,11 @@ const { listFolder, pasteEntry, extractZip } = require('../src/fileManager.ts');
   global.fetch=async (url,options)=> {
     calls.push({url,options});
     if (options.method==='POST') return {ok:true,json:async()=>({ok:true})};
-    return {ok:true,headers:new Headers({'X-PolDrive-Revision':'1-2-abc'}),arrayBuffer:async()=>binary.buffer};
+    return {ok:true,headers:new Headers({'X-Obsidian-Revision':'1-2-abc'}),arrayBuffer:async()=>binary.buffer};
   };
   assert.deepEqual(new Uint8Array((await remote.readFile(remoteFile)).bytes),binary);
   await remote.writeFile(remoteFile,binary,'1-2-abc');
-  assert.equal(calls.at(-1).options.headers['X-PolDrive-Revision'],'1-2-abc');
+  assert.equal(calls.at(-1).options.headers['X-Obsidian-Revision'],'1-2-abc');
   assert.deepEqual(new Uint8Array(await calls.at(-1).options.body.arrayBuffer()),binary);
   await assert.rejects(()=>remote.writeFile(remoteFile,new Uint8Array(8*1024*1024+1),'new'),/8 MiB/);
   global.fetch=async()=>({ok:false,json:async()=>({error:'File changed on console; reload before saving'})});

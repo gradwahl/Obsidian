@@ -259,7 +259,7 @@ static char *shot_http(void *userdata, const char *url) {
         CURL *curl = curl_easy_init(); if (!curl) return NULL;
         ShotBuffer buffer = {0};
         curl_easy_setopt(curl,CURLOPT_URL,current);
-        curl_easy_setopt(curl,CURLOPT_USERAGENT,"PolDrive/2.0 (game screenshot gallery)");
+        curl_easy_setopt(curl,CURLOPT_USERAGENT,"Obsidian/2.0 (game screenshot gallery)");
         curl_easy_setopt(curl,CURLOPT_CONNECTTIMEOUT,5L);
         curl_easy_setopt(curl,CURLOPT_TIMEOUT,12L);
         curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,shot_write);

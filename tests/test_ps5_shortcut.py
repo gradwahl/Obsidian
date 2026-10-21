@@ -78,7 +78,7 @@ int sceAppInstUtilAppInstallAll(void *params) {
         sources = [str(ROOT / "src/web_shortcut_installer.c"), str(stub)]
         subprocess.run([*common, *sources, "-o", str(self.executable)], check=True)
         subprocess.run([*common, '-DWOLO_EMBED_APP',
-                        f'-DPOLDRIVE_APP_PATH="{self.directory}/dashboard.elf"',
+                        f'-DOBSIDIAN_APP_PATH="{self.directory}/dashboard.elf"',
                         *sources, '-o', str(self.embedded_executable)], check=True)
         subprocess.run([*common, "-DWOLO_SHORTCUT_WEBFIRST", *sources,
                         "-o", str(self.webfirst_executable)], check=True)
@@ -111,8 +111,8 @@ int sceAppInstUtilAppInstallAll(void *params) {
         metadata=json.loads((self.app_root/'WOLO00001/sce_sys/param.json').read_text())
         target=metadata['deeplinkUri'].split('/loadpayload:', 1)[1]
         self.assertTrue(target.startswith('/data/pldmgr/payloads/'))
-        self.assertEqual(Path(target).name, 'poldrive-app.elf')
-        self.assertNotEqual(Path(target).name, 'poldrive.elf')
+        self.assertEqual(Path(target).name, 'obsidian-app.elf')
+        self.assertNotEqual(Path(target).name, 'obsidian.elf')
 
     def test_fullscreen_experiment_can_restore_working_browser_card(self):
         self.assertEqual(subprocess.run([str(self.single_executable)]).returncode, 0)
@@ -228,22 +228,22 @@ int sceAppInstUtilAppInstallAll(void *params) {
         param = json.loads((system / "param.json").read_text())
         self.assertEqual(param["titleId"], "WOLO00001")
         self.assertEqual(param["applicationCategoryType"], 65536)
-        self.assertEqual(param["localizedParameters"]["en-US"]["titleName"], "PolDrive")
+        self.assertEqual(param["localizedParameters"]["en-US"]["titleName"], "Obsidian")
         self.assertEqual(param["deeplinkUri"],
-                         "http://127.0.0.1:8084/loadpayload:/data/pldmgr/payloads/poldrive/poldrive-app.elf")
+                         "http://127.0.0.1:8084/loadpayload:/data/pldmgr/payloads/obsidian/obsidian-app.elf")
         self.assertEqual((system / "icon0.png").read_bytes(), (self.directory / "icon.png").read_bytes())
 
     def test_repairs_previously_registered_uppercase_folder(self):
         self.assertEqual(self.run_installer().returncode, 0)
         system = self.app_root / "WOLO00001/sce_sys"
         metadata = system / "param.json"
-        metadata.write_text(metadata.read_text().replace('/data/pldmgr/payloads/poldrive/poldrive-app.elf', '/data/pldmgr/payloads/Poldrive/poldrive.elf'))
+        metadata.write_text(metadata.read_text().replace('/data/pldmgr/payloads/obsidian/obsidian-app.elf', '/data/pldmgr/payloads/Obsidian/obsidian.elf'))
         self.assertTrue((system / "wolodrive-shortcut.registered").exists())
         result = self.run_installer()
         self.assertEqual(result.returncode, 0)
         self.assertIn(b"REGISTER", result.stdout)
-        self.assertIn('/data/pldmgr/payloads/poldrive/poldrive-app.elf', json.loads(metadata.read_text())["deeplinkUri"])
-        self.assertIn('Media launch target: /data/pldmgr/payloads/poldrive/poldrive-app.elf', self.log.read_text())
+        self.assertIn('/data/pldmgr/payloads/obsidian/obsidian-app.elf', json.loads(metadata.read_text())["deeplinkUri"])
+        self.assertIn('Media launch target: /data/pldmgr/payloads/obsidian/obsidian-app.elf', self.log.read_text())
         self.assertNotIn(b"INITIALIZE", self.run_installer().stdout)
 
     def test_webfirst_direct_tile_and_explicit_rollback(self):

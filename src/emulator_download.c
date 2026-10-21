@@ -149,7 +149,7 @@ static int emulator_download_worker(void *userdata) {
     const EmulatorReleaseAsset *asset=task->asset;
     char output[680],part[690];
     if(!asset || strncmp(asset->asset_url,
-            "https://github.com/PolDrive/PolDrive-Emulators/releases/download/",65)!=0 ||
+            "https://github.com/gradwahl/Obsidian-Emulators/releases/download/",65)!=0 ||
        !asset->filename[0] || strchr(asset->filename,'/') ||
        strchr(asset->filename,'\\') || strstr(asset->filename,"..") ||
        strlen(asset->sha256)!=64 || !asset->size)goto failed;
@@ -182,7 +182,7 @@ static int emulator_download_worker(void *userdata) {
     curl_easy_setopt(curl,CURLOPT_CONNECTTIMEOUT,15L);
     curl_easy_setopt(curl,CURLOPT_LOW_SPEED_LIMIT,100L);
     curl_easy_setopt(curl,CURLOPT_LOW_SPEED_TIME,60L);
-    curl_easy_setopt(curl,CURLOPT_USERAGENT,"PolDrive/2.0 emulator-release-downloader");
+    curl_easy_setopt(curl,CURLOPT_USERAGENT,"Obsidian/2.0 emulator-release-downloader");
     curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,emulator_write);
     curl_easy_setopt(curl,CURLOPT_WRITEDATA,&writer);
     curl_easy_setopt(curl,CURLOPT_XFERINFOFUNCTION,emulator_progress);

@@ -24,7 +24,7 @@ class SingleInstaller(unittest.TestCase):
     fullscreen = False
 
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="poldrive-single-")
+        self.temp = tempfile.TemporaryDirectory(prefix="obsidian-single-")
         self.folder = Path(self.temp.name)
         self.app_root = self.folder / "app"
         self.app_root.mkdir()
@@ -33,7 +33,7 @@ class SingleInstaller(unittest.TestCase):
         self.title = self.app_root / "WOLO00001"
         self.config = self.folder / "pldmgr_config.txt"
         self.autoload = self.folder / "autoload.txt"
-        self.service = self.folder / "poldrive-web-service.elf"
+        self.service = self.folder / "obsidian-web-service.elf"
         self.status = self.folder / "shortcut.status"
         self.original_list = b"local/ftp\n!1000\nlocal/another-payload\n"
         self.original_config = b"AUTOLOAD_ENABLED=0\nAUTO_BROWSER_OPEN=0\nAUTOLOAD_DELAY=7\nUNKNOWN=42\n"
@@ -121,24 +121,24 @@ int sceAppInstUtilAppInstallTitleDir(const char *title, const char *root, void *
         (self.folder / service_header).write_text(
             'static const unsigned char service_payload_elf[] = {' +
             ','.join(str(n) for n in SERVICE) + '};\n' +
-            '#define POLDRIVE_EXPECTED_HEALTH "' + HEALTH.decode().strip() + '\\n"\n')
-        definitions = [*variant, f'-DPOLDRIVE_LOADER_PORT={self.loader.server_address[1]}',
-                       f'-DPOLDRIVE_SHORTCUT_STATUS="{self.status}"',
-                       f'-DPOLDRIVE_LAUNCH_LOG="{self.folder}/launcher.log"',
-                       '-DPOLDRIVE_SHORTCUT_WAIT_ATTEMPTS=5']
+            '#define OBSIDIAN_EXPECTED_HEALTH "' + HEALTH.decode().strip() + '\\n"\n')
+        definitions = [*variant, f'-DOBSIDIAN_LOADER_PORT={self.loader.server_address[1]}',
+                       f'-DOBSIDIAN_SHORTCUT_STATUS="{self.status}"',
+                       f'-DOBSIDIAN_LAUNCH_LOG="{self.folder}/launcher.log"',
+                       '-DOBSIDIAN_SHORTCUT_WAIT_ATTEMPTS=5']
         obj = self.folder / "launcher.o"
         subprocess.run(["gcc", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror",
-                        *definitions, "-Dmain=poldrive_install_shortcut", "-I", str(self.folder),
+                        *definitions, "-Dmain=obsidian_install_shortcut", "-I", str(self.folder),
                         "-c", str(ROOT / "src/ps5_unified_launcher.c"), "-o", str(obj)], check=True)
-        self.binary = self.folder / "poldrive.elf"
+        self.binary = self.folder / "obsidian.elf"
         subprocess.run(["gcc", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror", *definitions,
-                        f'-DPOLDRIVE_INSTALL_LOG="{self.folder}/install.log"',
-                        f'-DPOLDRIVE_TITLE_ROOT="{self.title}"',
-                        f'-DPOLDRIVE_SERVICE_PATH="{self.service}"',
-                        f'-DPOLDRIVE_AUTOLOAD_PATH="{self.autoload}"',
-                        f'-DPOLDRIVE_CONFIG_PATH="{self.config}"',
-                        f'-DPOLDRIVE_HEALTH_PORT={self.health.server_address[1]}',
-                        '-DPOLDRIVE_READY_ATTEMPTS=10', '-DPOLDRIVE_READY_DELAY_US=1000',
+                        f'-DOBSIDIAN_INSTALL_LOG="{self.folder}/install.log"',
+                        f'-DOBSIDIAN_TITLE_ROOT="{self.title}"',
+                        f'-DOBSIDIAN_SERVICE_PATH="{self.service}"',
+                        f'-DOBSIDIAN_AUTOLOAD_PATH="{self.autoload}"',
+                        f'-DOBSIDIAN_CONFIG_PATH="{self.config}"',
+                        f'-DOBSIDIAN_HEALTH_PORT={self.health.server_address[1]}',
+                        '-DOBSIDIAN_READY_ATTEMPTS=10', '-DOBSIDIAN_READY_DELAY_US=1000',
                         '-I', str(self.folder), str(ROOT / "src/ps5_single_installer.c"), str(obj),
                         "-o", str(self.binary)], check=True)
 
@@ -191,7 +191,7 @@ int sceAppInstUtilAppInstallTitleDir(const char *title, const char *root, void *
         self.assertEqual(self.autoload.read_bytes(), self.original_list + str(self.service).encode() + b"\n")
         self.assertEqual(self.config.read_bytes(), self.original_config.split(b"\n", 1)[1] + b"AUTOLOAD_ENABLED=1\n")
         for path, original in ((self.autoload, self.original_list), (self.config, self.original_config)):
-            self.assertEqual(Path(str(path) + ".poldrive-backup").read_bytes(), original)
+            self.assertEqual(Path(str(path) + ".obsidian-backup").read_bytes(), original)
         self.assertIn("No browser/native UI started", (self.folder / "install.log").read_text())
 
     def test_repeated_install_reuses_exact_service_and_preserves_backups(self):
@@ -199,7 +199,7 @@ int sceAppInstUtilAppInstallTitleDir(const char *title, const char *root, void *
         self.assertEqual(self.run_installer().returncode, 0)
         self.assertEqual(self.transfers, ["SERVICE", "SHORTCUT", "SHORTCUT"])
         self.assertEqual(self.autoload.read_text().count(str(self.service)), 1)
-        self.assertEqual(Path(str(self.config) + ".poldrive-backup").read_bytes(), self.original_config)
+        self.assertEqual(Path(str(self.config) + ".obsidian-backup").read_bytes(), self.original_config)
 
     def test_unrelated_service_or_stale_build_never_replaces_dashboard(self):
         self.health_body = HEALTH.replace(b"a", b"b")
@@ -288,7 +288,7 @@ class FullscreenSingleInstaller(SingleInstaller):
 
 class ServiceEmbedding(unittest.TestCase):
     def test_bundle_uses_exact_elf_and_preview_identity_and_rejects_invalid_inputs(self):
-        with tempfile.TemporaryDirectory(prefix="poldrive-embed-service-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="obsidian-embed-service-") as temporary:
             folder = Path(temporary)
             source = folder / "service.elf"
             source.write_bytes(SERVICE)

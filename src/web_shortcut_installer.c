@@ -1,4 +1,4 @@
-/* Prepare PolDrive's browser shortcut and register it with the PS5 app service. */
+/* Prepare Obsidian's browser shortcut and register it with the PS5 app service. */
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,9 +17,9 @@
 #ifdef WOLO_EMBED_APP
 #include "ps5_app_payload.h"
 #endif
-#ifndef POLDRIVE_APP_PATH
-#define POLDRIVE_APP_PATH "/data/pldmgr/payloads/poldrive/poldrive-app.elf"
-#define POLDRIVE_CREATE_APP_DIRS
+#ifndef OBSIDIAN_APP_PATH
+#define OBSIDIAN_APP_PATH "/data/pldmgr/payloads/obsidian/obsidian-app.elf"
+#define OBSIDIAN_CREATE_APP_DIRS
 #endif
 #ifdef __PS5__
 #include <stdint.h>
@@ -39,9 +39,9 @@ extern int sceAppInstUtilAppInstallTitleDir(const char *title, const char *root,
 #endif
 #ifndef WOLO_INSTALL_LOG
 #ifdef WOLO_FULLSCREEN_WEBAPP
-#define WOLO_INSTALL_LOG "/data/poldrive-fullscreen-shortcut.log"
+#define WOLO_INSTALL_LOG "/data/obsidian-fullscreen-shortcut.log"
 #elif defined(WOLO_FULLSCREEN_RESTORE)
-#define WOLO_INSTALL_LOG "/data/poldrive-fullscreen-restore.log"
+#define WOLO_INSTALL_LOG "/data/obsidian-fullscreen-restore.log"
 #else
 #define WOLO_INSTALL_LOG "/data/wolodrive-shortcut.log"
 #endif
@@ -80,8 +80,8 @@ static int register_shortcut(FILE *log) {
 
 #ifdef WOLO_SINGLE_SHORTCUT
 /* The single-file installer verifies the quiet service before sending us. */
-#define SHORTCUT_TARGET POLDRIVE_DIRECT_URL
-#define SHORTCUT_LOG_TARGET "Single installer Media target: " POLDRIVE_DIRECT_URL
+#define SHORTCUT_TARGET OBSIDIAN_DIRECT_URL
+#define SHORTCUT_LOG_TARGET "Single installer Media target: " OBSIDIAN_DIRECT_URL
 #elif defined(WOLO_SHORTCUT_WEBFIRST)
 /* Browser-only Media tile. This deliberately does not start the payload.
    Install only AFTER the fixed-port background server is configured. */
@@ -89,8 +89,8 @@ static int register_shortcut(FILE *log) {
 #define SHORTCUT_LOG_TARGET "Web-first Media target: http://127.0.0.1:8097/"
 #else
 /* Recovery/legacy route remains available in the ordinary unified installer. */
-#define SHORTCUT_TARGET "http://127.0.0.1:8084/loadpayload:" POLDRIVE_APP_PATH
-#define SHORTCUT_LOG_TARGET "Media launch target: " POLDRIVE_APP_PATH
+#define SHORTCUT_TARGET "http://127.0.0.1:8084/loadpayload:" OBSIDIAN_APP_PATH
+#define SHORTCUT_LOG_TARGET "Media launch target: " OBSIDIAN_APP_PATH
 #endif
 
 static const char param_json[] =
@@ -104,7 +104,7 @@ static const char param_json[] =
     "\"deeplinkUri\":\"" SHORTCUT_TARGET "\","
 #endif
     "\"localizedParameters\":{\"defaultLanguage\":\"en-US\","
-    "\"en-US\":{\"titleName\":\"PolDrive\"}}}\n";
+    "\"en-US\":{\"titleName\":\"Obsidian\"}}}\n";
 
 static int write_asset(const char *path, const void *bytes, size_t size) {
     FILE *file = fopen(path, "wb");
@@ -170,9 +170,9 @@ int main(void) {
 #ifdef WOLO_EMBED_APP
     /* Install the exact dashboard runtime before publishing its shortcut.
        Keep it under Payload Manager's allowed payload root for /loadpayload:. */
-#ifdef POLDRIVE_CREATE_APP_DIRS
+#ifdef OBSIDIAN_CREATE_APP_DIRS
     const char *parents[] = {"/data/pldmgr", "/data/pldmgr/payloads",
-                             "/data/pldmgr/payloads/poldrive"};
+                             "/data/pldmgr/payloads/obsidian"};
     for (size_t i = 0; i < sizeof(parents)/sizeof(parents[0]); ++i) {
         if (mkdir(parents[i], 0755) && errno != EEXIST) {
             fprintf(log, "Cannot prepare dashboard app directory: %s\n", strerror(errno));
@@ -181,9 +181,9 @@ int main(void) {
         }
     }
 #endif
-    const char *temporary = POLDRIVE_APP_PATH ".tmp";
+    const char *temporary = OBSIDIAN_APP_PATH ".tmp";
     if (write_asset(temporary, app_payload_elf, sizeof(app_payload_elf)) ||
-        chmod(temporary, 0755) || rename(temporary, POLDRIVE_APP_PATH)) {
+        chmod(temporary, 0755) || rename(temporary, OBSIDIAN_APP_PATH)) {
         fprintf(log, "Cannot save dashboard app: %s\n", strerror(errno));
         remove(temporary);
         fclose(log);
@@ -226,7 +226,7 @@ int main(void) {
     fprintf(log, "AppInst initialize: 0x%x\n", (unsigned)result);
     if (!result) {
         result = register_shortcut(log);
-        fprintf(log, "Register PolDrive (%s) under Media: 0x%x\n", TITLE_ID, (unsigned)result);
+        fprintf(log, "Register Obsidian (%s) under Media: 0x%x\n", TITLE_ID, (unsigned)result);
         sceAppInstUtilTerminate();
     }
     if (!result) {

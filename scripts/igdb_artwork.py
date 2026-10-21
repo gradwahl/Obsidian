@@ -1,4 +1,4 @@
-"""Optional, resumable IGDB cover search for Poldrive's missing artwork.
+"""Optional, resumable IGDB cover search for Obsidian's missing artwork.
 
 Security: credentials ONLY via IGDB_CLIENT_ID / IGDB_CLIENT_SECRET in the
 process environment. OAuth token and credentials are never written to disk.
@@ -579,7 +579,7 @@ def main(argv=None):
                         help="Maximum individual game searches (default 50); ignored with --bulk")
     parser.add_argument("--batch-size", type=int, default=10, help="Game searches per IGDB request, 1-10 (default 10)")
     parser.add_argument("--workers", type=int, default=3, help="Concurrent requests, 1-4 (default 3)")
-    parser.add_argument("--platforms", help="Comma-separated Poldrive platform IDs")
+    parser.add_argument("--platforms", help="Comma-separated Obsidian platform IDs")
     parser.add_argument("--retry-unmatched", action="store_true",
                         help="Retry cached not-found/review results; never clear matched results")
     args = parser.parse_args(argv)
@@ -645,7 +645,7 @@ def main(argv=None):
         # results become "covered" after enrich_artwork.py merges them.
         count = export_cache(cache)
         print(f"IGDB cached matches exported: {count}. No API requests made.")
-        print("Run python scripts/enrich_artwork.py --offline to merge covers into Poldrive.")
+        print("Run python scripts/enrich_artwork.py --offline to merge covers into Obsidian.")
         return 0
     cid, secret = os.getenv("IGDB_CLIENT_ID"), os.getenv("IGDB_CLIENT_SECRET")
     if not cid or not secret:
@@ -665,7 +665,7 @@ def main(argv=None):
                            progress=lambda message: print(message, flush=True))
         matches = export_cache(cache)
         print(f"Bulk results: {dict(totals)}; IGDB cached matches exported: {matches}.", flush=True)
-        print("Run python scripts/enrich_artwork.py --offline to merge covers into Poldrive.")
+        print("Run python scripts/enrich_artwork.py --offline to merge covers into Obsidian.")
         return 0
     print(f"Multi-Query: {args.batch_size} searches/request, {args.workers} workers, "
           "shared ~3 requests/second limiter", flush=True)
@@ -681,7 +681,7 @@ def main(argv=None):
     matches = export_cache(cache)
     print(f"Queried: {requested_count}; IGDB cached matches exported: {matches}; "
           f"missing Multi-Query blocks verified individually: {client.fallback_searches}.", flush=True)
-    print("Run python scripts/enrich_artwork.py --offline to merge covers into Poldrive.")
+    print("Run python scripts/enrich_artwork.py --offline to merge covers into Obsidian.")
     return 0
 
 if __name__ == "__main__":

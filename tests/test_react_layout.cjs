@@ -71,7 +71,7 @@ const archiveURLs = JSON.parse(fs.readFileSync(path.join(root, 'src/archiveArtwo
 assert.ok(Object.keys(archiveURLs).length >= 700, 'Verified artwork match index should be generated');
 assert.equal(INITIAL_CATALOG.length, 862);
 for (const [gameKey, url] of Object.entries(archiveURLs)) {
-  assert.match(url, /^https:\/\/raw\.githubusercontent\.com\/PolDrive\/PolDrive-archive\/main\/assets\/covers\/Sony\/PlayStation%20[45]\//);
+  assert.match(url, /^https:\/\/raw\.githubusercontent\.com\/gradwahl\/Obsidian-archive\/main\/assets\/covers\/Sony\/PlayStation%20[45]\//);
   assert.ok(!url.includes('..'), 'Archive artwork URLs must not contain traversal paths');
   assert.ok(gameKey.includes('|'));
 }
@@ -169,7 +169,7 @@ assert.match(mobileCSS, /\.tv-stage-mobile \.tv-theme-ubiquity \.ubq-feature-tit
 assert.match(mobileCSS, /\.tv-stage-mobile \.ubq-category-select \{[\s\S]*?overflow-x:auto/,
   'All game categories must be horizontally swipeable');
 assert.match(mobileCSS, /\.tv-stage-mobile \.tv-theme-ubiquity \.tv-sidebar\.glass-surface \{[\s\S]*?backdrop-filter:none!important/,
-  'Fixed-position language and PD buttons must not anchor to the bottom navbar');
+  'Fixed-position language and logo buttons must not anchor to the bottom navbar');
 const noop = () => {};
 const game = { id_code: 'PPSA00001', title: 'Example <game>', version: '01.00', source_name: 'Fixture',
   is_game: true, is_dlc: false, screenshot_urls: [], catalog_added_at: 20261019120000,
@@ -188,7 +188,7 @@ assert.match(completeBox, /src="\/box.jpg"/);
 assert.ok(!completeBox.includes('tv-platform-ps5'), 'Complete box art must retain its original platform branding');
 const missing = render(React.createElement(CoverArt, { game: { ...game, cover_local_path: '' } }));
 assert.ok(!missing.includes('<img'));
-assert.match(missing, /PolDrive/);
+assert.match(missing, /Obsidian/);
 const games = Array.from({ length: 5 }, (_, index) => ({ ...game, id_code: `PPSA0000${index}`, title: `Game ${index}` }));
 const homeProps = { games, language: 'en', selected: 1, sidebarFocused: false, onSelect: noop, onOpen: noop, onRefresh: noop, syncInProgress: false };
 const home = render(React.createElement(NativeViewport, null, React.createElement(HomeView, homeProps)));
@@ -378,7 +378,7 @@ assert.match(detail, /tv-detail-tabs/);
 const appDetailSource = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
 assert.match(appDetailSource, /\{detailGame && \(/);
 assert.match(appDetailSource, /<UbiquityGameDetails/);
-assert.doesNotMatch(appDetailSource, /GameDetailModal|poldrive-ui-theme|changeUiTheme/);
+assert.doesNotMatch(appDetailSource, /GameDetailModal|obsidian-ui-theme|changeUiTheme/);
 const nativeDetailSource = fs.readFileSync(path.join(root, 'src/ui_ubiquity_details.h'), 'utf8');
 assert.match(nativeDetailSource, /static void render_ubiquity_game_details/);
 assert.match(nativeDetailSource, /render_cover_or_placeholder\(app, item, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true\)/);
@@ -413,7 +413,7 @@ assert.ok(availableEmulators.every(system =>
   system.platform_id !== 'sony-ps4' && system.platform_id !== 'sony-ps5'));
 assert.equal(emulatorSystems.length, 58,
   'The current library has 58 system tiles, including the requested emulator groups');
-assert.equal(EMULATOR_RELEASES_URL, 'https://github.com/PolDrive/PolDrive-Emulators/releases');
+assert.equal(EMULATOR_RELEASES_URL, 'https://github.com/gradwahl/Obsidian-Emulators/releases');
 assert.equal(Object.keys(emulatorReleaseData.platforms).length, 9);
 assert.equal(Object.keys(emulatorReleaseData.systems).length, 34,
   'The owner-designated 34 RetroArch systems should share one v4 asset');
@@ -433,7 +433,7 @@ for (const system of emulatorSystems) {
   const rendered = render(React.createElement(EmulatorReleaseView, {
     system, onBack: () => {}
   }));
-  assert.doesNotMatch(rendered, /View release|Browse all PolDrive emulator releases/,
+  assert.doesNotMatch(rendered, /View release|Browse all Obsidian emulator releases/,
     'Emulator detail pages should not offer release-browsing buttons');
   const match = getEmulatorRelease(system);
   if (match) {
@@ -456,7 +456,7 @@ assert.equal(availableEmulators.filter(system => !getEmulatorRelease(system)).le
 assert.equal(getEmulatorRelease(sonyCompany.consoles[3]), null, 'PS4 is not an emulator');
 assert.equal(getEmulatorRelease(sonyCompany.consoles[4]), null, 'PS5 is not an emulator');
 
-const assetRoot = 'https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/';
+const assetRoot = 'https://raw.githubusercontent.com/gradwahl/Obsidian-archive/main/';
 assert.equal(archiveLibraryUrl('/assets/library/companies/sony.png'),
   assetRoot + 'assets/library/companies/sony.png');
 assert.equal(archiveLibraryUrl('../secrets.txt'), null);
@@ -469,7 +469,7 @@ const allLibraryAssets = COMPANIES.flatMap(company => [
 assert.equal(allLibraryAssets.length, 119,
   'All existing company, emulator and console image paths must stream');
 assert.ok(allLibraryAssets.every(uri => uri.startsWith(assetRoot + 'assets/library/')));
-assert.match(library, /raw\.githubusercontent\.com\/PolDrive\/PolDrive-archive\/main\/assets\/library\/companies\/sony\.png/);
+assert.match(library, /raw\.githubusercontent\.com\/gradwahl\/Obsidian-archive\/main\/assets\/library\/companies\/sony\.png/);
 assert.match(library, /loading="lazy"/);
 const importedCoverMap = JSON.parse(
   fs.readFileSync(path.join(root, 'src/archiveSourceCovers.json'), 'utf8'));
@@ -480,7 +480,7 @@ for (const path of Object.values(importedCoverMap)) {
   assert.ok(!path.split('/').includes('..'), 'Archive cover paths must remain under assets/covers/');
 }
 const pagedBrowserSource = fs.readFileSync(path.join(root, 'src/sourceCatalogues.ts'), 'utf8');
-assert.match(pagedBrowserSource, /poldrive-pages\//);
+assert.match(pagedBrowserSource, /obsidian-pages\//);
 assert.match(pagedBrowserSource, /manifest\.json/);
 assert.doesNotMatch(pagedBrowserSource, /import\('\.\/archiveSourceCovers\.json'\)/,
   'Browser startup should not execute a 6MB artwork JSON module');
@@ -498,7 +498,7 @@ assert.match(librarySource, /tv-library-ubiquity-games/);
 assert.match(librarySource, /<HomeView games=\{gamesFor\(console\)\}/);
 const appSourceForLibrary = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
 assert.match(appSourceForLibrary, /className="tv-app tv-theme-ubiquity"/);
-assert.doesNotMatch(appSourceForLibrary, /poldrive-ui-theme|themeChoiceIndex|changeUiTheme/);
+assert.doesNotMatch(appSourceForLibrary, /obsidian-ui-theme|themeChoiceIndex|changeUiTheme/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-library-ubiquity-games \.tv-breadcrumb/);
 const nativeLibraryPath = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 assert.match(nativeLibraryPath, /static bool ubiquity_carousel_enabled\(WolodriveApp \*app\)/);
@@ -516,18 +516,18 @@ assert.match(collapsedSidebar, /tv-sidebar-collapsed/);
 assert.match(collapsedSidebar, /data-state="collapsed"/);
 assert.ok(!collapsedSidebar.includes('tv-sidebar-dim-active'));
 assert.ok(collapsedSidebar.includes('tv-brand-mark'));
-assert.ok(collapsedSidebar.includes('olDrive'));
+assert.ok(collapsedSidebar.includes('bsidian'));
 assert.match(collapsedSidebar, /ubq-pd-bubble-collapsed/,
-  'The animated PD emblem must render on the default Ubiquity sidebar');
+  'The animated O emblem must render on the default Ubiquity sidebar');
 assert.match(collapsedSidebar, /ubq-pd-ribbon-1/,
-  'The PD emblem needs its moving crimson ribbons');
+  'The O emblem needs its moving crimson ribbons');
 assert.match(css, /@keyframes ubqCrimsonRibbon1/,
   'The crimson emblem animation must be included in the web CSS');
 assert.match(css, /\.ubq-cinematic-background \{[^}]*left: -92px; width: 1920px; height: 1080px/,
   'Cinematic artwork must extend behind the rail to fill the entire 1920x1080 screen');
 const focusedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, isSidebarFocused: true }));
 assert.match(focusedSidebar, /ubq-pd-bubble-expanded/,
-  'The PD emblem must unfold to PolDrive when sidebar receives focus');
+  'The O emblem must unfold to Obsidian when sidebar receives focus');
 assert.match(focusedSidebar, /tv-sidebar-expanded/);
 assert.match(focusedSidebar, /data-state="expanded"/);
 assert.match(focusedSidebar, /tv-sidebar-dim-active/);
@@ -562,6 +562,11 @@ assert.match(ubiquitySource, /prefers-reduced-motion: reduce/);
 assert.match(appSource, /selectedHomeCols\[activeHomeCategory\]/);
 assert.match(appSource, /lastGamepadPress\.current/);
 assert.match(heroSource, /function ArtworkCrossfade/);
+assert.match(heroSource, /<strong>O<\/strong>/, 'Hero banner must use the Obsidian O mark');
+assert.match(heroSource, /<span>bsidian<\/span>/, 'Hero banner must spell Obsidian');
+assert.match(native, /draw_text\(app, app->font_logo, "O"/, 'Native logo must use the Obsidian O mark');
+assert.match(native, /draw_text\(app, app->font_logo, "bsidian"/, 'Native logo must spell Obsidian');
+
 assert.match(css, /\.tv-hero-incoming-loaded/);
 assert.match(css, /\.tv-nav-marker \{/);
 assert.match(collapsedSidebar, /glass-pill glass-pill--active sliding-highlight tv-nav-marker/);
@@ -579,10 +584,10 @@ assert.equal(declaration('.tv-meta-pill', 'height'), 30);
 assert.equal(declaration('.tv-card', 'border-radius'), 18);
 assert.match(fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8'), /border-radius: 9999px/);
 assert.match(home, /class="ubq-system-label ubq-glass-capsule"/,
-  'The PD-branding PolDrive glass capsule should replace the old PS5 Library label');
-assert.match(home, /class="ubq-logo-d">D<\/span>/);
+  'The Obsidian-branding Obsidian glass capsule should replace the old PS5 Library label');
+assert.match(home, /class="ubq-logo-p">O<\/b>/);
 assert.doesNotMatch(home, /PS5 LIBRARY/);
-assert.doesNotMatch(home, /Poldrive/);
+assert.match(home, /aria-label="Obsidian"/);
 const glassCss = fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8');
 assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar\.glass-surface\.tv-sidebar-collapsed \{ width: 64px; \}/,
   'The collapsed Ubiquity rail must be 64px wide');
@@ -601,19 +606,19 @@ assert.match(native, /SIDEBAR_COLLAPSED_W = 64, RAIL_WIDTH = 92, SIDEBAR_EXPANDE
 assert.match(native, /\(SDL_Rect\)\{10, 8, 44, 44\}/,
   'Native Ubiquity language control should be the same 44px square');
 assert.match(glassCss, /\.tv-theme-ubiquity \.ubq-pd-bubble-collapsed \{ top: 80px;/,
-  'The collapsed PD mark should sit lower under the language button');
+  'The collapsed O mark should sit lower under the language button');
 assert.match(glassCss, /\.tv-theme-ubiquity \.ubq-pd-bubble-expanded \{ top: 77px;/,
-  'The expanded PolDrive mark must also clear the language control');
+  'The expanded Obsidian mark must also clear the language control');
 assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar\.glass-surface::after \{[^}]*content: none/s,
   'The bright white glass sheen at the top of the sidebar must be removed');
 assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar \.tv-language \{ z-index: 30; \}/,
-  'Language stacking context must paint above the PD emblem');
+  'Language stacking context must paint above the O emblem');
 assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar \.tv-language-options \{[^}]*width: 100%;[^}]*max-width: 100%;/s,
   'Language menu must fit inside the expanded rail rather than retain a fixed 244px width');
 assert.match(native, /LANGUAGE_MENU = \{8, 92, SIDEBAR_EXPANDED_W - 16, LANG_COUNT \* 44 \+ 16\}/,
   'Native language menu must also remain within the expanded sidebar');
 assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar \.ubq-pd-bubble \{ z-index: 3; \}/,
-  'PD branding must stay behind the language dropdown');
+  'Obsidian branding must stay behind the language dropdown');
 assert.match(native, /by = expanded \? 77 : 80/,
   'Native logo placement must match the web sidebar');
 assert.match(fs.readFileSync(path.join(root, 'src/ui_glass.h'), 'utf8'),
@@ -623,7 +628,7 @@ assert.match(glassCss, /\.tv-theme-ubiquity \.sliding-highlight\.glass-pill--act
   'Selected capsules need their own translucent multi-stop bevel gradient');
 assert.match(glassCss, /rgba\(255, 136, 166, \.60\)/);
 assert.match(glassCss, /\.tv-theme-ubiquity \.ubq-feature-title \{[^}]*font-size: 84px/s,
-  'The featured game title uses the original larger PD-branding sizing');
+  'The featured game title uses the original larger Obsidian-branding sizing');
 const nativeSettings = fs.readFileSync(path.join(root, 'src/ui_settings.h'), 'utf8');
 const persistedTheme = fs.readFileSync(path.join(root, 'src/settings.c'), 'utf8');
 const componentSettings = render(React.createElement(SettingsView, {
@@ -636,7 +641,7 @@ const componentDefault = render(React.createElement(SettingsView, {
   onChangeFilters: noop, availableSources: [], language: 'en',
   uiTheme: 'ubiquity', onChangeTheme: noop
 }));
-assert.match(componentSettings, /PolDrive System/, 'Restored Settings dashboard must display the system summary');
+assert.match(componentSettings, /Obsidian System/, 'Restored Settings dashboard must display the system summary');
 assert.match(componentSettings, /Network|Connection|Połączenie/i,
   'Restored Settings dashboard must include network status');
 assert.match(t('en', 'TXT_DOWNLOADS_HELP'), /download/i);
