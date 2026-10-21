@@ -70,7 +70,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
       {items.slice(page * 8, page * 8 + 8).map((item, index) => {
         const system = company ? item as LibraryConsole : null;
         const brand = company ? null : item as LibraryCompany;
-        return <button type="button" key={item.name}
+        return <button type="button" key={`${item.name}_${index}`}
           className={`tv-library-tile ${focused === index ? 'tv-library-selected' : ''}`}
           onFocus={() => setFocused(index)} onMouseEnter={() => setFocused(index)}
           onClick={() => { if (system) setConsole(system); else setCompany(brand); setPage(0); setFocused(0); }}>

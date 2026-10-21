@@ -106,7 +106,7 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
               {t(language, 'TXT_NO_ACTIVE_DOWNLOADS')}
             </div>
           ) : (
-            currentGames.map((game) => {
+            currentGames.map((game, idx) => {
               const isPaused = pausedTasks[game.id_code];
               const isCompleted = game.state === 'installed';
               const progress = isCompleted ? 100 : game.progress || 0;
@@ -122,7 +122,7 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
 
               return (
                 <div
-                  key={game.id_code}
+                  key={`${game.id_code}_${idx}`}
                   onClick={() => onOpenGame && onOpenGame(game)}
                   className="bg-[#14141c]/85 backdrop-blur-md border border-white/12 rounded-[18px] p-5 hover:border-white/25 transition-all cursor-pointer shadow-lg relative overflow-hidden group"
                 >

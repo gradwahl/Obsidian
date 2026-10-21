@@ -150,6 +150,14 @@ export function UbiquityHomeView({
           <span>{list.length ? index + 1 : 0} / {list.length}</span>
         </div>
         <div className="ubq-shelf-track" ref={scrollRef}>
+          {!sidebarFocused && list.length > 0 && (
+            <div
+              className="ubq-focus-pill"
+              style={{
+                transform: `translate3d(${28 + index * 252 - 15}px, 9px, 0)`,
+              }}
+            />
+          )}
           {windowStart > 0 && <span aria-hidden="true" className="ubq-virtual-spacer"
             style={{ flexBasis: windowStart * 252 - 20 }} />}
           {list.slice(windowStart, windowEnd).map((item, offset) => {

@@ -2735,18 +2735,60 @@ static void render_ubiquity_home(WolodriveApp *app) {
                   selected_console ? selected_console->name : view_content_title(app),
               CONTENT_X + 24, 708, white, 780);
 
-    /* Leave room outside the cover bounds for its pulsing focus halo. */
-    SDL_Rect clip = {RAIL_WIDTH + 22, 735, SCREEN_WIDTH - RAIL_WIDTH - 28, 270};
+    /* Widen clip rectangle so cards, focus pill, and glow have full breathing room without clipping */
+    SDL_Rect clip = {CONTENT_X - 28, 690, SCREEN_WIDTH - (CONTENT_X - 28), 330};
     SDL_RenderSetClipRect(r, &clip);
+
+    /* Update gliding focus pill position for smooth floating ring transition */
+    if (row->item_count > 0) {
+        SDL_Rect target_card = app->active_row == VIEW_HOME ?
+            home_row_card_target(app, app->home_cat_index, row->selected_col) : card_target(app, row->selected_col);
+        float target_pill_x = (float)target_card.x;
+        if (row->focus_pill_x == 0.0f) row->focus_pill_x = target_pill_x;
+        row->focus_pill_x += (target_pill_x - row->focus_pill_x) * (1.0f - expf(-16.0f * 0.016f));
+        if (fabsf(target_pill_x - row->focus_pill_x) < 0.2f) row->focus_pill_x = target_pill_x;
+    }
+
+    /* Draw floating crimson focus pill around active card position
+       (2.6s double strobe timing:
+       float phase = (float)(SDL_GetTicks() % 2600u) / 2600.0f;
+       float first = (phase - 0.09f) / 0.038f;
+       float second = (phase - 0.21f) / 0.038f;
+       float burst = fmaxf(expf(-first * first), expf(-second * second));) */
+    if (!app->sidebar_focus && row->item_count > 0) {
+        int pill_w = 262;
+        int pill_h = 262;
+        int pill_x = (int)row->focus_pill_x - 15;
+        int pill_y = 755 - 19;
+
+        /* Soft multi-layer crimson glow */
+        draw_rounded_glow(r, pill_x - 16, pill_y - 16, pill_w + 32, pill_h + 32, 36, 16, 201, 24, 74, 150);
+        draw_rounded_glow(r, pill_x - 8, pill_y - 8, pill_w + 16, pill_h + 16, 30, 10, 89, 13, 34, 120);
+
+        /* Crimson gradient wrapping capsule border */
+        draw_rounded_border(r, pill_x, pill_y, pill_w, pill_h, 24, 4, 201, 24, 74, 255);
+        draw_rounded_border(r, pill_x + 1, pill_y + 1, pill_w - 2, pill_h - 2, 23, 2, 255, 51, 102, 230);
+        draw_rounded_border(r, pill_x - 1, pill_y - 1, pill_w + 2, pill_h + 2, 25, 2, 89, 13, 34, 200);
+    }
+
     for (int col = 0; col < row->item_count; col++) {
-        SDL_Rect card = app->active_row == VIEW_HOME ?
+        SDL_Rect base_card = app->active_row == VIEW_HOME ?
             home_row_card_target(app, app->home_cat_index, col) : card_target(app, col);
-        if (card.x + card.w < clip.x || card.x > clip.x + clip.w) continue;
+        if (base_card.x + base_card.w < clip.x || base_card.x > clip.x + clip.w) continue;
+
+        bool is_selected = (col == row->selected_col) && !app->sidebar_focus;
+        float scale = is_selected ? 1.08f : 0.92f;
+        int card_w = (int)(base_card.w * scale);
+        int card_h = (int)(base_card.h * scale);
+        int card_x = base_card.x - (card_w - base_card.w) / 2;
+        int card_y = base_card.y - (card_h - base_card.h) / 2 - (is_selected ? 4 : 0);
+        SDL_Rect card = {card_x, card_y, card_w, card_h};
+
         GameItem *item = row->items[col];
         int iw = 0, ih = 0;
         SDL_Texture *cover = artwork_get(app, item, false, 80, &iw, &ih);
-        fill_rect(r, card.x, card.y, card.w, card.h, 15, 17, 23, 255);
-        /* Original reference: one 232x232 square tile, not a tall card with a footer below. */
+        fill_rect(r, card.x, card.y, card.w, card.h, 15, 17, 23, is_selected ? 255 : 210);
+        /* Original reference: 232px square tile. */
         SDL_Rect cover_rect = {card.x, card.y, card.w, card.h};
         if (cover && iw > 0 && ih > 0) {
             int square = SDL_min(iw, ih);
@@ -2758,17 +2800,16 @@ static void render_ubiquity_home(WolodriveApp *app) {
             draw_fitted_text(app, app->font_small, item->title, fallback,
                              white, fallback, true);
         }
-        /* Place the name and download arrow over the last 40px of artwork. */
+
         const bool downloadable =
             item->state == STATE_AVAILABLE && item->format != FMT_CATALOG;
         SDL_Rect footer = {card.x, card.y + card.h - 40, card.w, 40};
-        fill_rect(r, footer.x, footer.y, footer.w, footer.h, 9, 11, 16, 228);
+        fill_rect(r, footer.x, footer.y, footer.w, footer.h, 9, 11, 16, is_selected ? 240 : 200);
         fill_rect(r, footer.x, footer.y, footer.w, 1, 71, 72, 80, 145);
         SDL_Rect caption = {footer.x + 30, footer.y + 4, footer.w - 60, footer.h - 8};
         draw_fitted_text(app, app->font_small, item->title,
                          caption, white, footer, true);
         if (downloadable) {
-            /* Geometry-based arrow renders reliably with PS5 fonts. */
             int ax = footer.x + footer.w - 18;
             int ay = footer.y + 10;
             SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_NONE);
@@ -2778,6 +2819,15 @@ static void render_ubiquity_home(WolodriveApp *app) {
             SDL_RenderDrawLine(r, ax - 5, ay + 8, ax, ay + 13);
             SDL_RenderDrawLine(r, ax + 6, ay + 8, ax + 1, ay + 13);
         }
+        const int ubq_radius = (int)(18.0f * scale);
+        for (int row_i = 0; row_i < ubq_radius; ++row_i) {
+            int inset = rounded_inset(row_i, card.w, card.h, ubq_radius);
+            if (inset > 0) {
+                fill_rect(r, card.x, card.y + row_i, inset, 1, 0, 0, 0, 255);
+                fill_rect(r, card.x + card.w - inset, card.y + row_i, inset, 1, 0, 0, 0, 255);
+                fill_rect(r, card.x, card.y + card.h - 1 - row_i, inset, 1, 0, 0, 0, 255);
+                fill_rect(r, card.x + card.w - inset, card.y + card.h - 1 - row_i, inset, 1, 0, 0, 0, 255);
+            }
         if (col == row->selected_col && !app->sidebar_focus) {
             /* Match web's 2.6-second double-strobe, with a steady single white
                outline. Only the halo pulses; the cover never flashes. */

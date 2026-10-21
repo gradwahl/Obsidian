@@ -207,8 +207,8 @@ assert.match(nativeThemeSource, /SDL_RenderDrawLine\(r, ax, ay, ax, ay \+ 13\)/)
 assert.match(nativeThemeSource, /SDL_GetTicks\(\) % 2600u/,
   'SDL2 focus strobe should have matching 2.6-second timing');
 assert.match(nativeThemeSource, /float burst = fmaxf\(expf\(-first \* first\), expf\(-second \* second\)\)/);
-assert.match(nativeThemeSource, /2, 2, 250, 250, 255, 255/,
-  'SDL2 should use one steady white focus border');
+assert.match(nativeThemeSource, /201,\s*24,\s*74/,
+  'SDL2 should use silk crimson gradient border');
 assert.match(css, /\.ubq-square-art \{[^}]*width: 232px; height: 232px/);
 assert.match(css, /\.ubq-cover-footer \{[^}]*height: 40px/);
 assert.match(css, /\.ubq-cover-footer \{[^}]*position: absolute;[^}]*bottom: 0/);
