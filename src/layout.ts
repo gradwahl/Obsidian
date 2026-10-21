@@ -26,3 +26,12 @@ export function platformLabel(id: string) {
   if (/^CUSA/i.test(id)) return 'PS4';
   return '';
 }
+
+// Mirrored by GAME_LIST_* in ui_game_list.h (logical 1920 x 1080).
+export const GAME_LIST = { top: 220, rowHeight: 64, rowGap: 8, pageSize: 10, columnWeights: [17, 39, 32, 12] } as const;
+
+// Public Home navigation order. Native HOME_TABS mirrors these two categories.
+export const HOME_TABS = [
+  { id: 'newest', titleKey: 'TXT_CAT_NEWEST' },
+  { id: 'popular', titleKey: 'TXT_CAT_POPULAR' }
+] as const;

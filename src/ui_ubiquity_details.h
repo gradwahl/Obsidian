@@ -7,16 +7,7 @@ static void render_ubiquity_game_details(WolodriveApp *app) {
     SDL_Color white = {246, 246, 249, 255};
     SDL_Color muted = {188, 190, 200, 255};
 
-    /* Existing backdrop selection/cache; expand to the full viewport. */
-    fill_rect(r, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 7, 9, 14, 255);
-    render_cover_or_placeholder(app, item, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true);
-    for (int band = 0; band < 72; band++) {
-        float t = 1.0f - (float)band / 72.0f;
-        fill_rect(r, band * 17, 0, 17, SCREEN_HEIGHT, 3, 5, 9,
-                  (Uint8)(236.0f * t * t));
-    }
-    fill_vertical_gradient(r, 0, 675, SCREEN_WIDTH, 405,
-                           4, 5, 9, 0, 4, 5, 9, 255, 48);
+    fill_rect(r, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 11, 13, 20, 255);
     draw_text(app, app->font_row_title, "Obsidian",
               SCREEN_WIDTH - 255, 45, muted, 210);
     draw_text(app, app->font_small, "X", 48, 47, white, 0);
@@ -67,7 +58,7 @@ static void render_ubiquity_game_details(WolodriveApp *app) {
     draw_text(app, app->font_small, "Version", 350, 785, muted, 0);
     draw_text(app, app->font_small, "Status", 540, 785, muted, 0);
     char size[64];
-    snprintf(size, sizeof(size), "%.1f GB", item->size_gb);
+    game_list_size(item,size);
     draw_text(app, app->font_small, size, 170, 825, white, 0);
     draw_text(app, app->font_small, item->version, 350, 825, white, 0);
     draw_text(app, app->font_small,

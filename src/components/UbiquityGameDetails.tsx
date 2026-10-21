@@ -1,4 +1,4 @@
-import { MemoryImage } from './MemoryImage';
+import { gameSize } from '../gameList';
 import { GlassLiquid } from './GlassLiquid';
 import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -26,11 +26,8 @@ export function UbiquityGameDetails({
   parentGame, onBackToParent, actionIndex, onActionIndexChange
 }: Props) {
   const game = useCatalogDetails(summary);
-  const [failedArt, setFailedArt] = useState<string[]>([]);
-  useEffect(() => setFailedArt([]), [summary]);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
-  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   // Controller users should land on the first option when the panel opens.
   useEffect(() => {
     if (!optionsOpen) return;
@@ -42,16 +39,10 @@ export function UbiquityGameDetails({
   const descriptionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setFailedArt([]);
     setOptionsOpen(false);
     setShowOriginal(false);
-    setSelectedScreenshot(null);
     descriptionRef.current?.scrollTo(0, 0);
   }, [game.id_code]);
-
-  const backdrop = [
-    game.backdrop_url, game.cover_local_path, game.cover_url, game.boxart_url
-  ].find(src => src && !failedArt.includes(src)) || '';
 
   const siblings = useMemo(
     () => catalog.filter(candidate => isSameGame(game, candidate)),
@@ -90,11 +81,6 @@ export function UbiquityGameDetails({
   return (
     <div className="ubq-detail-screen" role="dialog" aria-modal="true"
       aria-labelledby="ubq-detail-title" data-layout="ubiquity-detail">
-      <div className="ubq-detail-art" aria-hidden="true">
-        {backdrop && <MemoryImage artworkSize="hero" src={backdrop} alt=""
-          onError={() => setFailedArt(prev => prev.includes(backdrop) ? prev : [...prev, backdrop])} />}
-      </div>
-      <div className="ubq-detail-vignette" aria-hidden="true" />
       <div className="ubq-detail-provider">
         <span className="ubq-detail-provider-mark">◈</span> Obsidian
       </div>
@@ -122,7 +108,7 @@ export function UbiquityGameDetails({
             {t(language, showOriginal ? 'TXT_TRANSLATED_DESCRIPTION' : 'TXT_ORIGINAL_DESCRIPTION')} [I]
           </button>}
           <div className="ubq-detail-stats">
-            <div><span>Install size</span><strong>{game.size_gb.toFixed(1)} GB</strong></div>
+            <div><span>Install size</span><strong>{gameSize(game)}</strong></div>
             <div><span>Status</span><strong>{game.state === 'installed' ? 'Installed' : game.state === 'downloading' ? 'Downloading' : 'Available'}</strong></div>
             <div><span>Packages</span><strong>{siblings.length}</strong></div>
             {(game.download_count || 0) > 0 && <div><span>Downloads</span><strong>{game.download_count?.toLocaleString()}</strong></div>}
@@ -150,25 +136,16 @@ export function UbiquityGameDetails({
           {siblings.map((item, index) => <button type="button" key={item.id_code + '-' + index}
             onClick={() => onTriggerAction(item)}>
             <b>{item.source_name || item.title}</b>
-            <span>{item.format.toUpperCase()} · {item.version} · {item.size_gb.toFixed(1)} GB</span>
+            <span>{item.format.toUpperCase()} · {item.version} · {gameSize(item)}</span>
           </button>)}
           {dlc.map((item, index) => <button type="button" key={'dlc-' + index} onClick={() => onSelectGame(item)}>
             <b>{item.title}</b><span>DLC · {item.id_code}</span>
           </button>)}
-          {(game.screenshot_urls || []).map((url, index) => <button type="button" key={'shot-' + index}
-            onClick={() => setSelectedScreenshot(url)}>
-            <b>Screenshot {index + 1}</b><span>View image</span>
-          </button>)}
-          {!siblings.length && !dlc.length && !game.screenshot_urls?.length &&
+          {!siblings.length && !dlc.length &&
             <p>No additional items available.</p>}
         </div>
         <p className="ubq-detail-availability">{t(language, 'TXT_ACTION_UNAVAILABLE')}</p>
       </section>}
-      {selectedScreenshot && <div className="ubq-detail-lightbox" role="dialog"
-        aria-label="Screenshot preview" onClick={() => setSelectedScreenshot(null)}>
-        <MemoryImage artworkSize="hero" src={selectedScreenshot} alt="Screenshot enlarged" />
-        <button type="button" onClick={() => setSelectedScreenshot(null)}>✕</button>
-      </div>}
       {parentGame && onBackToParent && <button type="button" className="ubq-detail-parent"
         onClick={onBackToParent}>{t(language, 'TXT_LIBRARY_BACK')}: {parentGame.title}</button>}
       <button type="button" className="ubq-detail-close" onClick={onClose}

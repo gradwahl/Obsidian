@@ -177,191 +177,100 @@ const game = { id_code: 'PPSA00001', title: 'Example <game>', version: '01.00', 
   cover_r: 120, cover_g: 60, cover_b: 30, size_gb: 42, format: 'pkg', state: 'available', progress: 0 };
 const cardProps = { game, language: 'en', onSelect: noop, onOpen: noop, isSelected: true };
 const selected = render(React.createElement(GameCard, cardProps));
-assert.match(selected, /tv-platform-ps5/);
-assert.ok(selected.includes(`[X] ${t('en', 'TXT_GAME_DETAILS')}`));
+assert.match(selected, /game-list-row-selected/);
 assert.match(selected, /Example &lt;game&gt;/);
-const unselected = render(React.createElement(GameCard, { ...cardProps, game: { ...game, id_code: 'CUSA00001' }, isSelected: false }));
-assert.match(unselected, /tv-platform-ps4/);
-assert.ok(unselected.includes('PKG / 42.0 GB'));
-const completeBox = render(React.createElement(CoverArt, { game: { ...game, boxart_url: '/box.jpg' } }));
-assert.match(completeBox, /src="\/box.jpg"/);
-assert.ok(!completeBox.includes('tv-platform-ps5'), 'Complete box art must retain its original platform branding');
-const missing = render(React.createElement(CoverArt, { game: { ...game, cover_local_path: '' } }));
-assert.ok(!missing.includes('<img'));
-assert.match(missing, /Obsidian/);
+assert.match(selected, /PlayStation 5/);
+assert.match(selected, /game-list-format/);
+assert.match(selected, /42.0 GB/);
+assert.doesNotMatch(selected, /<img|tv-cover/);
+assert.equal(render(React.createElement(CoverArt, { game })), '');
+const { gameConsole, gameFormat, gameSize } = require('../src/gameList.ts');
+assert.equal(gameConsole(game), 'PlayStation 5');
+assert.equal(gameConsole({...game,id_code:'cusa00001'}), 'PlayStation 4');
+assert.equal(gameConsole({...game,id_code:'EXT-1',platform:'nintendo-switch'}), 'Nintendo Switch');
+assert.equal(gameConsole({...game,id_code:'EXT-1',platform:''}), '—');
+assert.equal(gameFormat(game),'PKG');
+assert.equal(gameFormat({...game,format:'exfat'}),'EXFAT');
+assert.equal(gameFormat({...game,format:'ffpkg'}),'FFPKG');
+assert.equal(gameFormat({...game,format:'catalog'}),'—');
+assert.equal(gameSize({...game,size_gb:0}), '—');
+assert.equal(gameSize({...game,size_gb:-2}), '—');
+assert.equal(gameSize({...game,size_gb:NaN}), '—');
+assert.equal(gameSize(game), '42.0 GB');
+assert.equal(gameSize({...game,size_gb:0.033}), '33.0 MB');
+assert.equal(gameSize({...game,size_gb:0.0000015}), '1.5 KB');
+assert.equal(gameSize({...game,size_gb:0.000000001}), '1 B');
+assert.equal(gameSize({...game,size_gb:1500}), '1.5 TB');
+const { GameListHeader } = require('../src/components/GameCard.tsx');
+const headings = render(React.createElement(GameListHeader,{language:'en'}));
+assert.ok(headings.indexOf('Console') < headings.indexOf('Name'));
+assert.ok(headings.indexOf('Name') < headings.indexOf('Format'));
+assert.ok(headings.indexOf('Format') < headings.indexOf('Size'));
+assert.doesNotMatch(selected, /game-list-id|game-list-folder/);
+// No repeated placeholder sizes: every Pippo size must match its explicit source line.
+const seedCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/catalogData.json'),'utf8'));
+const pippoSizes=seedCatalog.filter(item=>item.source_name==='Pippo .exFAT');
+assert.equal(pippoSizes.length,852);
+for(const item of pippoSizes) {
+  const match=item.description.match(/^Size:\s*([\d.]+)\s*(GB|MB)\s*$/m);
+  assert.ok(match,item.title);
+  assert.ok(Math.abs(item.size_gb - Number(match[1]) * (match[2]==='MB'?0.001:1)) < 1e-9,item.title);
+}
+assert.ok(seedCatalog.filter(item=>item.source_name==='Pegasus-DL / Obsidian').every(item=>item.size_gb===0));
 const games = Array.from({ length: 5 }, (_, index) => ({ ...game, id_code: `PPSA0000${index}`, title: `Game ${index}` }));
 const homeProps = { games, language: 'en', selected: 1, sidebarFocused: false, onSelect: noop, onOpen: noop, onRefresh: noop, syncInProgress: false };
 const home = render(React.createElement(NativeViewport, null, React.createElement(HomeView, homeProps)));
 assert.match(home, /width:1920px;height:1080px/);
-assert.match(home, /<h1 class="ubq-feature-title">Game 1<\/h1>/);
-assert.match(home, /2026/);
-assert.equal((home.match(/class="tv-meta-pill glass-pill glass-pill--sm"/g) || []).length, 6,
-  'Source, game id, version, format, size and year render as separate pills');
+assert.match(home, /data-layout="game-list"/);
+assert.doesNotMatch(home, /<img|ubq-cinematic|ubq-square-art/);
+assert.equal((home.match(/class="game-list-row[ "]/g) || []).length, games.length);
+assert.equal((home.match(/game-list-row-selected/g) || []).length, 1);
+assert.doesNotMatch(render(React.createElement(HomeView, { ...homeProps, sidebarFocused: true })), /game-list-row-selected/);
+const largeRows = Array.from({ length: 20000 }, (_, i) => ({ ...game, id_code: 'EXT-' + i, title: 'Row ' + i }));
+for (const index of [0, 9, 10, 500, 19999, 99999]) {
+  const list = render(React.createElement(HomeView, { ...homeProps, games: largeRows, selected: index }));
+  assert.equal((list.match(/class="game-list-row[ "]/g) || []).length, 10);
+  assert.match(list, new RegExp('Row ' + Math.min(index, 19999)));
+  assert.doesNotMatch(list, /<img|NaN|undefined/);
+}
 const catalogueModule = require('../src/catalog.ts');
 const exampleFilters = { sources_limited: false, sources: [], disabled_formats: [] };
 const categoriesOnce = catalogueModule.getHomeCategoryLists(INITIAL_CATALOG, exampleFilters, 128);
-for (const id of ['ps5', 'ps4', 'popular', 'newest', 'top_rated']) {
-  assert.deepEqual(
-    categoriesOnce[id].map(item => item.id_code),
-    catalogueModule.getHomeCategoryGames(INITIAL_CATALOG, exampleFilters, id, 128)
-      .map(item => item.id_code),
-    'Fast shared category selection must preserve ' + id
-  );
+const { HOME_TABS } = require('../src/layout.ts');
+assert.deepEqual(HOME_TABS.map(tab => tab.id), ['newest', 'popular']);
+const categories = HOME_TABS.map(tab => ({...tab, games}));
+for (const id of ['ps5','ps4','popular','newest','top_rated']) {
+  assert.deepEqual(categoriesOnce[id].map(item => item.id_code), catalogueModule.getHomeCategoryGames(INITIAL_CATALOG, exampleFilters, id, 128).map(item => item.id_code));
 }
-// Home rows must not mount 128 covers times five categories when browsing on PS5.
-const largeRows = Array.from({ length: 128 }, (_, index) =>
-  ({ ...game, id_code: 'PPSA' + String(index).padStart(5, '0'), title: 'Row ' + index }));
-const multiRows = ['ps5','ps4','popular','newest','top_rated'].map(id =>
-  ({ id, titleKey: 'TXT_CAT_PS5', games: largeRows }));
-const reducedHome = render(React.createElement(HomeView, {
-  ...homeProps, categories: multiRows, activeCategoryIndex: 0, selected: 70
-}));
-const visibleCards = (reducedHome.match(/<button type="button" class="ubq-game-cover/g) || []).length;
-assert.ok(visibleCards > 0 && visibleCards < 120,
-  'PS5 category view should virtualize offscreen covers (got ' + visibleCards + ')');
-assert.match(reducedHome, /Row 70/, 'Focused cover must stay in the rendered slice');
-
-// The same expanded-grid geometry must remain bounded for very large libraries.
-const { VirtualGameGrid, gridWindow } = require('../src/components/VirtualGameGrid.tsx');
-const hugeLibrary = Array.from({ length: 20000 }, (_, i) => ({ ...game, title: 'Virtual ' + i, id_code: 'TEST' + i }));
-const virtualGrid = render(React.createElement(VirtualGameGrid, {
-  games: hugeLibrary, selected: 12000, language: 'en', sidebarFocused: false, onSelect: noop, onOpen: noop
-}));
-assert.ok((virtualGrid.match(/class="tv-card /g) || []).length <= 30);
-assert.match(virtualGrid, /Virtual 12000/);
-const range = gridWindow(20000, 392 * 500, 800);
-assert.equal(range.start, 499 * 6);
-assert.ok(range.end - range.start <= 30);
-assert.ok(range.before > 0 && range.after > 0);
-// Empty and final windows retain all valid records without phantom cards.
-assert.deepEqual(gridWindow(0, 0, 800), { start: 0, end: 0, before: 0, after: 0 });
-assert.equal(gridWindow(20000, Math.floor(19999 / 6) * 392, 800).end, 20000);
-assert.deepEqual(gridWindow(0, 999999, 800), { start: 0, end: 0, before: 0, after: 0 });
-
-const scoredHome = render(React.createElement(HomeView, {
-  ...homeProps, games: games.map(g => ({ ...g, rating_score: 8.7, download_count: 140 }))
-}));
-assert.equal((scoredHome.match(/class="tv-meta-pill glass-pill glass-pill--sm"/g) || []).length, 6);
-const ubiquity = render(React.createElement(HomeView, {
-  ...homeProps, uiTheme: 'ubiquity'
-}));
-assert.match(ubiquity, /data-layout="ubiquity"/);
-assert.match(ubiquity, /ubq-cinematic-background/);
-const verifiedBackdrop = render(React.createElement(HomeView, {
-  ...homeProps, games: [{ ...game, boxart_url: '/verified-art.jpg',
-    cover_local_path: '/assets/covers/PPSA00001.cover' }], selected: 0
-}));
-assert.match(verifiedBackdrop, /class="ubq-backdrop-current"[^>]*src="\/verified-art\.jpg"/,
-  'Cinematic background must choose verified artwork before missing legacy .cover files');
-assert.match(ubiquity, /ubq-feature-title/);
-assert.match(ubiquity, /ubq-shelf-track/);
-assert.match(ubiquity, /ubq-focus-scroll-layer/,
-  'Focus glow must have a separate layer so scrolling does not animate its offset');
-assert.equal((ubiquity.match(/class="ubq-game-cover/g) || []).length, games.length);
-assert.equal((ubiquity.match(/class="ubq-square-art"/g) || []).length, games.length,
-  '(u)biquity artwork should be separate square images');
-assert.equal((ubiquity.match(/class="ubq-cover-footer"/g) || []).length, games.length,
-  '(u)biquity titles should overlay the bottom of the square artwork');
-assert.equal((ubiquity.match(/class="ubq-cover-download"/g) || []).length, games.length,
-  'Downloadable games should have a download-arrow indicator');
-// Regression: the first/selected game still renders the original cover source.
-const firstFocused = render(React.createElement(HomeView, {
-  ...homeProps, uiTheme: 'ubiquity', selected: 0
-}));
-assert.match(firstFocused,
-  /class="ubq-game-cover ubq-game-cover-selected"[^>]*>[\s\S]*?src="\/assets\/covers\/PPSA00001\.cover"/,
-  'Selected index 0 must retain its cover <img>, not become an empty black tile');
-const styleBody = selector => css.match(new RegExp('\\.' + selector + ' \\{([^}]+)\\}'))?.[1] || '';
-const selectedZ = Number(styleBody('ubq-game-cover-selected').match(/z-index:\s*(\d+)/)?.[1]);
-const frameZ = Number(styleBody('ubq-focus-pill').match(/z-index:\s*(\d+)/)?.[1]);
-assert.ok(selectedZ > frameZ,
-  'Crimson focus frame must paint behind the selected cover, not over its artwork');
-assert.match(styleBody('ubq-focus-pill'), /background-image:\s*linear-gradient\(/,
-  'The focus frame gradient must remain intact');
-assert.match(styleBody('ubq-focus-pill'), /box-shadow:/,
-  'The focus frame glow must remain intact');
-assert.match(styleBody('ubq-shelf-track'), /z-index:\s*5/,
-  'Every cover must paint above the glow while focus glides between cards');
-assert.match(styleBody('ubq-focus-scroll-layer'), /z-index:\s*4/,
-  'The glow wrapper must remain behind the carousel track');
-assert.match(styleBody('ubq-game-cover-selected'), /transform:\s*scale\(1\.08\) translateY\(-4px\)/,
-  'The selected-card scale animation must remain intact');
-assert.match(styleBody('ubq-focus-pill'), /top:\s*42px/, 'Focus ring vertical placement follows the enlarged card');
-const ubiquitySource = fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8');
-assert.match(ubiquitySource, /index \* 252 - 15/,
-  'Focus ring still uses the original 252px card stride');
-assert.match(ubiquitySource, /layer\.style\.transform = `translate3d\(\$\{-track\.scrollLeft\}px, 0, 0\)`/,
-  'Scroll compensation must follow actual scrollLeft, independently of React renders');
-assert.match(ubiquitySource, /track\.addEventListener\('scroll', syncFocusScroll, \{ passive: true \}\)/,
-  'Frame offset must update throughout smooth scrolling, not just when focus changes');
-assert.match(ubiquitySource, /track\.removeEventListener\('scroll', syncFocusScroll\)/,
-  'The scroll listener must be cleaned up when the carousel changes');
-const nonDownloadable = render(React.createElement(HomeView, {
-  ...homeProps, uiTheme: 'ubiquity',
-  games: [ { ...game, state: 'installed' }, { ...game, state: 'downloading' },
-           { ...game, format: 'catalog', state: 'available' } ]
-}));
-assert.doesNotMatch(nonDownloadable, /class="ubq-cover-download"/,
-  'Installed, downloading and catalog-only entries have no download indicator');
-
-const largeCatalog = Array.from({ length: 1000 }, (_, index) =>
-  ({ ...game, id_code: 'EXT-' + index, title: 'Imported ' + index }));
-const longUbq = render(React.createElement(HomeView,
-  { ...homeProps, games: largeCatalog, selected: 500, uiTheme: 'ubiquity' }));
-assert.ok((longUbq.match(/class="ubq-game-cover/g) || []).length <= 21,
-  'Large imported catalogues must render only near-focus covers');
-assert.match(longUbq, /501 \/ 1000/);
-const longDefault = render(React.createElement(HomeView,
-  { ...homeProps, games: largeCatalog, selected: 500, uiTheme: 'ubiquity' }));
-assert.ok((longDefault.match(/class="ubq-game-cover/g) || []).length <= 21,
-  'Default interface must window long single-console catalogues');
-assert.match(longDefault, /501 \/ 1000/);
-
-assert.doesNotMatch(ubiquity, /ubq-cover-line/,
-  'The selected Ubiquity tile must not add a second solid white stripe at its bottom');
-assert.match(css, /\.ubq-game-cover-selected::after \{/,
-  'Selected artwork and title need a single inset white border');
-assert.match(css, /@keyframes ubqFocusStrobe/,
-  'The selected tile should have a glowing strobe animation');
-assert.match(css, /\.ubq-game-cover-selected \{[^}]*animation: ubqFocusStrobe 2\.6s/);
-assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-assert.doesNotMatch(ubiquity, /tv-hero-btn-primary|tv-card-footer/);
-assert.equal((home.match(/class="ubq-game-cover/g) || []).length, games.length);
+const categorized = render(React.createElement(HomeView, { ...homeProps, categories, activeCategoryIndex: 1 }));
+assert.equal((categorized.match(/aria-current="page"/g) || []).length, 1);
+assert.match(categorized, /Game categories/);
+const tabMarkup = categorized.match(/<nav class="game-list-categories"[\s\S]*?<\/nav>/)[0];
+assert.equal((tabMarkup.match(/<button/g) || []).length, 2);
+assert.ok(tabMarkup.indexOf('Newest Releases') < tabMarkup.indexOf('Most Popular'));
+assert.doesNotMatch(tabMarkup, /PS5 Games|PS4 Games|Top Rated/);
+assert.match(fs.readFileSync(path.join(root,'src/App.tsx'),'utf8'), /HOME_TABS\.map/);
 const nativeThemeSource = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
-assert.match(nativeThemeSource, /static void render_ubiquity_home\(/);
-assert.match(nativeThemeSource, /render_ubiquity_home\(app\)/);
-assert.match(nativeThemeSource, /UBQ_CARD_W = 232, UBQ_CARD_GAP = 20, UBQ_CARD_Y = 755, UBQ_CARD_H = 232/);
-assert.match(nativeThemeSource, /SDL_Rect cover_rect = \{card.x, card.y, card.w, card.h\}/);
-// SDL already draws the pill before the texture; keep that ordering.
-const nativeHome = nativeThemeSource.slice(nativeThemeSource.indexOf('static void render_ubiquity_home('));
-assert.ok(nativeHome.indexOf('draw_rounded_border(r, pill_x') <
-          nativeHome.indexOf('SDL_RenderCopy(r, cover, &src, &cover_rect)'),
-  'Native SDL must draw the crimson focus ring behind the cover texture');
-assert.match(nativeThemeSource, /SDL_Rect footer = \{card.x, card.y \+ card.h - 40, card.w, 40\}/);
-assert.match(nativeThemeSource, /item->state == STATE_AVAILABLE && item->format != FMT_CATALOG/);
-assert.match(nativeThemeSource, /SDL_RenderDrawLine\(r, ax, ay, ax, ay \+ 13\)/);
-assert.match(nativeThemeSource, /SDL_GetTicks\(\) % 2600u/,
-  'SDL2 focus strobe should have matching 2.6-second timing');
-assert.match(nativeThemeSource, /float burst = fmaxf\(expf\(-first \* first\), expf\(-second \* second\)\)/);
-assert.match(nativeThemeSource, /201,\s*24,\s*74/,
-  'SDL2 should use silk crimson gradient border');
-assert.match(css, /\.ubq-square-art \{[^}]*width: 232px; height: 232px/);
-assert.match(css, /\.ubq-cover-footer \{[^}]*height: 40px/);
-assert.match(css, /\.ubq-cover-footer \{[^}]*position: absolute;[^}]*bottom: 0/);
-assert.match(css, /\.ubq-shelf-track \{[^}]*gap: 20px/);
-assert.match(css, /\.ubq-cover-download \{[^}]*position: absolute;[^}]*bottom: 8px/);
-assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'), /index \* 252/);
-assert.match(css, /\.ubq-game-cover \{[^}]*width: 232px; height: 232px/);
-assert.match(home, /DOWNLOAD \/ INSTALL/);
-assert.match(home, /More info/);
-assert.equal((home.match(/class="ubq-game-cover ubq-game-cover-selected"/g) || []).length, 1);
-assert.ok(!render(React.createElement(HomeView, { ...homeProps, sidebarFocused: true })).includes('ubq-game-cover-selected'));
-assert.match(render(React.createElement(HomeView, { ...homeProps, selected: 99 })), /<h1 class="ubq-feature-title">Game 4<\/h1>/);
-for (const language of ['en', 'pl', 'fr', 'nl', 'de', 'es', 'it', 'zh', 'ru']) {
-  assert.ok(render(React.createElement(GameCard, { ...cardProps, language })).includes(t(language, 'TXT_GAME_DETAILS')));
+const nativeList = fs.readFileSync(path.join(root, 'src/ui_game_list.h'), 'utf8');
+const { GAME_LIST } = require('../src/layout.ts');
+assert.deepEqual(GAME_LIST.columnWeights,[17,39,32,12]);
+const nativeColumns=fs.readFileSync(path.join(root,'src/ui_game_list_columns.h'),'utf8');
+assert.match(nativeColumns,/GAME_LIST_COLUMN_WEIGHTS\[4\] = \{17, 39, 32, 12\}/);
+assert.match(css,/grid-template-columns: minmax\(0,17fr\) minmax\(0,39fr\) minmax\(0,32fr\) minmax\(0,12fr\)/);
+
+for (const [name, value] of [['TOP',GAME_LIST.top],['ROW_HEIGHT',GAME_LIST.rowHeight],['ROW_GAP',GAME_LIST.rowGap],['PAGE_SIZE',GAME_LIST.pageSize]]) {
+  assert.match(nativeList, new RegExp('GAME_LIST_' + name + ' = ' + value));
+}
+assert.match(nativeThemeSource, /render_game_list\(app\)/);
+assert.doesNotMatch(nativeThemeSource.slice(nativeThemeSource.indexOf('void ui_render(')), /artwork_prefetch|render_ubiquity_home|render_hero_banner/);
+assert.doesNotMatch(nativeList, /artwork_get|render_cover/);
+const ubiquitySource = fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8');
+assert.doesNotMatch(ubiquitySource, /MemoryImage|coverSources|CinematicBackground/);
+for (const language of ['en','pl','fr','nl','de','es','it','zh','ru']) {
+  assert.ok(render(React.createElement(GameCard, {...cardProps, language})).includes(t(language,'TXT_GAME_DETAILS')));
 }
 const empty = render(React.createElement(HomeView, { ...homeProps, games: [] }));
-assert.ok(!empty.includes('NaN') && !empty.includes('undefined'));
+assert.match(empty, /0 \/ 0/);
 assert.ok(empty.includes(t('en', 'TXT_NO_LATEST_GAMES')));
 const detail = render(React.createElement(GameDetailModal, { game: games[1], catalog: games, language: 'en', onClose: noop, onSelectGame: noop, onTriggerAction: noop }));
 const ubiquityDetails = render(React.createElement(UbiquityGameDetails, {
@@ -381,7 +290,8 @@ assert.match(appDetailSource, /<UbiquityGameDetails/);
 assert.doesNotMatch(appDetailSource, /GameDetailModal|obsidian-ui-theme|changeUiTheme/);
 const nativeDetailSource = fs.readFileSync(path.join(root, 'src/ui_ubiquity_details.h'), 'utf8');
 assert.match(nativeDetailSource, /static void render_ubiquity_game_details/);
-assert.match(nativeDetailSource, /render_cover_or_placeholder\(app, item, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true\)/);
+assert.doesNotMatch(nativeDetailSource, /render_cover_or_placeholder/);
+assert.doesNotMatch(ubiquityDetails, /<img|ubq-detail-art|Screenshot/);
 assert.match(fs.readFileSync(path.join(root, 'src/ui_game_details.h'), 'utf8'), /detail_ubiquity_options/);
 assert.match(detail, /role="dialog"/);
 assert.equal((detail.match(/role="tab"/g) || []).length, 4);
@@ -469,8 +379,7 @@ const allLibraryAssets = COMPANIES.flatMap(company => [
 assert.equal(allLibraryAssets.length, 119,
   'All existing company, emulator and console image paths must stream');
 assert.ok(allLibraryAssets.every(uri => uri.startsWith(assetRoot + 'assets/library/')));
-assert.match(library, /raw\.githubusercontent\.com\/gradwahl\/Obsidian-archive\/main\/assets\/library\/companies\/sony\.png/);
-assert.match(library, /loading="lazy"/);
+assert.doesNotMatch(library, /<img/);
 const importedCoverMap = JSON.parse(
   fs.readFileSync(path.join(root, 'src/archiveSourceCovers.json'), 'utf8'));
 assert.ok(Object.keys(importedCoverMap).length >= 40000,
@@ -489,8 +398,7 @@ assert.match(fs.readFileSync(path.join(root, 'scripts/generate_browser_catalog_p
   'Build-time artwork matching must preserve source cover associations');
 assert.match(fs.readFileSync(path.join(root, 'src/sys_bridge.c'), 'utf8'),
   /SDL_strlcpy\(game->boxart_url, entry->boxart/);
-assert.match(fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8'),
-  /artwork_get_media\(app, url, 95/);
+assert.match(nativeThemeSource, /\(void\)bounds; return false;/);
 
 // All game routes use the sole Ubiquity interface, including existing saved preferences.
 const librarySource = fs.readFileSync(path.join(root, 'src/components/LibraryBrowser.tsx'), 'utf8');
@@ -503,7 +411,7 @@ assert.match(css, /\.tv-theme-ubiquity \.tv-library-ubiquity-games \.tv-breadcru
 const nativeLibraryPath = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 assert.match(nativeLibraryPath, /static bool ubiquity_carousel_enabled\(WolodriveApp \*app\)/);
 assert.match(nativeLibraryPath, /app->active_row == VIEW_GAMES\)\s*return app->library_depth == LIBRARY_GAMES/);
-assert.match(nativeLibraryPath, /if \(ubiquity_carousel_enabled\(app\)\) \{\s*render_ubiquity_home\(app\)/);
+assert.match(nativeLibraryPath, /render_game_list\(app\)/);
 assert.match(nativeLibraryPath, /if \(ubiquity_carousel_enabled\(app\)\) \{\s*enum \{ UBQ_CARD_W = 232/);
 
 const sidebarProps = {
@@ -558,7 +466,7 @@ assert.match(native, /sidebar_indicator_y \+=/);
 assert.match(native, /home_grid_anim < 1\.0f/);
 assert.match(css, /@keyframes tvGridEnter/);
 assert.match(homeSource, /<UbiquityHomeView/);
-assert.match(ubiquitySource, /prefers-reduced-motion: reduce/);
+assert.doesNotMatch(ubiquitySource, /scrollTo.*smooth/);
 assert.match(appSource, /selectedHomeCols\[activeHomeCategory\]/);
 assert.match(appSource, /lastGamepadPress\.current/);
 assert.match(heroSource, /function ArtworkCrossfade/);
@@ -583,11 +491,7 @@ assert.equal(declaration('.tv-hero-btn', 'border-radius'), 25);
 assert.equal(declaration('.tv-meta-pill', 'height'), 30);
 assert.equal(declaration('.tv-card', 'border-radius'), 18);
 assert.match(fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8'), /border-radius: 9999px/);
-assert.match(home, /class="ubq-system-label ubq-glass-capsule"/,
-  'The Obsidian-branding Obsidian glass capsule should replace the old PS5 Library label');
-assert.match(home, /class="ubq-logo-p">O<\/b>/);
-assert.doesNotMatch(home, /PS5 LIBRARY/);
-assert.match(home, /aria-label="Obsidian"/);
+assert.match(home, /data-layout="game-list"/);
 const glassCss = fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8');
 assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar\.glass-surface\.tv-sidebar-collapsed \{ width: 64px; \}/,
   'The collapsed Ubiquity rail must be 64px wide');
@@ -665,10 +569,9 @@ assert.match(glassCSS, /mask-composite: exclude/);
 assert.match(highlightSource, /flight.current\?\.cancel\(\)/);
 assert.match(highlightSource, /ResizeObserver/);
 assert.match(highlightSource, /document.fonts\?\.ready/);
-assert.match(ubiquitySource, /<SlidingHighlight activeKey=\{String\(activeCategoryIndex\)\} axis="x"/);
+assert.match(ubiquitySource, /game-list-categories/);
 assert.match(fs.readFileSync(path.join(root, 'src/components/Sidebar.tsx'), 'utf8'), /<SlidingHighlight activeKey=\{language\}/);
-assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'),
-  /<span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid \/>\{game.id_code\}<\/span>/);
+assert.match(fs.readFileSync(path.join(root, 'src/components/GameCard.tsx'), 'utf8'), /game-list-format/);
 for (const markup of [componentSettings, componentDefault]) {
   assert.doesNotMatch(markup, /Appearance|Wygląd|Netflix \/ Glass|tv-theme-option/);
   assert.match(markup, /role="button" tabindex="0"/);

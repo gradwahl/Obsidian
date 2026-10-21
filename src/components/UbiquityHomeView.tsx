@@ -1,12 +1,8 @@
-import { useLanguagePresentation } from '../useLanguagePresentation';
-import { SlidingHighlight } from './SlidingHighlight';
-import { GlassLiquid } from './GlassLiquid';
-import { MemoryImage } from './MemoryImage';
-import { useCatalogDetails } from '../useCatalogDetails';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GameItem, LanguageCode, HomeCategoryId } from '../types';
-import { nextCoverSource, coverSources } from '../artworkMatches';
 import { t } from '../translations';
+import { GameCard, GameListHeader } from './GameCard';
+import { GAME_LIST } from '../layout';
 
 interface Category {
   id: HomeCategoryId;
@@ -29,208 +25,71 @@ interface Props {
   showDate: boolean;
 }
 
-// Preserve the previous backdrop until the next artwork finishes loading.
-function CinematicBackground({ game }: { game: GameItem | null }) {
-  const [failed, setFailed] = useState<string[]>([]);
-  // Reuse the verified artwork order (including archive matches and fallbacks).
-  // Legacy .cover paths often do not exist in the standalone web preview;
-  // leave them as a last resort rather than showing a blank backdrop first.
-  const sources = game ? coverSources(game, true) : [];
-  const candidate = [...sources.filter(src => !src.endsWith('.cover')),
-    ...sources.filter(src => src.endsWith('.cover'))]
-    .find(src => !failed.includes(src)) || '';
-  const [visible, setVisible] = useState(candidate);
-  const [next, setNext] = useState('');
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setFailed([]);
-  }, [game?.id_code]);
-
-  useEffect(() => {
-    if (candidate === visible) return;
-    if (!candidate) { setVisible(''); setNext(''); return; }
-    setReady(false);
-    setNext(candidate);
-  }, [candidate, visible]);
-
-  useEffect(() => {
-    if (!ready || !next) return;
-    const timer = window.setTimeout(() => {
-      setVisible(next);
-      setNext('');
-      setReady(false);
-    }, 380);
-    return () => window.clearTimeout(timer);
-  }, [ready, next]);
-
-  return (
-    <div className="ubq-cinematic-background" aria-hidden="true">
-      {visible && <MemoryImage artworkSize="hero" className="ubq-backdrop-current" src={visible} alt=""
-        onError={() => setFailed(old => old.includes(visible) ? old : [...old, visible])} />}
-      {next && next !== visible && <MemoryImage artworkSize="hero" key={next} className={'ubq-backdrop-next' + (ready ? ' ubq-backdrop-next-ready' : '')} src={next} alt=""
-        onLoad={() => setReady(true)}
-        onError={() => { setFailed(old => old.includes(next) ? old : [...old, next]); setNext(''); }} />}
-      <div className="ubq-cinematic-vignette" />
-    </div>
-  );
-}
-
-function UbiquityCover({ game, selected, onSelect, onOpen }: {
-  game: GameItem; selected: boolean; onSelect: () => void; onOpen: () => void;
-}) {
-  game = useCatalogDetails(game);
-  const [failed, setFailed] = useState<string[]>([]);
-  const sources = coverSources(game, false);
-  const localFallbacks = ['/assets/covers/0ad60600d3caf8d0.art', '/assets/covers/88c5672513ff89df.art', '/assets/covers/76c3e998b3fc03d8.art'];
-  const allSources = [...sources, ...localFallbacks];
-  const cover = allSources.find(url => !failed.includes(url)) || localFallbacks[0];
-  const downloadable = game.state === 'available' && game.format !== 'catalog';
-  return (
-    <button type="button"
-      className={'ubq-game-cover' + (selected ? ' ubq-game-cover-selected' : '')}
-      aria-label={game.title} aria-current={selected ? 'true' : undefined}
-      onFocus={onSelect} onClick={() => { onSelect(); onOpen(); }}>
-      <span className="ubq-square-art">
-        {cover
-          ? <MemoryImage src={cover} alt="" loading="eager"
-              onError={() => setFailed(values => [...values, cover])} />
-          : <span className="ubq-cover-fallback">{game.title}</span>}
-      </span>
-      <span className="ubq-cover-footer">
-        <span className="ubq-cover-name">{game.title}</span>
-        {downloadable && <span className="ubq-cover-download" aria-hidden="true">↓</span>}
-      </span>
-    </button>
-  );
-}
-
-export function UbiquityHomeView({
-  games, categories, activeCategoryIndex, onSelectCategory, language,
-  selected, sidebarFocused, onSelect, onOpen, onPlay,
-  heading, emptyMessage, showDate
-}: Props) {
-  const { displayLanguage, fading } = useLanguagePresentation(language);
-  const activeCategory = categories?.[activeCategoryIndex];
-  const list = activeCategory ? activeCategory.games : games;
+export function UbiquityHomeView({ games, categories, activeCategoryIndex,
+  onSelectCategory, language, selected, sidebarFocused, onSelect, onOpen,
+  heading, emptyMessage }: Props) {
+  const category = categories?.[activeCategoryIndex];
+  const list = category?.games || games;
   const index = Math.max(0, Math.min(selected, list.length - 1));
-  const game = useCatalogDetails(list[index] || null);
-  // Full public source indexes can contain tens of thousands of entries.
-  // Keep a small window of real DOM covers without losing scroll geometry.
-  const windowStart = list.length > 24 ? Math.max(0, index - 6) : 0;
-  const windowEnd = list.length > 24 ? Math.min(list.length, index + 15) : list.length;
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const focusScrollRef = useRef<HTMLDivElement>(null);
-
-  // The carousel scrolls independently of React renders. Compensate the glow
-  // layer for every scroll change, without introducing another animated
-  // transform that would lag behind the moving artwork.
-  useLayoutEffect(() => {
-    const track = scrollRef.current;
-    const layer = focusScrollRef.current;
-    if (!track || !layer) return;
-    const syncFocusScroll = () => {
-      layer.style.transform = `translate3d(${-track.scrollLeft}px, 0, 0)`;
-    };
-    track.addEventListener('scroll', syncFocusScroll, { passive: true });
-    syncFocusScroll();
-    return () => track.removeEventListener('scroll', syncFocusScroll);
-  }, [activeCategoryIndex, sidebarFocused, list.length]);
-
+  const start = Math.floor(index / GAME_LIST.pageSize) * GAME_LIST.pageSize;
+  const ref = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<number | null>(null);
   useEffect(() => {
-    const row = scrollRef.current;
-    if (!row) return;
-    // Keep the active cover near the left, with the upcoming covers visible.
-    // Reference-size 232px square artwork + 20px spacing; native SDL2 uses the same step.
-    const target = Math.max(0, Math.min(index * 252,
-      Math.max(0, row.scrollWidth - row.clientWidth)));
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
-    row.scrollTo({ left: target, behavior: motion });
-  }, [index, activeCategoryIndex]);
-
-  const date = game?.release_date || String(game?.catalog_added_at || '').slice(0, 8);
-  const year = date ? date.slice(0, 4) : '';
-  const summary = game
-    ? game.description_id ? t(language, game.description_id) : game.description
-    : emptyMessage || t(language, 'TXT_NO_LATEST_GAMES');
-
-  return (
-    <div className="tv-home ubq-home" data-layout="ubiquity">
-      <CinematicBackground game={game} />
-      <div className="ubq-ambient-top">
-        <div className="ubq-system-label ubq-glass-capsule" aria-label="Obsidian">
-          <span className="ubq-logo-lockup ubq-logo-capsule">
-            <b className="ubq-logo-p">O</b>
-            <span className="ubq-logo-tail">
-              <span className="ubq-logo-white">bsidian</span>
-            </span>
-          </span>
-        </div>
-      </div>
-
-      <div className="ubq-feature" key={game?.id_code || heading}>
-        <h1 className="ubq-feature-title">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
-        {game && <div className="ubq-feature-metadata">
-          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.source_name || 'Obsidian'}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.id_code}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />v{game.version}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.format.toUpperCase()}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.size_gb.toFixed(1)} GB</span>
-          {(game.rating_score || 0) > 0 && <span className="tv-meta-pill glass-pill glass-pill--sm ubq-score"><GlassLiquid />★ {(game.rating_score || 0).toFixed(1)}/10</span>}
-          {showDate && year && <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{year}</span>}
-        </div>}
-        <p className="ubq-feature-description">{summary}</p>
-      </div>
-
-      <section className="ubq-shelf" aria-label={activeCategory ? t(language, activeCategory.titleKey) : heading}>
-        <div className="ubq-shelf-heading">
-          <h2>{activeCategory ? t(language, activeCategory.titleKey) : heading || t(language, 'TXT_LATEST_GAMES')}</h2>
-          <span>{list.length ? index + 1 : 0} / {list.length}</span>
-        </div>
-        {!sidebarFocused && list.length > 0 && (
-          <div className="ubq-focus-scroll-layer" ref={focusScrollRef}
-            style={{ transform: `translate3d(${-(scrollRef.current?.scrollLeft || 0)}px, 0, 0)` }}>
-            <div className="ubq-focus-pill"
-              style={{ transform: `translate3d(${index * 252 - 15}px, 0, 0)` }} />
-          </div>
-        )}
-        <div className="ubq-shelf-track" ref={scrollRef}>
-          {windowStart > 0 && <span aria-hidden="true" className="ubq-virtual-spacer"
-            style={{ flexBasis: windowStart * 252 - 20 }} />}
-          {list.slice(windowStart, windowEnd).map((item, offset) => {
-            const gameIndex = windowStart + offset;
-            return <UbiquityCover
-              key={item.id_code + '-' + gameIndex}
-              game={item} selected={gameIndex === index && !sidebarFocused}
-              onSelect={() => onSelect(gameIndex)} onOpen={() => onOpen(item)} />;
-          })}
-          {windowEnd < list.length && <span aria-hidden="true" className="ubq-virtual-spacer"
-            style={{ flexBasis: (list.length - windowEnd) * 252 - 20 }} />}
-        </div>
-      </section>
-
-      {categories && categories.length > 1 && <nav className="ubq-category-select" aria-label="Game categories">
-        <SlidingHighlight activeKey={String(activeCategoryIndex)} axis="x" />
-        {categories.map((cat, catIndex) => (
-          <button type="button" key={cat.id}
-            data-highlight-key={String(catIndex)}
-            className={'glass-pill glass-pill--md' + (catIndex === activeCategoryIndex ? ' ubq-category-current' : '')}
-            aria-current={catIndex === activeCategoryIndex ? 'page' : undefined}
-            onClick={() => onSelectCategory?.(catIndex)}>
-            <GlassLiquid /><span className="language-copy" data-language-fading={fading}>{t(displayLanguage, cat.titleKey)}</span>
-          </button>
-        ))}
-      </nav>}
-
-      <div className="ubq-shortcuts">
-        <span><b>✕</b> {t(language, 'TXT_GAME_DETAILS')}</span>
-        <button type="button" disabled={!game} onClick={() => game && (onPlay ? onPlay(game) : onOpen(game))}>
-          <b>▶</b> {t(language, 'TXT_DOWNLOAD')}
-        </button>
-        <button type="button" disabled={!game} onClick={() => game && onOpen(game)}>
-          <b>ⓘ</b> {t(language, 'TXT_MORE_INFO')}
-        </button>
-      </div>
+    if (pendingFocus.current === null) return;
+    ref.current?.querySelector<HTMLButtonElement>(`[data-grid-index="${pendingFocus.current}"]`)?.focus();
+    pendingFocus.current = null;
+  }, [index]);
+  useEffect(() => {
+    if (categories || sidebarFocused) return;
+    const handle = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"]') || (event.target as HTMLElement)?.closest?.('.game-list-page,input,textarea,button')) return;
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault(); onSelect(Math.max(0, Math.min(list.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1))));
+      } else if (event.key === 'Enter' && list[index]) { event.preventDefault(); onOpen(list[index]); }
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [categories, sidebarFocused, list, index, onSelect, onOpen]);
+  return <div className="game-list-page" data-layout="game-list">
+    <h1>{heading || (category ? t(language, category.titleKey) : t(language, 'TXT_LATEST_GAMES'))}</h1>
+    {categories && <nav className="game-list-categories" aria-label="Game categories">
+      {categories.map((cat, i) => <button type="button" key={cat.id}
+        aria-current={i === activeCategoryIndex ? 'page' : undefined}
+        onClick={() => onSelectCategory?.(i)}>{t(language, cat.titleKey)}</button>)}
+    </nav>}
+    <div className="game-list-table"><GameListHeader language={language} />
+    <div className="game-list-rows" ref={ref}
+      onWheel={event => { if (event.deltaY && list.length) onSelect(Math.max(0, Math.min(list.length - 1, index + (event.deltaY > 0 ? 1 : -1)))); }}
+      onKeyDown={event => {
+        if (!categories && !sidebarFocused) {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault(); event.stopPropagation();
+            onSelect(Math.max(0, Math.min(list.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))); return;
+          }
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault(); event.stopPropagation(); if (list[index]) onOpen(list[index]); return;
+        }
+        if (event.key !== 'Tab') return;
+        const row = (event.target as HTMLElement).closest<HTMLElement>('[data-grid-index]');
+        if (!row) return;
+        const next = Number(row.dataset.gridIndex) + (event.shiftKey ? -1 : 1);
+        if (next < 0 || next >= list.length) return;
+        event.preventDefault(); pendingFocus.current = next; onSelect(next);
+      }}>
+      {list.slice(start, start + GAME_LIST.pageSize).map((game, offset) => <GameCard
+        key={game.id_code + '-' + offset} game={game} virtualIndex={start + offset}
+        isSelected={!sidebarFocused && start + offset === index} language={language}
+        onSelect={() => onSelect(start + offset)} onOpen={() => onOpen(game)} />)}
+      {!list.length && <p>{emptyMessage || t(language, 'TXT_NO_LATEST_GAMES')}</p>}
     </div>
-  );
+    </div>
+    <footer className="game-list-footer">
+      <span>{list.length ? index + 1 : 0} / {list.length}</span>
+      <span>↑ ↓ · ✕ {t(language, 'TXT_GAME_DETAILS')}</span>
+      <button type="button" disabled={index === 0} onClick={() => onSelect(Math.max(0, start - GAME_LIST.pageSize))}>←</button>
+      <button type="button" disabled={start + GAME_LIST.pageSize >= list.length}
+        onClick={() => onSelect(Math.min(list.length - 1, start + GAME_LIST.pageSize))}>→</button>
+    </footer>
+  </div>;
 }

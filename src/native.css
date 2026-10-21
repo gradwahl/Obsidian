@@ -854,3 +854,54 @@
 .tv-emulator-additional a { color: #ecedf7; text-decoration: underline; }
 
 .tv-emulator-core-note { max-width: 710px; font-size: 14px; opacity: .88; }
+
+/* Text-only catalog, mirrored in ui_game_list.h. */
+.game-list-page { position: absolute; inset: 0; padding: 70px 48px 40px 38px; background: #0b0d14; color: #f6f6f9; }
+.game-list-page h1 { margin: 0; font-size: 52px; font-weight: 700; line-height: 64px; }
+.game-list-categories { position: absolute; top: 140px; left: 38px; display: flex; gap: 12px; }
+.game-list-categories button, .game-list-footer button { min-height: 44px; padding: 0 18px; border: 1px solid #383a44; border-radius: 8px; background: #171a24; color: #d2d3d9; font-size: 20px; }
+.game-list-categories button[aria-current] { background: #481a30; border-color: #c9184a; color: white; }
+.game-list-rows { position: absolute; top: 220px; left: 38px; right: 48px; display: flex; flex-direction: column; gap: 8px; }
+.game-list-row { width: 100%; height: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 20px; border: 1px solid #2c2e38; border-radius: 8px; background: #171a24; color: #f6f6f9; text-align: left; }
+.game-list-row-selected, .game-list-row:hover { background: #481a30; border-color: #c9184a; }
+.game-list-row-selected { outline: 2px solid #c9184a; outline-offset: -2px; }
+.game-list-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 26px; font-weight: 400; }
+.game-list-id { width: 180px; color: #bcbec8; font-size: 20px; }
+.game-list-format { width: 120px; color: #bcbec8; font-size: 20px; }
+.game-list-size { width: 140px; text-align: right; color: #bcbec8; font-size: 20px; }
+.game-list-footer { position: absolute; left: 38px; right: 48px; top: 980px; display: flex; align-items: center; gap: 16px; color: #bcbec8; font-size: 20px; }
+.game-list-footer > span:nth-child(2) { margin-left: auto; }
+.tv-search-results { display: flex; flex-direction: column; gap: 8px; }
+.tv-library-grid { display: flex; flex-direction: column; gap: 8px; right: 48px; }
+.tv-library-tile { width: 100%; height: 72px; min-height: 72px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; text-align: left; }
+.tv-library-tile strong, .tv-library-tile > span { position: static; margin: 0; }
+.tv-theme-ubiquity .ubq-detail-screen { background: #0b0d14; }
+.tv-emulator-release-main { gap: 0; grid-template-columns: minmax(0, 1fr); }
+.tv-stage-mobile .game-list-page { position: relative; padding: 24px 16px 110px; min-height: 100%; }
+.tv-stage-mobile .game-list-page h1 { font-size: 28px; }
+.tv-stage-mobile .game-list-categories { position: static; overflow-x: auto; margin: 16px 0; }
+.tv-stage-mobile .game-list-categories button { flex-shrink: 0; font-size: 14px; }
+.tv-stage-mobile .game-list-rows { position: static; }
+.tv-stage-mobile .game-list-row { height: auto; min-height: 72px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px; }
+.tv-stage-mobile .game-list-title { grid-column: 1 / -1; font-size: 20px; white-space: normal; }
+.tv-stage-mobile .game-list-id, .tv-stage-mobile .game-list-format, .tv-stage-mobile .game-list-size { width: auto; font-size: 12px; }
+.tv-stage-mobile .game-list-footer { position: static; margin-top: 24px; flex-wrap: wrap; font-size: 12px; }
+
+.game-list-categories button { width: 218px; padding: 0 12px; }
+.tv-theme-ubiquity .tv-library-ubiquity-games .tv-breadcrumb { top: 24px; left: 38px; }
+
+
+.game-list-categories button, .game-list-id, .game-list-format, .game-list-size { font-weight: 700; }
+
+/* Console | Name | Format | Size; widths mirror ui_game_list_columns.h. */
+.game-list-table { position: absolute; top: 190px; left: 38px; right: 48px; }
+.game-list-table .game-list-rows { position: static; }
+.game-list-row, .game-list-header { display: grid; grid-template-columns: minmax(0,17fr) minmax(0,39fr) minmax(0,32fr) minmax(0,12fr); gap: 20px; padding: 0 20px; }
+.game-list-header { height: 30px; align-items: center; color: #bcbec8; font-size: 16px; font-weight: 700; }
+.game-list-header span:last-child { text-align: right; }
+.game-list-console, .game-list-format { min-width: 0; font-size: 20px; color: #bcbec8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-list-size { min-width: 0; width: auto; overflow: hidden; white-space: nowrap; }
+
+.game-list-console, .game-list-format { font-weight: 700; }
+
+.game-list-format { width: auto; }

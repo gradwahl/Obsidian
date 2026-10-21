@@ -2,6 +2,7 @@
 #include "text.h"
 #include <curl/curl.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -512,7 +513,7 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
     SDL_strlcpy(target->cover_url, cover_url ? cover_url : "", sizeof(target->cover_url));
 
     target->format  = fmt;
-    target->size_gb = (size_gb > 0.05f) ? size_gb : 42.5f;
+    target->size_gb = (isfinite(size_gb) && size_gb > 0.0f) ? size_gb : 0.0f;
 
     if (fmt == FMT_PKG) {
         snprintf(target->install_path, sizeof(target->install_path), "/data/pkg/%s.pkg", target->id_code);
@@ -625,15 +626,13 @@ static int parse_catalog_json(WolodriveApp *app, const char *json, const char *f
 
             double size_bytes = json_extract_number(obj_start, obj_end, "sizeBytes");
             float size_gb = 0.0f;
-            if (size_bytes > 1024.0 * 1024.0) {
-                size_gb = (float)(size_bytes / (1024.0 * 1024.0 * 1024.0));
+            if (isfinite(size_bytes) && size_bytes > 0.0) {
+                size_gb = (float)(size_bytes / 1e9);
             } else {
-                double raw_size = json_extract_number(obj_start, obj_end, "size");
-                if (raw_size > 1024.0 * 1024.0) {
-                    size_gb = (float)(raw_size / (1024.0 * 1024.0 * 1024.0));
-                } else if (raw_size > 0.0) {
-                    size_gb = (float)raw_size;
-                }
+                /* Only fields with explicit units can establish a package size. */
+                double declared_gb = json_extract_number(obj_start, obj_end, "sizeGB");
+                if (declared_gb <= 0) declared_gb = json_extract_number(obj_start, obj_end, "size_gb");
+                if (isfinite(declared_gb) && declared_gb > 0) size_gb = (float)declared_gb;
             }
 
             PackageFormat fmt = detect_package_format(id_code, dl_url, fmt_str);

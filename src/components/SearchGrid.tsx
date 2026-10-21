@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
 import { normalizeTitleKey, searchPlatform, matchesFilters } from '../catalog';
-import { GameCard } from './GameCard';
+import { GameCard, GameListHeader } from './GameCard';
 import { ChevronLeft, ChevronRight, Delete, CornerDownLeft } from 'lucide-react';
 
 interface SearchGridProps {
@@ -23,6 +23,8 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef(false);
 
   const pageSize = 9;
   // Count all matching identities, retaining only the existing visible page.
@@ -74,8 +76,28 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
     setSelectedIdx(0);
   };
 
+  useEffect(() => {
+    if (!pendingFocus.current) return;
+    pendingFocus.current = false;
+    rootRef.current?.querySelectorAll<HTMLButtonElement>('.game-list-row')[selectedIdx]?.focus();
+  }, [page, selectedIdx]);
+
   return (
-    <div className="tv-search tv-page">
+    <div className="tv-search tv-page" ref={rootRef} onKeyDown={event => {
+      const target = event.target as HTMLElement;
+      const result = target.closest('.game-list-row');
+      const rows = rootRef.current?.querySelectorAll<HTMLButtonElement>('.game-list-row');
+      if (result && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        event.preventDefault(); event.stopPropagation();
+        const next = page * pageSize + selectedIdx + (event.key === 'ArrowDown' ? 1 : -1);
+        if (next < 0 || next >= results.count) return;
+        pendingFocus.current = true; setPage(Math.floor(next / pageSize)); setSelectedIdx(next % pageSize);
+      } else if (event.key === 'ArrowRight' && !result && rows?.length) {
+        event.preventDefault(); rows[selectedIdx]?.focus();
+      } else if (result && event.key === 'ArrowLeft') {
+        event.preventDefault(); rootRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+      }
+    }}>
       {/* Title & Query input */}
       <div className="max-w-6xl mb-6">
         <h2 className="text-2xl font-black text-white tracking-tight mb-3">
@@ -160,6 +182,7 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
             </div>
           ) : (
             <div>
+              <div className="game-list-table-scroll"><GameListHeader language={language} />
               <div className="tv-search-results">
                 {currentItems.map((item, idx) => (
                   <GameCard
@@ -173,6 +196,7 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
                 ))}
               </div>
 
+              </div>
               {/* Paging controls */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#1c1c24]">

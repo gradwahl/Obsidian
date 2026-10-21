@@ -1,3 +1,4 @@
+import { gameSize } from '../gameList';
 import { MemoryImage } from './MemoryImage';
 import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useState } from 'react';
@@ -111,7 +112,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 {game.id_code}
               </span>
               <span className="text-xs text-[#8a8a94] font-medium">
-                {game.version} • {game.size_gb.toFixed(1)} GB
+                {game.version} • {gameSize(game)}
               </span>
             </div>
             <h2 id="tv-detail-title" className="tv-detail-title">

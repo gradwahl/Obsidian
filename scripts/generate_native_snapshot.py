@@ -67,7 +67,7 @@ def main():
         if not (0 <= added <= 99999999999999 and 0 <= size <= 100000):
             raise ValueError("Out-of-range catalogue metadata")
         scalars = [
-            str(added) + "ULL", f"{size:.3f}f",
+            str(added) + "ULL", f"{size:.9f}f",
             str(format_index(item.get("format"))),
             str(int(bool(item.get("is_game")))),
             str(int(bool(item.get("is_dlc")))),

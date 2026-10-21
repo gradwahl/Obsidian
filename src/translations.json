@@ -2110,5 +2110,49 @@
     "it": "Nessun download attivo in questa kategorie",
     "zh": "该分类中无活动的下载任务",
     "ru": "Нет активных задач загрузки в этой категории"
+  },
+  "TXT_LIST_CONSOLE": {
+    "en": "Console",
+    "pl": "Konsola",
+    "es": "Consola",
+    "fr": "Console",
+    "nl": "Console",
+    "de": "Konsole",
+    "it": "Console",
+    "zh": "主机",
+    "ru": "Консоль"
+  },
+  "TXT_LIST_NAME": {
+    "en": "Name",
+    "pl": "Nazwa",
+    "es": "Nombre",
+    "fr": "Nom",
+    "nl": "Naam",
+    "de": "Name",
+    "it": "Nome",
+    "zh": "名称",
+    "ru": "Название"
+  },
+  "TXT_LIST_SIZE": {
+    "en": "Size",
+    "pl": "Rozmiar",
+    "es": "Tamaño",
+    "fr": "Taille",
+    "nl": "Grootte",
+    "de": "Größe",
+    "it": "Dimensione",
+    "zh": "大小",
+    "ru": "Размер"
+  },
+  "TXT_LIST_FORMAT": {
+    "en": "Format",
+    "pl": "Format",
+    "es": "Formato",
+    "fr": "Format",
+    "nl": "Formaat",
+    "de": "Format",
+    "it": "Formato",
+    "zh": "格式",
+    "ru": "Формат"
   }
 }

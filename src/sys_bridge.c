@@ -339,61 +339,61 @@ void sys_init(WolodriveApp *app) {
         TXT_DESC_SPIDER_MAN_2,
         "/data/homebrew/PPSA08338/PPSA08338.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202306/1219/1c7b75d8ed9271516546560d219ad0b22ee0a263b4537bd8.png",
-        86.4f, FMT_EXFAT, 185, 20, 32, "2023-10-20", 184200, 9.1f);
+        0.0f, FMT_EXFAT, 185, 20, 32, "2023-10-20", 184200, 9.1f);
 
     add_seed_entry(app, "PPSA04610", "God of War Ragnarok",
         TXT_DESC_GOD_OF_WAR,
         "/data/homebrew/PPSA04610/PPSA04610.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202207/1210/4xJ8XB3bi888QTLZYdl7Oi0s.png",
-        104.2f, FMT_EXFAT, 26, 82, 148, "2022-11-09", 162900, 9.5f);
+        0.0f, FMT_EXFAT, 26, 82, 148, "2022-11-09", 162900, 9.5f);
 
     add_seed_entry(app, "PPSA01341", "Demon's Souls Remake",
         TXT_DESC_DEMONS_SOULS,
         "/data/homebrew/PPSA01341",
         "https://image.api.playstation.com/vulcan/img/rnd/202011/1717/GemRaOZaCMhGxQ9dRhnQQyT5.png",
-        53.8f, FMT_FFPKG, 110, 78, 38, "2020-11-12", 94500, 9.2f);
+        0.0f, FMT_FFPKG, 110, 78, 38, "2020-11-12", 94500, 9.2f);
 
     add_seed_entry(app, "PPSA07950", "Stellar Blade",
         TXT_DESC_STELLAR_BLADE,
         "/data/homebrew/PPSA07950/PPSA07950.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202401/2211/40e7cfd126a11fe5118310ebce6d9b3a23e7cab2717217c8.png",
-        34.7f, FMT_EXFAT, 22, 118, 132, "2024-04-26", 128400, 8.8f);
+        0.0f, FMT_EXFAT, 22, 118, 132, "2024-04-26", 128400, 8.8f);
 
     add_seed_entry(app, "PPSA01552", "Ratchet & Clank: Rift Apart",
         TXT_DESC_RATCHET_AND_CLANK,
         "/data/homebrew/PPSA01552",
         "https://image.api.playstation.com/vulcan/ap/rnd/202101/2921/DwVjpbKOsFOyPdNzmSTSWuxG.png",
-        33.6f, FMT_FFPKG, 136, 42, 165, "2021-06-11", 88300, 8.9f);
+        0.0f, FMT_FFPKG, 136, 42, 165, "2021-06-11", 88300, 8.9f);
 
     add_seed_entry(app, "PPSA10665", "Astro Bot",
         TXT_DESC_ASTRO_BOT,
         "/mnt/ext0/homebrew/PPSA10665.exfat",
         "https://image.api.playstation.com/vulcan/ap/rnd/202405/2409/dc90a668a7effb6fb9b2cf55fb9cd6f7c26856c504ef1e54.png",
-        37.9f, FMT_EXFAT, 32, 96, 205, "2024-09-06", 145600, 9.6f);
+        0.0f, FMT_EXFAT, 32, 96, 205, "2024-09-06", 145600, 9.6f);
 
     add_seed_entry(app, "CUSA30410", "Bloodborne GOTY (60 FPS Patch)",
         TXT_DESC_BLOODBORNE,
         "/data/pkg/CUSA30410_bloodborne_60fps.pkg",
         "https://image.api.playstation.com/cdn/UP9000/CUSA00900_00/b5Qrdv032c226K9f0n37P4v2s0F17H4E.png",
-        36.2f, FMT_PKG, 82, 28, 46, "2015-03-24", 210400, 9.4f);
+        0.0f, FMT_PKG, 82, 28, 46, "2015-03-24", 210400, 9.4f);
 
     add_seed_entry(app, "CUSA03041", "Red Dead Redemption 2",
         TXT_DESC_RED_DEAD_REDEMPTION,
         "/mnt/ext0/pkg/CUSA03041_rdr2.pkg",
         "https://image.api.playstation.com/cdn/UP1004/CUSA03041_00/Hpl5MtwQgOVF9vJqlfui6SDB5Jl4oBSq.png",
-        105.0f, FMT_PKG, 168, 62, 24, "2018-10-26", 248900, 9.7f);
+        0.0f, FMT_PKG, 168, 62, 24, "2018-10-26", 248900, 9.7f);
 
     add_seed_entry(app, "CUSA18017", "Ghost of Tsushima Director's Cut",
         TXT_DESC_GHOST_OF_TSUSHIMA,
         "/data/pkg/CUSA18017_got.pkg",
         "https://image.api.playstation.com/vulcan/ap/rnd/202106/2322/c16gs6a7lbAYzPf7ZTikbH1c.png",
-        59.1f, FMT_PKG, 112, 108, 42, "2021-08-20", 176300, 9.3f);
+        0.0f, FMT_PKG, 112, 108, 42, "2021-08-20", 176300, 9.3f);
 
     add_seed_entry(app, "CUSA00900", "Driveclub Complete Edition",
         TXT_DESC_DRIVECLUB,
         "/data/pkg/CUSA00900_driveclub.pkg",
         "https://image.api.playstation.com/cdn/EP9000/CUSA00003_00/4b3c01e6b1d4525a1fb42ef213b6dcac867527f32bc8cf43.png",
-        31.4f, FMT_PKG, 152, 28, 78, "2014-10-07", 74200, 8.4f);
+        0.0f, FMT_PKG, 152, 28, 78, "2014-10-07", 74200, 8.4f);
 
     /* Share the React catalogue and source list on Linux and PS5, even offline. */
     sys_import_native_snapshot(app);

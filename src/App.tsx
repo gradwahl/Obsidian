@@ -1,3 +1,4 @@
+import { HOME_TABS } from './layout';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { SidebarView, LanguageCode, GameItem, CatalogFilters, SystemStats } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -76,7 +77,7 @@ function App() {
   // 5. Selected category & game for Home carousel
   const [activeHomeCategory, setActiveHomeCategory] = useState(0);
   // Each Netflix row remembers its own focused cover, like the native SDL view.
-  const [selectedHomeCols, setSelectedHomeCols] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [selectedHomeCols, setSelectedHomeCols] = useState<number[]>([0, 0]);
   const selectedHomeCol = selectedHomeCols[activeHomeCategory] ?? 0;
   const setSelectedHomeCol = useCallback<React.Dispatch<React.SetStateAction<number>>>((value) => {
     setSelectedHomeCols((previous) => {
@@ -161,13 +162,7 @@ function App() {
     // The former implementation re-normalized/deduplicated up to 80,000
     // entries five times, every catalogue update. Share one deduped pass.
     const groups = getHomeCategoryLists(catalog, filters, 128);
-    return [
-      { id: 'ps5', titleKey: 'TXT_CAT_PS5', games: groups.ps5 },
-      { id: 'ps4', titleKey: 'TXT_CAT_PS4', games: groups.ps4 },
-      { id: 'popular', titleKey: 'TXT_CAT_POPULAR', games: groups.popular },
-      { id: 'newest', titleKey: 'TXT_CAT_NEWEST', games: groups.newest },
-      { id: 'top_rated', titleKey: 'TXT_CAT_TOP_RATED', games: groups.top_rated }
-    ];
+    return HOME_TABS.map(tab => ({ ...tab, games: groups[tab.id] }));
   }, [catalog, filters]);
   const homeGames = useMemo(
     () => homeCategories[activeHomeCategory]?.games || getLatestGames(catalog, filters, 128),
@@ -363,25 +358,22 @@ function App() {
 
       const target = e.target as HTMLElement;
       if (target.closest('input,textarea,select')) return;
-      if (!isSidebarFocused && target.closest('button') && !target.closest('.tv-carousel,.tv-navigation')) return;
+      if (!isSidebarFocused && target.closest('button') && !target.closest('.game-list-page,.tv-navigation')) return;
+      if (!isSidebarFocused && !detailGame && document.querySelector('.game-list-page') && e.key === 'ArrowLeft') { e.preventDefault(); setIsSidebarFocused(true); return; }
       if ((currentView === 'home' || isSidebarFocused) && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(e.key)) e.preventDefault();
 
-      // Arrow keys navigation for Home carousel (Horizontal within category, Vertical across categories)
+      // Lists use vertical game movement and horizontal category movement.
       if (currentView === 'home' && !detailGame && !isSidebarFocused) {
-        if (e.key === 'ArrowRight' || e.key === 'd') {
-          setSelectedHomeCol((c) => Math.min(homeGames.length - 1, c + 1));
-        } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-          if (selectedHomeCol === 0) {
-            setIsSidebarFocused(true);
-          } else {
-            setSelectedHomeCol((c) => Math.max(0, c - 1));
-          }
-        } else if (e.key === 'ArrowDown' || e.key === 's') {
-          setActiveHomeCategory((cat) => Math.min(homeCategories.length - 1, cat + 1));
+        if (e.key === 'ArrowDown' || e.key === 's') {
+          setSelectedHomeCol(c => Math.min(homeGames.length - 1, c + 1));
         } else if (e.key === 'ArrowUp' || e.key === 'w') {
-          setActiveHomeCategory((cat) => Math.max(0, cat - 1));
+          setSelectedHomeCol(c => Math.max(0, c - 1));
+        } else if (e.key === 'ArrowRight' || e.key === 'd') {
+          setActiveHomeCategory(cat => (cat + 1) % homeCategories.length);
+        } else if (e.key === 'ArrowLeft' || e.key === 'a') {
+          setIsSidebarFocused(true);
         } else if (e.key === 'Enter' || e.key === ' ') {
-          if (activeHeroGame) setDetailGame(activeHeroGame);
+          if (!target.closest('button') && activeHeroGame) setDetailGame(activeHeroGame);
         }
       } else if (currentView === 'settings' && !detailGame && !isSidebarFocused) {
         if (e.key === 'ArrowUp') { e.preventDefault(); focusSettingsControl(-1); }
@@ -439,6 +431,17 @@ function App() {
       if (gp) {
         const now = Date.now();
         if (now - lastGamepadPress.current > 165) {
+          if (!isSidebarFocused && !detailGame && document.querySelector('.game-list-page')) {
+            const keys: Record<number, string> = { 0: 'Enter', 1: 'Escape', 2: 'l', 3: 'r', 12: 'ArrowUp', 13: 'ArrowDown', 14: 'ArrowLeft', 15: 'ArrowRight' };
+            const button = Object.keys(keys).map(Number).find(index => gp.buttons[index]?.pressed);
+            if (button !== undefined) {
+              lastGamepadPress.current = now;
+              const row = document.querySelector<HTMLElement>('.game-list-row-selected');
+              (row || window).dispatchEvent(new KeyboardEvent('keydown', { key: keys[button], bubbles: true, cancelable: true }));
+            }
+            animId = requestAnimationFrame(pollGamepad);
+            return;
+          }
           if (currentView === 'files' && !isSidebarFocused) {
             const keys: Record<number, string> = { 0: 'Enter', 1: 'Escape', 2: 'l', 3: 'r',
               12: 'ArrowUp', 13: 'ArrowDown', 14: 'ArrowLeft', 15: 'ArrowRight' };
@@ -516,7 +519,7 @@ function App() {
             } else if (currentView === 'settings' && !detailGame) {
               focusSettingsControl(-1);
             } else if (currentView === 'home' && !detailGame) {
-              setActiveHomeCategory((cat) => Math.max(0, cat - 1));
+              setSelectedHomeCol(c => Math.max(0, c - 1));
             }
           }
           // D-Pad Down
@@ -535,7 +538,7 @@ function App() {
             } else if (currentView === 'settings' && !detailGame) {
               focusSettingsControl(1);
             } else if (currentView === 'home' && !detailGame) {
-              setActiveHomeCategory((cat) => Math.min(homeCategories.length - 1, cat + 1));
+              setSelectedHomeCol(c => Math.min(homeGames.length - 1, c + 1));
             }
           }
           // D-Pad Left
@@ -548,8 +551,7 @@ function App() {
             } else if (currentView === 'settings' && !detailGame) {
               setIsSidebarFocused(true);
             } else if (currentView === 'home' && !detailGame) {
-              if (selectedHomeCol === 0) setIsSidebarFocused(true);
-              else setSelectedHomeCol((c) => Math.max(0, c - 1));
+              setIsSidebarFocused(true);
             }
           }
           // D-Pad Right
@@ -562,7 +564,7 @@ function App() {
             }
             else if (isSidebarFocused && !detailGame) setIsSidebarFocused(false);
             else if (currentView === 'home' && !detailGame) {
-              setSelectedHomeCol((c) => Math.min(homeGames.length - 1, c + 1));
+              setActiveHomeCategory(cat => (cat + 1) % homeCategories.length);
             }
           }
         }
@@ -646,7 +648,7 @@ function App() {
 
           {/* VIEW: GAMES / ROMS */}
           {currentView === 'games' && (
-            <LibraryBrowser
+            <LibraryBrowser sidebarFocused={isSidebarFocused}
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={false}
 
@@ -662,7 +664,7 @@ function App() {
 
           {/* VIEW: EMULATORS */}
           {currentView === 'emulators' && (
-            <LibraryBrowser
+            <LibraryBrowser sidebarFocused={isSidebarFocused}
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={true}
 

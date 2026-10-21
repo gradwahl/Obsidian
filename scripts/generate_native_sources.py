@@ -80,12 +80,12 @@ def main():
         "static const NativeSourceSeed NATIVE_SOURCE_CATALOGUE[] = {",
     ]
     for id_, title, source, plat, ver, cover, boxart, desc, date, size, is_game in rows:
-        try:size_gb=float(size)/1073741824
+        try:size_gb=float(size)/1e9
         except (ValueError,TypeError):size_gb=0
         if not isfinite(size_gb) or size_gb<0:size_gb=0
         fields = [c_string(v,limit) for v,limit in zip(
             [id_,title,source,plat,ver,cover,boxart,desc,date],[31,127,63,47,31,511,511,500,23])]
-        header.append(" {" + ",".join(fields)+f",{size_gb:.4f}f,{int(is_game)}"+"},")
+        header.append(" {" + ",".join(fields)+f",{size_gb:.9f}f,{int(is_game)}"+"},")
     header.extend([
         "};",
         "#define NATIVE_SOURCE_CATALOGUE_COUNT (sizeof(NATIVE_SOURCE_CATALOGUE) / sizeof(NATIVE_SOURCE_CATALOGUE[0]))",

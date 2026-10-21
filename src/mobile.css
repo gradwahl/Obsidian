@@ -271,3 +271,23 @@
   top:8px;right:12px;left:auto;width:48px;height:48px;
   border-radius:15px;background:rgba(17,18,29,.85);
 }
+
+/* Text lists replace artwork tiles on narrow screens too. */
+.tv-stage-mobile .game-list-page { padding-top: 80px; }
+.tv-stage-mobile .tv-library-grid { display: flex; flex-direction: column; gap: 8px; }
+.tv-stage-mobile .tv-library-tile { display: flex; height: 72px; min-height: 72px; border-radius: 8px; padding: 0 16px; }
+.tv-stage-mobile .tv-library-tile strong { width: auto; flex: 1; }
+.tv-stage-mobile .tv-library-tile > span { text-align: right; }
+.tv-stage-mobile .tv-library-ubiquity-games .tv-breadcrumb { position: relative; inset: auto; margin: 78px 16px 0; }
+.tv-stage-mobile .tv-library-ubiquity-games .game-list-page { padding-top: 16px; }
+
+.tv-stage-mobile .tv-search-results { display: flex; flex-direction: column; gap: 8px; }
+
+.tv-stage-mobile .game-list-table, .tv-stage-mobile .game-list-table-scroll { position: static; overflow-x: auto; }
+.tv-stage-mobile .game-list-table .game-list-rows, .tv-stage-mobile .game-list-table-scroll .tv-search-results, .tv-stage-mobile .game-list-header { min-width: 720px; }
+.tv-stage-mobile .game-list-row { display: grid; grid-template-columns: minmax(0,17fr) minmax(0,39fr) minmax(0,32fr) minmax(0,12fr); gap: 12px; padding: 12px 20px; }
+.tv-stage-mobile .game-list-header { gap: 12px; padding: 0 20px; font-size: 13px; }
+.tv-stage-mobile .game-list-title { grid-column: auto; font-size: 16px; white-space: nowrap; }
+.tv-stage-mobile .game-list-console, .tv-stage-mobile .game-list-format, .tv-stage-mobile .game-list-size { font-size: 13px; }
+
+.game-list-format { width: auto; }

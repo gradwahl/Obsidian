@@ -1,3 +1,4 @@
+import { gameSize } from '../gameList';
 import { MemoryImage } from './MemoryImage';
 import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useState } from 'react';
@@ -96,7 +97,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           <span className="tv-meta-pill glass-pill glass-pill--sm">{game.id_code}</span>
           <span className="tv-meta-pill glass-pill glass-pill--sm">v{game.version}</span>
           <span className="tv-meta-pill glass-pill glass-pill--sm">{game.format.toUpperCase()}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.size_gb.toFixed(1)} GB</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{gameSize(game)}</span>
           {game.rating_score ? <span className="tv-meta-pill glass-pill glass-pill--sm">★ {game.rating_score.toFixed(1)}/10</span> : null}
           {game.download_count ? <span className="tv-meta-pill glass-pill glass-pill--sm">↓ {game.download_count.toLocaleString()}</span> : null}
           {showDate && added ? <span className="tv-meta-pill glass-pill glass-pill--sm">{added}</span> : null}

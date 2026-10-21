@@ -1,7 +1,7 @@
 /* Shared game panel used by every catalog entry point. */
-enum { GAME_INSTALL, GAME_DLC, GAME_SCREENSHOTS, GAME_DETAILS, GAME_TAB_COUNT };
+enum { GAME_INSTALL, GAME_DLC, GAME_DETAILS, GAME_TAB_COUNT, GAME_SCREENSHOTS };
 static const SDL_Rect GAME_CLOSE = {1820, 215, 60, 60};
-static const TextId GAME_TABS[] = {TXT_GAME_INSTALL, TXT_GAME_DLC, TXT_GAME_SCREENSHOTS, TXT_GAME_DETAILS};
+static const TextId GAME_TABS[] = {TXT_GAME_INSTALL, TXT_GAME_DLC, TXT_GAME_DETAILS};
 
 static SDL_Rect game_tab_target(int tab) {
     return (SDL_Rect){CONTENT_X + tab * 380, 850, 360, 65};
@@ -194,7 +194,7 @@ static void handle_game_details_input(WolodriveApp *app, const SDL_Event *ev) {
     }
     if (action == 6) { game_back(app); return; }
     if (!app->detail_content_focus) {
-        if (action == 1 || action == 2) game_select_tab(app, (app->detail_tab + (action == 1 ? 3 : 1)) % GAME_TAB_COUNT);
+        if (action == 1 || action == 2) game_select_tab(app, (app->detail_tab + (action == 1 ? GAME_TAB_COUNT - 1 : 1)) % GAME_TAB_COUNT);
         else if (action == 4 || action == 5) app->detail_content_focus = true;
     } else if (action == 3) app->detail_content_focus = false;
     else if (app->detail_tab == GAME_DETAILS && action == 4) app->detail_scroll += 60;
@@ -250,21 +250,13 @@ static void render_game_details(WolodriveApp *app) {
     }
 
     fill_rect(r, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0,0,0,220);
-    /* Keep a strip of neighboring covers above the expanded game panel. */
-    int count = app->active_row == VIEW_SEARCH ? app->search_count : app->rows[app->active_row].item_count;
-    int selected = app->active_row == VIEW_SEARCH ? app->search_selected : app->rows[app->active_row].selected_col;
-    for (int i = 0; i < 4 && selected + i < count; i++) {
-        GameItem *neighbor = app->active_row == VIEW_SEARCH ? app->search_results[selected+i] : app->rows[app->active_row].items[selected+i];
-        render_cover_or_placeholder(app, neighbor, CONTENT_X + i*390 + 126, 20, 118, 165, false);
-        if (!i) draw_border(r, CONTENT_X+123, 17, 124, 171, 3,245,245,245,255);
-    }
-    render_cover_or_placeholder(app, item, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, true);
-    fill_rect(r, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, 0,0,0,220);
+    fill_rect(r, RAIL_WIDTH+10, 205, SCREEN_WIDTH-RAIL_WIDTH-20, 735, 11,13,20,255);
     SDL_Rect title_box = {CONTENT_X+20, 240, 1400, 105};
     draw_fitted_text(app, app->font_hero_title, item->title, title_box, white, title_box, false);
     char metadata[256];
-    snprintf(metadata, sizeof(metadata), "%s   |   %s   |   %s   |   %.1f GB", item->id_code,
-             sys_format_short_badge(item->format), item->version, item->size_gb);
+    char size_label[64]; game_list_size(item,size_label);
+    snprintf(metadata, sizeof(metadata), "%s   |   %s   |   %s   |   %s", item->id_code,
+             sys_format_short_badge(item->format), item->version, size_label);
     draw_text(app, app->font_small, metadata, CONTENT_X+20, 365, muted, 1350);
     draw_text(app, app->font_row_title, "X", GAME_CLOSE.x+15, GAME_CLOSE.y+8, white, 0);
     if (app->detail_tab == GAME_DETAILS) {

@@ -1,47 +1,31 @@
-import { MemoryImage } from './MemoryImage';
-import { useCatalogDetails } from '../useCatalogDetails';
-import React, { useState } from 'react';
+import { gameConsole, gameFormat, gameSize } from '../gameList';
+import React from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
-import { platformLabel } from '../layout';
-import { FittedText } from './FittedText';
-import { nextCoverSource } from '../artworkMatches';
 
-export function CoverArt({ game: summary, className = '' }: { game: GameItem; className?: string }) {
-  const game = useCatalogDetails(summary);
-  const [failedSources, setFailedSources] = useState<string[]>([]);
-  const source = nextCoverSource(game, failedSources);
-  const platform = platformLabel(game.id_code);
-  const completeBox = Boolean(source && (source === game.boxart_url || source === game.cover_fallback_url));
-  return <div className={`tv-cover ${className}`} style={{ background:
-    `linear-gradient(rgb(${game.cover_r},${game.cover_g},${game.cover_b}), #101014)` }}>
-    {platform && !completeBox && <div className={`tv-platform tv-platform-${platform.toLowerCase()}`}>{platform}</div>}
-    {game.rating_score ? (
-      <div className="tv-rating-badge">★ {game.rating_score.toFixed(1)}</div>
-    ) : null}
-    <div className="tv-cover-image">
-      {!source && <div className="tv-cover-placeholder"><strong>Obsidian</strong><span>{game.title}</span></div>}
-      {source && <MemoryImage src={source} alt={game.title}
-        onError={() => setFailedSources(values => [...values, source])} />}
-    </div>
-  </div>;
-}
-
+// Retained for legacy detail consumers; game artwork is no longer displayed.
+export function CoverArt(_props: { game: GameItem; className?: string }) { return null; }
 interface GameCardProps {
   game: GameItem; isSelected: boolean; onSelect: () => void;
-  onOpen: () => void; language: LanguageCode;
-  virtualIndex?: number;
+  onOpen: () => void; language: LanguageCode; virtualIndex?: number;
 }
-
 export const GameCard: React.FC<GameCardProps> = ({ game, isSelected, onSelect, onOpen, language, virtualIndex }) => (
-  <button type="button" className={`tv-card ${isSelected ? 'tv-card-selected' : ''}`}
-    data-grid-index={virtualIndex}
-    aria-label={`${game.title} — ${t(language, 'TXT_GAME_DETAILS')}`}
+  <button type="button" className={'game-list-row' + (isSelected ? ' game-list-row-selected' : '')}
+    data-grid-index={virtualIndex} aria-current={isSelected ? 'true' : undefined}
+    aria-label={`${gameConsole(game)} — ${game.title} — ${gameFormat(game)} — ${gameSize(game)} — ${t(language, 'TXT_GAME_DETAILS')}`}
     onFocus={onSelect} onClick={() => { onSelect(); onOpen(); }}>
-    <CoverArt game={game} />
-    <span className="tv-card-title" title={game.title}>{game.title}</span>
-    <span className="tv-card-footer"><FittedText>{isSelected
-      ? `[X] ${t(language, 'TXT_GAME_DETAILS')}`
-      : `${game.format === 'ffpkg' ? 'FFPKG' : game.format.toUpperCase()} / ${game.size_gb.toFixed(1)} GB`}</FittedText></span>
+    <span className="game-list-console" title={gameConsole(game)}>{gameConsole(game)}</span>
+    <span className="game-list-title" title={game.title}>{game.title}</span>
+    <span className="game-list-format" title={gameFormat(game)}>{gameFormat(game)}</span>
+    <span className="game-list-size">{gameSize(game)}</span>
   </button>
 );
+
+export function GameListHeader({ language }: { language: LanguageCode }) {
+  return <div className="game-list-header">
+    <span>{t(language, 'TXT_LIST_CONSOLE')}</span>
+    <span>{t(language, 'TXT_LIST_NAME')}</span>
+    <span>{t(language, 'TXT_LIST_FORMAT')}</span>
+    <span>{t(language, 'TXT_LIST_SIZE')}</span>
+  </div>;
+}

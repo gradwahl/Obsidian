@@ -36,6 +36,13 @@ int main(void) {
         }
     }
     assert(pippo >= 800 && games > 800);
+    for(int i=0;i<app->catalog_count;i++) {
+        GameItem *it=&app->catalog[i];
+        if(!strcmp(it->title,"Unknown 9 Awakening Deluxe Edition")) assert(it->size_gb==58);
+        if(!strcmp(it->title,"NAIAD")) assert(it->size_gb==1);
+        if(!strcmp(it->title,"Lies of P: Overture")) assert(it->size_gb==72);
+        if(!strcmp(it->source_name,"Pegasus-DL / Obsidian")) assert(it->size_gb==0);
+    }
     assert(SDL_Init(0) == 0);
     app->catalog_mutex=SDL_CreateMutex();
     assert(app->catalog_mutex);
@@ -49,6 +56,34 @@ int main(void) {
     for(int i=1;i<app->home_categories[HOME_CAT_NEWEST].item_count;i++)
         assert(strcmp(app->home_categories[HOME_CAT_NEWEST].items[i-1]->release_date,
                       app->home_categories[HOME_CAT_NEWEST].items[i]->release_date) >= 0);
+    app->active_row = VIEW_HOME;
+    app->home_cat_index = HOME_CAT_NEWEST;
+    app->sidebar_focus = false;
+    app->rows[VIEW_HOME].selected_col = 0;
+    app->home_categories[HOME_CAT_NEWEST].selected_col = 0;
+    SDL_Event event = {0};
+    event.type = SDL_KEYDOWN; event.key.keysym.sym = SDLK_DOWN;
+    for(int i=0;i<10;i++) ui_handle_input(app,&event);
+    assert(app->rows[VIEW_HOME].selected_col == 10);
+    assert(app->home_categories[HOME_CAT_NEWEST].selected_col == 10);
+    event.type = SDL_CONTROLLERBUTTONDOWN; event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    ui_handle_input(app,&event);
+    assert(app->rows[VIEW_HOME].selected_col == 9);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+    ui_handle_input(app,&event);
+    assert(app->home_cat_index == HOME_CAT_POPULAR);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+    ui_handle_input(app,&event);
+    assert(app->sidebar_focus);
+    event.cbutton.button = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+    ui_handle_input(app,&event);
+    assert(!app->sidebar_focus);
+    event.type = SDL_MOUSEBUTTONDOWN; event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 140; event.button.y = 230;
+    ui_handle_input(app,&event);
+    assert(app->detail_open);
+    assert(app->detail_item == app->rows[VIEW_HOME].items[0]);
+    app->detail_open = false;
     app->filters.sources_limited = true;
     app->filters.source_count = 1;
     SDL_strlcpy(app->filters.sources[0], "Pippo .exFAT", 64);

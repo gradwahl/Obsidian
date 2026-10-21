@@ -1,6 +1,6 @@
 /* Search owns its query, full-catalog result set and keyboard/grid focus.
    Included by ui_netflix.c to share its rendering and hit-test primitives. */
-enum { SEARCH_COLUMNS = 3, SEARCH_PAGE = 9, SEARCH_KEYS = 38 };
+enum { SEARCH_COLUMNS = 1, SEARCH_PAGE = 9, SEARCH_KEYS = 38 };
 static const char SEARCH_LETTERS[] = "abcdefghijklmnopqrstuvwxyz1234567890";
 
 /* Source typography and package tags are not separate game identities. Keep
@@ -141,7 +141,7 @@ static SDL_Rect search_key_target(int key) {
 
 static SDL_Rect search_result_target(int index) {
     int slot = index % SEARCH_PAGE;
-    return (SDL_Rect){640 + slot % 3 * 350, 210 + slot / 3 * 238, 330, 220};
+    return (SDL_Rect){640, 210 + slot * 72, 1100, 64};
 }
 
 static SDL_Rect search_page_button(bool next) {
@@ -225,13 +225,9 @@ static bool handle_search_input(WolodriveApp *app, const SDL_Event *ev) {
     if (action == 6) { app->sidebar_focus = true; return true; }
     if (app->search_results_focus) {
         int *selected = &app->search_selected;
-        if (action == 1) {
-            if (*selected % 3) (*selected)--;
-            else app->search_results_focus = false;
-        } else if (action == 2 && *selected % 3 < 2 && *selected + 1 < app->search_count) (*selected)++;
-        else if (action == 3 && *selected >= 3) *selected -= 3;
-        else if (action == 4 && (*selected / 3 + 1) * 3 < app->search_count)
-            *selected = SDL_min(*selected + 3, app->search_count - 1);
+        if (action == 1) app->search_results_focus = false;
+        else if (action == 3 && *selected > 0) (*selected)--;
+        else if (action == 4 && *selected + 1 < app->search_count) (*selected)++;
         else if (action == 5 && app->search_count) ui_open_game(app, get_focused_item(app));
     } else {
         int *key = &app->search_key;
@@ -273,15 +269,15 @@ static void render_search(WolodriveApp *app) {
     snprintf(count, sizeof(count), TR(app, TXT_SEARCH_COUNT), app->search_count);
     draw_text(app, app->font_small, count, 1560, 140, muted, 0);
     draw_text(app, app->font_micro, TR(app, TXT_SEARCH_HINT), CONTENT_X, 750, muted, 455);
+    render_game_list_headers(app,(SDL_Rect){640,184,1100,24});
     int start = app->search_selected / SEARCH_PAGE * SEARCH_PAGE;
     for (int i = start; i < app->search_count && i < start + SEARCH_PAGE; i++) {
         SDL_Rect box = search_result_target(i);
         GameItem *item = app->search_results[i];
-        render_cover_or_placeholder(app, item, box.x + (box.w-132)/2, box.y, 132, 184, false);
-        SDL_Rect label = {box.x, box.y + 188, box.w, 30};
-        draw_single_line(app, app->font_micro, item->title, label.x, label.y, white, label);
-        if (!app->sidebar_focus && app->search_results_focus && i == app->search_selected)
-            draw_border(r, box.x - 3, box.y - 3, box.w + 6, box.h + 6, 3,245,245,245,255);
+        bool selected = !app->sidebar_focus && app->search_results_focus && i == app->search_selected;
+        fill_rounded_rect(r,box.x,box.y,box.w,box.h,8,selected?72:23,26,selected?48:36,255);
+        render_game_list_columns(app,item,box);
+        if(selected) draw_rounded_border(r,box.x,box.y,box.w,box.h,8,2,201,24,74,255);
     }
     if (!app->search_count) draw_text(app, app->font_body,
         TR(app, settings_filters_active(app) ? TXT_SETTINGS_NO_MATCHES : TXT_SEARCH_EMPTY),

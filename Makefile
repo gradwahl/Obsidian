@@ -45,7 +45,7 @@ benchmark-ui: src/native_catalog_snapshot.h
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	SDL_VIDEODRIVER=dummy ./build/benchmark_ui
 
-test: src/native_catalog_snapshot.h test-files test-ps5-renderer test-settings
+test: src/native_catalog_snapshot.h test-files test-ps5-renderer test-settings test-game-list
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
 	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
@@ -269,3 +269,13 @@ test-glass:
 	@mkdir -p build
 	gcc -Wall -Wextra -Werror -O2 -Isrc tests/test_glass_ui.c -o build/test_glass_ui `pkg-config --cflags --libs sdl2` -lm
 	SDL_VIDEODRIVER=dummy ./build/test_glass_ui
+
+.PHONY: test-game-list
+test-game-list:
+	python3 -m unittest discover -s tests -p test_catalog_sizes.py
+	@mkdir -p build
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+	    tests/test_game_list_ui.c src/file_manager.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/emulator_download.c src/screenshots.c src/artwork.c \
+	    -o build/test_game_list_ui \
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
+	SDL_VIDEODRIVER=dummy ./build/test_game_list_ui

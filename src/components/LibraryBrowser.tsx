@@ -1,35 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CatalogFilters, GameItem, LanguageCode, LibraryCompany, LibraryConsole } from '../types';
 import { COMPANIES, consolesForSection } from '../libraryData';
 import { t } from '../translations';
 import { matchesFilters } from '../catalog';
 import { HomeView } from './HomeView';
 import { EmulatorReleaseView, getEmulatorRelease, EMULATOR_RELEASES_URL } from './EmulatorReleaseView';
-/** Prevent broken-image icons if a remote asset is temporarily unavailable. */
-const LibraryTileArtwork: React.FC<{ url: string | null; label: string }> = ({ url, label }) => {
-  const [failed, setFailed] = useState(false);
-  React.useEffect(() => setFailed(false), [url]);
-  return url && !failed
-    ? <img src={url} alt={label} loading="lazy" decoding="async"
-        onError={() => setFailed(true)} />
-    : <span>{label}</span>;
-};
-const LibraryTileLogo: React.FC<{ url: string }> = ({ url }) => {
-  const [failed, setFailed] = useState(false);
-  React.useEffect(() => setFailed(false), [url]);
-  return failed ? null : <img className="tv-library-logo" src={url}
-    alt="" aria-hidden="true" loading="lazy" decoding="async"
-    onError={() => setFailed(true)} />;
-};
-
-
 interface LibraryBrowserProps {
-  isEmulatorsView: boolean; catalog: GameItem[]; language: LanguageCode;
+  sidebarFocused?: boolean; isEmulatorsView: boolean; catalog: GameItem[]; language: LanguageCode;
   onOpenGame: (game: GameItem) => void; filters: CatalogFilters;
   onRefresh: () => void; syncInProgress: boolean;
 }
 
-export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView, catalog, language,
+export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ sidebarFocused = false, isEmulatorsView, catalog, language,
   onOpenGame, filters, onRefresh, syncInProgress }) => {
   const [company, setCompany] = useState<LibraryCompany | null>(null);
   const [console, setConsole] = useState<LibraryConsole | null>(null);
@@ -48,6 +30,17 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
     return count;
   };
   const back = () => { if (console) setConsole(null); else setCompany(null); setPage(0); setSelected(0); setFocused(0); };
+  useEffect(() => {
+    if (sidebarFocused || !company) return;
+    const handle = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"]')) return;
+      if (event.key === 'Escape' || event.key === 'Backspace') {
+        event.preventDefault(); event.stopImmediatePropagation(); back();
+      }
+    };
+    window.addEventListener('keydown', handle, true);
+    return () => window.removeEventListener('keydown', handle, true);
+  }, [sidebarFocused, company, console]);
   const items = company ? consolesForSection(company, isEmulatorsView) : COMPANIES;
   const pages = Math.ceil(items.length / 8);
   const breadcrumb = <div className="tv-breadcrumb">
@@ -61,7 +54,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
     <HomeView games={gamesFor(console)} language={language} title={console.name} showDate={false}
       emptyMessage={t(language, isEmulatorsView ? 'TXT_EMULATOR_NOT_CONNECTED'
         : (console.title_id_prefix || console.platform_id) ? 'TXT_NO_PACKAGES' : 'TXT_CONSOLE_NOT_CONNECTED')}
-      selected={selected} sidebarFocused={false} onSelect={setSelected} onOpen={onOpenGame}
+      selected={selected} sidebarFocused={sidebarFocused} onSelect={setSelected} onOpen={onOpenGame}
       onRefresh={onRefresh} syncInProgress={syncInProgress} />
     {breadcrumb}
   </div>;
@@ -78,10 +71,6 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
           className={`tv-library-tile ${focused === index ? 'tv-library-selected' : ''}`}
           onFocus={() => setFocused(index)} onMouseEnter={() => setFocused(index)}
           onClick={() => { if (system) setConsole(system); else setCompany(brand); setPage(0); setFocused(0); }}>
-          <div className={`tv-library-image ${brand ? 'tv-library-brand' : ''}`}>
-            <LibraryTileArtwork url={item.artwork_path} label={item.name} />
-          </div>
-          {system?.logo_path && <LibraryTileLogo url={system.logo_path} />}
           <strong>{item.name}</strong>
           <span>{brand ? t(language, 'TXT_CONSOLE_COUNT', consolesForSection(brand, isEmulatorsView).length)
             : isEmulatorsView ? (getEmulatorRelease(system!) ? 'Release available' : 'Browse releases')

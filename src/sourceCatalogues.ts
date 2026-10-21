@@ -63,7 +63,7 @@ function safeGame(entry: SourcePackage, source: SourceInfo): GameItem | null {
     cover_url: safeUrl(entry.coverUrl),
     description: entry.description || 'Catalog metadata only - ' + source.name,
     install_path: '',
-    size_gb: Number.isFinite(size) && size > 0 ? size / (1024 * 1024 * 1024) : 0,
+    size_gb: Number.isFinite(size) && size > 0 ? size / 1e9 : 0,
     format: 'catalog', state: 'available', progress: 0,
     cover_r: 24, cover_g: 30, cover_b: 40,
     ...(created ? { release_date: created } : {}),
@@ -121,7 +121,7 @@ export async function loadSourceCatalogues(
                 typeof raw[1] !== 'string' || !raw[1].trim()) continue;
             const converted = Object.assign(Object.create(defaults[raw[3] === 'dlc' ? 1 : 0]), {
               id_code: raw[0], title: raw[1], platform: raw[2], version: raw[4],
-              size_gb: Number(raw[5]) > 0 ? Number(raw[5]) / (1024 ** 3) : 0,
+              size_gb: Number.isFinite(Number(raw[5])) && Number(raw[5]) > 0 ? Number(raw[5]) / 1e9 : 0,
               detailsPage, detailsOffset: row
             }) as CatalogSummary;
             const created = raw[6];

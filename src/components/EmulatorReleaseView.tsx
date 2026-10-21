@@ -42,8 +42,6 @@ export const EmulatorReleaseView: React.FC<{
   return <section className="tv-emulator-release-view" data-layout="emulator-release">
     <button type="button" className="tv-emulator-back" onClick={onBack}>← Back</button>
     <div className="tv-emulator-release-main">
-      {system.artwork_path && <img className="tv-emulator-art" src={system.artwork_path}
-        alt="" loading="lazy" decoding="async" />}
       <div className="tv-emulator-release-content">
         <p className="tv-emulator-kicker">Obsidian Emulators · GitHub Releases</p>
         <h1>{system.name}</h1>

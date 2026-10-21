@@ -1,3 +1,4 @@
+import { gameSize } from '../gameList';
 import React, { useState } from 'react';
 import { LanguageCode, GameItem } from '../types';
 import { t } from '../translations';
@@ -126,26 +127,6 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
                   className="bg-[#14141c]/85 backdrop-blur-md border border-white/12 rounded-[18px] p-5 hover:border-white/25 transition-all cursor-pointer shadow-lg relative overflow-hidden group"
                 >
                   <div className="flex items-start gap-4">
-                    {/* Game Cover Thumbnail */}
-                    <div className="w-20 h-24 rounded-xl overflow-hidden bg-[#20202e] shrink-0 border border-white/10 relative">
-                      {game.cover_url ? (
-                        <img
-                          src={game.cover_url}
-                          alt={game.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center text-xs font-black text-white p-2 text-center"
-                          style={{
-                            background: `linear-gradient(135deg, rgb(${game.cover_r || 180}, ${game.cover_g || 20}, ${game.cover_b || 30}), #0a0a10)`
-                          }}
-                        >
-                          {game.title.slice(0, 10)}
-                        </div>
-                      )}
-                    </div>
-
                     {/* Task Info & Stages */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-2">
@@ -153,7 +134,7 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
                           {game.title}
                         </h3>
                         <span className="text-xs font-mono text-[#a0a0b0]">
-                          {game.size_gb ? `${game.size_gb} GB` : '—'}
+                          {gameSize(game)}
                         </span>
                       </div>
 

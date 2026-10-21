@@ -116,6 +116,10 @@ global.fetch = async (url) => {
   assert.ok(result.entries.every(game => !Object.hasOwn(game, 'description') &&
     !Object.hasOwn(game, 'boxart_url') && !Object.hasOwn(game, 'cover_url') &&
     Object.keys(game).length <= 10), 'Browsing records must remain compact');
+  const sized=result.entries.find(game=>game.size_gb>0);
+  assert.ok(sized);
+  const rawSized=JSON.parse(fs.readFileSync(path.join(dir,sized.detailsPage),'utf8'))[sized.detailsOffset];
+  assert.equal(sized.size_gb,rawSized.sizeBytes/1e9,'Use decimal GB for source byte counts');
   const samples = [];
   const pages = new Set();
   for (const game of result.entries) {

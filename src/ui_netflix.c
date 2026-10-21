@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include "ui_text.h"
 #include "ui_glass.h"
+/* Visible Home tabs, mirrored by HOME_TABS in layout.ts. Other category
+   data remains available to catalog consumers, but has no Home tab. */
+enum { HOME_TAB_COUNT = 2 };
+static const HomeCategory HOME_TABS[HOME_TAB_COUNT] = {HOME_CAT_NEWEST, HOME_CAT_POPULAR};
+static void sync_home_active_row(WolodriveApp *app);
 static HighlightAnim nav_highlight, category_highlight, language_highlight;
 static Uint32 language_close_at, sidebar_started;
 static float sidebar_from, sidebar_to;
@@ -236,15 +241,14 @@ static SDL_Rect get_show_all_button_rect(WolodriveApp *app, int header_y) {
     return (SDL_Rect){show_all_x, header_y, show_all_w, 34};
 }
 
-enum { LIBRARY_COLUMNS = 4, LIBRARY_PAGE_SIZE = 8, LIBRARY_TILE = 320,
+enum { LIBRARY_COLUMNS = 1, LIBRARY_PAGE_SIZE = 8, LIBRARY_TILE = 72,
        LIBRARY_GAP_X = 36, LIBRARY_GAP_Y = 24, LIBRARY_GRID_Y = 220 };
 static const SDL_Rect LIBRARY_BACK_BUTTON = {CONTENT_X, 24, 180, 50};
 
 static SDL_Rect library_tile_target(int index) {
     int slot = index % LIBRARY_PAGE_SIZE;
-    return (SDL_Rect){CONTENT_X + slot % LIBRARY_COLUMNS * (LIBRARY_TILE + LIBRARY_GAP_X),
-                      LIBRARY_GRID_Y + slot / LIBRARY_COLUMNS * (LIBRARY_TILE + LIBRARY_GAP_Y),
-                      LIBRARY_TILE, LIBRARY_TILE};
+    return (SDL_Rect){CONTENT_X, LIBRARY_GRID_Y + slot * 80,
+                      SCREEN_WIDTH - CONTENT_X - 48, 72};
 }
 
 static int library_console_game_count(WolodriveApp *app, const LibraryConsole *console);
@@ -267,7 +271,7 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
     app->active_row = view;
     app->sidebar_focus = false;
     if (view == VIEW_HOME) {
-        app->home_cat_index = 0;
+        app->home_cat_index = HOME_CAT_NEWEST;
         app->home_grid_expanded = false;
     }
     if (view == VIEW_SEARCH) SDL_StartTextInput();
@@ -289,9 +293,8 @@ static SDL_Rect sidebar_target(int row) {
 }
 
 static CarouselRow *active_home_row(WolodriveApp *app) {
-    if (app->active_row == VIEW_HOME && app->home_cat_index > 0 &&
-        app->home_cat_index < HOME_CAT_COUNT &&
-        app->home_categories[app->home_cat_index].item_count > 0) {
+    if (app->active_row == VIEW_HOME && app->home_cat_index >= 0 &&
+        app->home_cat_index < HOME_CAT_COUNT) {
         return &app->home_categories[app->home_cat_index];
     }
     return &app->rows[app->active_row];
@@ -656,120 +659,7 @@ static int render_box_brand(WolodriveApp *app, const GameItem *item, SDL_Rect bo
 /* Zaokrąglenie rogów pionowego kafelka okładki (proporcje pudełkowe) */
 static void render_cover_or_placeholder_alpha(WolodriveApp *app, GameItem *it,
                                               int x, int y, int w, int h, bool is_hero, Uint8 alpha) {
-    SDL_Renderer *r = app->renderer;
-    int width = 0, height = 0;
-    SDL_Texture *texture = artwork_get(app, it, is_hero, is_hero ? 100 : 80, &width, &height);
-    if (!texture && is_hero) texture = artwork_get(app, it, false, 100, &width, &height);
-    if (texture && width > 0 && height > 0) {
-        SDL_Rect box = {x, y, w, h};
-        SDL_Color color = artwork_background(app, texture);
-
-        SDL_Rect previous;
-        bool clipped = SDL_RenderIsClipEnabled(r);
-        SDL_RenderGetClipRect(r, &previous);
-        SDL_Rect intersection = box;
-        if (clipped) SDL_IntersectRect(&box, &previous, &intersection);
-        SDL_RenderSetClipRect(r, &intersection);
-
-        if (is_hero) {
-            /* 1. Szerokie rozciągnięcie pola grafiki (dstrect = 78% szerokości okna od 22% X) */
-            int dst_x = app->ui_theme == UI_THEME_UBIQUITY ? x : (int)(SCREEN_WIDTH * 0.22f);
-            int dst_y = 0;
-            int dst_w = app->ui_theme == UI_THEME_UBIQUITY ? w : SCREEN_WIDTH - dst_x;
-            int dst_h = app->ui_theme == UI_THEME_UBIQUITY ? h : (int)(SCREEN_HEIGHT * 0.62f);
-            if (dst_h < h) dst_h = h;
-            SDL_Rect dstrect = {dst_x, dst_y, dst_w, dst_h};
-
-            float tex_aspect = (float)width / (float)height;
-            float dst_aspect = (float)dst_w / (float)dst_h;
-
-            /* 2. Wypełnienie całej szerokości dstrect z wycentrowaniem i 25% top bias */
-            SDL_Rect srcrect;
-            if (tex_aspect > dst_aspect) {
-                srcrect.h = height;
-                srcrect.w = (int)lroundf((float)height * dst_aspect);
-                srcrect.x = (width - srcrect.w) / 2;
-                srcrect.y = 0;
-            } else {
-                srcrect.w = width;
-                srcrect.h = (int)lroundf((float)width / dst_aspect);
-                if (srcrect.h > height) srcrect.h = height;
-                srcrect.x = 0;
-                srcrect.y = (int)lroundf((float)(height - srcrect.h) * 0.25f);
-            }
-
-            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-            SDL_SetTextureAlphaMod(texture, (Uint8)((245 * alpha) / 255));
-            SDL_RenderCopy(r, texture, &srcrect, &dstrect);
-
-            /* Pełna czerń od lewej krawędzi ekranu do dst_x */
-            fill_rect(r, 0, 0, dst_x, dst_h, 0, 0, 0, (Uint8)alpha);
-
-            /* 3. Płynne zanikanie lewej krawędzi przez 55% szerokości dstrect (100% czerń -> 0%) */
-            int fade_w = (int)(dst_w * 0.55f);
-            for (int gx = 0; gx <= fade_w; gx++) {
-                float t = (float)gx / (float)fade_w;
-                float dark_factor = (1.0f - t) * (1.0f - t);
-                Uint8 dark_a = (Uint8)(255.0f * dark_factor * alpha / 255.0f);
-                if (dark_a > 0) fill_rect(r, dst_x + gx, dst_y, 1, dst_h, 0, 0, 0, dark_a);
-            }
-
-            /* 4. Płynne zanikanie dolnej krawędzi przez 35% wysokości dstrect w pętli 64-krokowej */
-            int fade_h = (int)(dst_h * 0.35f);
-            int fade_y = dst_y + dst_h - fade_h;
-            fill_vertical_gradient(r, 0, fade_y, SCREEN_WIDTH, fade_h,
-                                   0, 0, 0, 0,
-                                   0, 0, 0, (Uint8)alpha, 64);
-
-            /* Top vignette for clean topbar blending */
-            fill_vertical_gradient(r, 0, 0, SCREEN_WIDTH, 80,
-                                   0, 0, 0, (Uint8)((160 * alpha) / 255),
-                                   0, 0, 0, 0, 24);
-
-            SDL_SetTextureAlphaMod(texture, 255);
-            SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
-            return;
-        }
-
-        fill_vertical_gradient(r, x, y, w, h, color.r/3, color.g/3, color.b/3, alpha,
-                               color.r/8, color.g/8, color.b/8, alpha, 24);
-        bool complete_box = artwork_complete_box(app, texture);
-        if (!complete_box) {
-            int band = render_box_brand(app, it, box);
-            box.y += band; box.h -= band;
-        }
-
-        SDL_Rect destination = artwork_fit(width, height, box, true);
-        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-        SDL_SetTextureAlphaMod(texture, alpha);
-        SDL_RenderCopy(r, texture, NULL, &destination);
-        SDL_SetTextureAlphaMod(texture, 255);
-        SDL_RenderSetClipRect(r, clipped ? &previous : NULL);
-    } else {
-        /* Elegancki, stylowy Placeholder z logo Obsidian i gradientem bazowym */
-        fill_vertical_gradient(r, x, y, w, h,
-                               it->cover_r, it->cover_g, it->cover_b, alpha,
-                               (uint8_t)(it->cover_r / 3), (uint8_t)(it->cover_g / 3), (uint8_t)(it->cover_b / 3), alpha,
-                               24);
-
-        /* Geometryczny akcent w tle placeholdera */
-        fill_rect(r, x + w - 90, y, 90, h, 255, 255, 255, (Uint8)((12 * alpha) / 255));
-        fill_rect(r, x, y + h / 2 - 1, w, 2, 255, 255, 255, (Uint8)((18 * alpha) / 255));
-
-        SDL_Color watermark_col = { 255, 255, 255, (Uint8)((75 * alpha) / 255) };
-        SDL_Color sub_col       = { 220, 220, 225, (Uint8)((160 * alpha) / 255) };
-        {
-            TTF_Font *ph_f = is_hero ? app->font_row_title : app->font_small;
-            int ph_y = y + h / 2 - (is_hero ? 28 : 22);
-            SDL_Color ph_red = { 229, 9, 20, (Uint8)((210 * alpha) / 255) };
-            int ph_pw = draw_text(app, ph_f, "O", x + 18, ph_y, ph_red, 0);
-            draw_text(app, ph_f, "bsidian", x + 18 + (ph_pw > 0 ? ph_pw + 1 : 14), ph_y, watermark_col, 0);
-        }
-
-        draw_text(app, app->font_micro, it->title, x + 18, y + h / 2 + 4, sub_col, w - 36);
-        if (!is_hero) render_box_brand(app, it, (SDL_Rect){x,y,w,h});
-    }
-    if (!is_hero) draw_border(r, x, y, w, h, 2, 22, 62, 110, alpha);
+    (void)app; (void)it; (void)x; (void)y; (void)w; (void)h; (void)is_hero; (void)alpha;
 }
 
 static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
@@ -850,7 +740,7 @@ bool ui_init(WolodriveApp *app) {
     }
 
     app->active_row = 0;
-    app->home_cat_index = 0;
+    app->home_cat_index = HOME_CAT_NEWEST;
     app->home_grid_expanded = false;
     app->home_grid_anim = 0.0f;
     app->sidebar_width = (float)SIDEBAR_COLLAPSED_W;
@@ -1058,6 +948,7 @@ void ui_rebuild_carousels(WolodriveApp *app) {
     app->catalog_dirty = false;
     search_rebuild_locked(app);
     SDL_UnlockMutex(app->catalog_mutex);
+    if (app->active_row == VIEW_HOME) sync_home_active_row(app);
 }
 
 static GameItem *get_focused_item(WolodriveApp *app) {
@@ -1254,12 +1145,13 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
 
 static void ui_open_game(WolodriveApp *app, GameItem *item);
 static const char *action_label(WolodriveApp *app, GameItem *item);
+#include "ui_game_list_columns.h"
 #include "ui_search.h"
 #include "ui_game_details.h"
 #include "ui_settings.h"
 
 static void sync_home_active_row(WolodriveApp *app) {
-    if (app->home_cat_index < 0) app->home_cat_index = 0;
+    if (app->home_cat_index < 0) app->home_cat_index = HOME_CAT_NEWEST;
     if (app->home_cat_index >= HOME_CAT_COUNT) app->home_cat_index = HOME_CAT_COUNT - 1;
     CarouselRow *cat = &app->home_categories[app->home_cat_index];
     CarouselRow *home = &app->rows[VIEW_HOME];
@@ -1286,6 +1178,10 @@ static const char *home_category_title(WolodriveApp *app, int cat) {
         default:                 return TR(app, TXT_LATEST_GAMES);
     }
 }
+
+static const char *view_content_title(WolodriveApp *app);
+static const char *empty_view_message(WolodriveApp *app);
+#include "ui_game_list.h"
 
 void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (ev->type == SDL_WINDOWEVENT) {
@@ -1363,6 +1259,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
     if (handle_files_input(app, ev)) return;
     if (handle_settings_input(app, ev)) return;
     if (handle_search_input(app, ev)) return;
+    if (handle_game_list_input(app, ev)) return;
     if (handle_library_input(app, ev)) return;
 
     /* Przyciski akcji w sekcji Hero ([Play/Pobierz], [Więcej informacji], [Przełącznik opisu]) */
@@ -1968,7 +1865,7 @@ static void render_hero_banner(WolodriveApp *app) {
     snprintf(meta, sizeof(meta), "v%s", hero->version);
     pill_x = draw_hero_metadata_pill(app, meta, pill_x, pill_y);
     pill_x = draw_hero_metadata_pill(app, sys_format_short_badge(hero->format), pill_x, pill_y);
-    snprintf(meta, sizeof(meta), "%.1f GB", hero->size_gb);
+    game_list_size(hero,meta);
     pill_x = draw_hero_metadata_pill(app, meta, pill_x, pill_y);
     if (hero->rating_score > 0.0f) {
         snprintf(meta, sizeof(meta), "★ %.1f/10", hero->rating_score);
@@ -2084,7 +1981,7 @@ static void render_single_card(WolodriveApp *app, GameItem *item, SDL_Rect base_
               selected ? 240 : 0, selected ? 240 : 0, selected ? 240 : 0, 255);
     char status[256];
     if (selected) snprintf(status, sizeof(status), "[X] %s", TR(app, TXT_GAME_DETAILS));
-    else snprintf(status, sizeof(status), "%s  /  %.1f GB", sys_format_short_badge(item->format), item->size_gb);
+    else { char size[64]; game_list_size(item,size); snprintf(status, sizeof(status), "%s  /  %s", sys_format_short_badge(item->format), size); }
     SDL_Rect footer_clip = {SDL_max(card.x + 8, clip.x), footer_y, 0, CARD_FOOTER};
     footer_clip.w = SDL_max(0, SDL_min(card.x + card.w - 8, SCREEN_WIDTH) - footer_clip.x);
     draw_fitted_text(app, app->font_small, status,
@@ -2474,6 +2371,7 @@ static void render_language_control(WolodriveApp *app) {
 }
 
 static void render_top_bar(WolodriveApp *app) {
+    if (game_list_view(app)) return; /* The list owns its footer. */
     SDL_Renderer *r = app->renderer;
     SDL_Color red = {229, 9, 20, 255};
     SDL_Color white = {245, 245, 245, 255};
@@ -2610,26 +2508,7 @@ static void render_library_breadcrumb(WolodriveApp *app) {
    public Obsidian-archive. Use the existing asynchronous 48 MiB texture cache
    instead of synchronous IMG_Load / writing image files to PS5 storage. */
 static bool render_library_artwork(WolodriveApp *app, const char *path, SDL_Rect bounds) {
-    if (!path || !path[0] || strncmp(path, "assets/library/", 15) != 0 ||
-        strstr(path, "..") || strlen(path) > 180) return false;
-    char url[320];
-    snprintf(url, sizeof(url),
-             "https://raw.githubusercontent.com/gradwahl/Obsidian-archive/main/%s", path);
-    int width = 0, height = 0;
-    bool failed = false;
-    SDL_Texture *texture = artwork_get_media(app, url, 95, &width, &height, &failed);
-    if (!texture && failed) {
-        /* Support existing locally bundled art when the network is down. */
-        texture = artwork_get_media(app, path, 50, &width, &height, &failed);
-    }
-    if (!texture || width <= 0 || height <= 0) return false;
-    float scale = fminf((float)bounds.w / width, (float)bounds.h / height);
-    int w = SDL_max(1, (int)(width * scale));
-    int h = SDL_max(1, (int)(height * scale));
-    SDL_Rect destination = {bounds.x + (bounds.w - w) / 2,
-                            bounds.y + (bounds.h - h) / 2, w, h};
-    SDL_RenderCopy(app->renderer, texture, NULL, &destination);
-    return true;
+    (void)app; (void)path; (void)bounds; return false;
 }
 
 static void render_library_grid(WolodriveApp *app) {
@@ -2651,24 +2530,9 @@ static void render_library_grid(WolodriveApp *app) {
         const LibraryConsole *console = companies ? NULL : library_console_visible_at(app->library_company, i, app->active_row == VIEW_EMULATORS);
         bool focused = !app->sidebar_focus && i == selected;
         fill_rect(r, tile.x, tile.y, tile.w, tile.h, 24, 24, 24, 255);
-        SDL_Rect image = companies ? (SDL_Rect){tile.x + 32, tile.y + 66, tile.w - 64, 144} :
-                                    (SDL_Rect){tile.x + 16, tile.y + 14, tile.w - 32, 194};
-        const char *artwork = companies ? brand->artwork_path :
-            (console->artwork_path ? console->artwork_path : console->logo_path);
-        if (!render_library_artwork(app, artwork, image)) {
-            draw_fitted_text(app, app->font_row_title, companies ? brand->name : console->name,
-                             image, white, image, true);
-        }
-        if (companies) {
-            /* React library cards show the brand name even when art is present. */
-            SDL_Rect name = {tile.x + 16, tile.y + 218, tile.w - 32, 30};
-            draw_fitted_text(app, app->font_small, brand->name, name, white, name, true);
-        } else {
-            SDL_Rect logo = {tile.x + 36, tile.y + 220, tile.w - 72, 36};
-            if (console->artwork_path) render_library_artwork(app, console->logo_path, logo);
-            SDL_Rect title = {tile.x + 16, tile.y + 264, tile.w - 32, 24};
-            draw_fitted_text(app, app->font_micro, console->name, title, white, title, true);
-        }
+        SDL_Rect name = {tile.x + 20, tile.y + 14, tile.w - 440, 44};
+        draw_fitted_text(app, app->font_body, companies ? brand->name : console->name,
+                         name, white, name, false);
         char subtitle[100];
         if (!companies && app->active_row == VIEW_EMULATORS) {
             SDL_strlcpy(subtitle, emulator_release_for_console(console) ?
@@ -2679,7 +2543,7 @@ static void render_library_grid(WolodriveApp *app) {
                      companies ? library_console_visible_count(i, app->active_row == VIEW_EMULATORS) :
                      library_console_game_count(app, console));
         }
-        SDL_Rect footer = {tile.x + 24, tile.y + (companies ? 256 : 292), tile.w - 48, companies ? 32 : 20};
+        SDL_Rect footer = {tile.x + tile.w - 400, tile.y + 16, 380, 40};
         draw_fitted_text(app, companies ? app->font_small : app->font_micro,
                          subtitle, footer, muted, footer, true);
         if (focused) draw_border(r, tile.x, tile.y, tile.w, tile.h, 3, 245, 245, 245, 255);
@@ -2742,7 +2606,7 @@ static void render_ubiquity_home(WolodriveApp *app) {
     snprintf(metadata[1], sizeof(metadata[1]), "%s", hero->id_code);
     snprintf(metadata[2], sizeof(metadata[2]), "v%s", hero->version);
     snprintf(metadata[3], sizeof(metadata[3]), "%s", sys_format_short_badge(hero->format));
-    snprintf(metadata[4], sizeof(metadata[4]), "%.1f GB", hero->size_gb);
+    game_list_size(hero,metadata[4]);
     snprintf(metadata[5], sizeof(metadata[5]), "* %.1f/10", hero->rating_score);
     int meta_x = CONTENT_X - 8, meta_y = 242;
     for (int field = 0; field < 6; field++) {
@@ -2911,27 +2775,24 @@ static void render_emulator_release_screen(WolodriveApp *app) {
     const EmulatorReleaseAsset *match=emulator_release_for_console(console);
     fill_rect(renderer,RAIL_WIDTH,0,SCREEN_WIDTH-RAIL_WIDTH,SCREEN_HEIGHT,
               11,13,20,255);
-    SDL_Rect image={CONTENT_X+40,170,360,340};
-    if (!render_library_artwork(app,console->artwork_path, image))
-        draw_fitted_text(app,app->font_body,console->name,image,white,image,true);
-    SDL_Rect name={CONTENT_X+430,176,980,100};
+    SDL_Rect name={CONTENT_X+40,176,980,100};
     draw_fitted_text(app,app->font_hero_title,console->name,name,white,name,false);
     draw_text(app,app->font_small,"Obsidian-Emulators / GitHub Releases",
-              CONTENT_X+430,300,muted,930);
+              CONTENT_X+40,300,muted,930);
     if(match) {
-        draw_text(app,app->font_row_title,match->filename,CONTENT_X+430,375,white,1060);
+        draw_text(app,app->font_row_title,match->filename,CONTENT_X+40,375,white,1060);
         char size[160];
         snprintf(size,sizeof(size),"Verified release %s  /  %.1f MB",
                  match->label,(double)match->size/(1024.0*1024.0));
-        draw_text(app,app->font_small,size,CONTENT_X+430,434,muted,960);
+        draw_text(app,app->font_small,size,CONTENT_X+40,434,muted,960);
         draw_text(app,app->font_micro,"SHA-256 recorded in bundled release metadata",
-                  CONTENT_X+430,481,muted,960);
+                  CONTENT_X+40,481,muted,960);
         if (match == &EMULATOR_RETROARCH_ASSET)
             draw_text(app,app->font_micro,
                 "Shared RetroArch ZIP; individual PS5 cores not verified",
-                CONTENT_X+430,528,muted,1000);
+                CONTENT_X+40,528,muted,1000);
     }else{
-        SDL_Rect msg={CONTENT_X+430,370,1080,100};
+        SDL_Rect msg={CONTENT_X+40,370,1080,100};
         draw_fitted_text(app,app->font_body,
           "No individual emulator asset is verified for this console. Browse GitHub releases.",
           msg,muted,msg,false);
@@ -2965,20 +2826,6 @@ static void render_emulator_release_screen(WolodriveApp *app) {
 void ui_render(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
 
-    /* Queue selection first, followed by visible cards and a small nearby window. */
-    if (app->detail_open && app->detail_item) artwork_prefetch(app, app->detail_item, 110);
-    if (app->active_row == VIEW_SEARCH) {
-        if (app->search_count) artwork_prefetch(app, app->search_results[app->search_selected], 100);
-        int start = app->search_selected / SEARCH_PAGE * SEARCH_PAGE;
-        for (int i = SDL_max(0, start-3); i < SDL_min(app->search_count, start+SEARCH_PAGE+3); i++)
-            artwork_prefetch(app, app->search_results[i], i >= start && i < start+SEARCH_PAGE ? 80 : 10);
-    } else {
-        CarouselRow *row = &app->rows[app->active_row];
-        if (row->item_count) artwork_prefetch(app, row->items[row->selected_col], 100);
-        for (int i = SDL_max(0, row->selected_col-2); i < SDL_min(row->item_count, row->selected_col+7); i++)
-            artwork_prefetch(app, row->items[i], 10);
-    }
-
     /* The presented backbuffer is undefined; clear before drawing scaled layers. */
     SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
     SDL_RenderClear(r);
@@ -2994,12 +2841,7 @@ void ui_render(WolodriveApp *app) {
     } else if (app->active_row == VIEW_EMULATORS && app->library_depth == LIBRARY_GAMES) {
         render_emulator_release_screen(app);
     } else {
-        if (ubiquity_carousel_enabled(app)) {
-            render_ubiquity_home(app);
-        } else {
-            render_hero_banner(app);
-            render_carousels(app);
-        }
+        render_game_list(app);
         if (is_library_view(app->active_row)) render_library_breadcrumb(app);
     }
     render_sidebar(app);
