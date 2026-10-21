@@ -1805,7 +1805,8 @@ void ui_update_animations(WolodriveApp *app, float dt) {
 
         /* Płynne rozsuwanie paska bocznego w prawo po najechaniu / focusie */
         float target_sb = (app->active_row == VIEW_SETTINGS || app->sidebar_hovered || app->sidebar_focus) ? 1.0f : 0.0f;
-        app->sidebar_expand += (target_sb - app->sidebar_expand) * (1.0f - expf(-14.0f * dt));
+        float sb_speed = (app->ui_theme == UI_THEME_UBIQUITY) ? 8.2f : 14.0f;
+        app->sidebar_expand += (target_sb - app->sidebar_expand) * (1.0f - expf(-sb_speed * dt));
         if (app->sidebar_expand < 0.001f) app->sidebar_expand = 0.0f;
         if (app->sidebar_expand > 0.999f) app->sidebar_expand = 1.0f;
         app->sidebar_width = (float)SIDEBAR_COLLAPSED_W +
@@ -2284,10 +2285,10 @@ static void render_sidebar(WolodriveApp *app) {
         float exp_t = app->sidebar_expand;
         if (exp_t < 0.0f) exp_t = 0.0f;
         if (exp_t > 1.0f) exp_t = 1.0f;
-        int bx = (int)lroundf(27.0f - 9.0f * exp_t);
-        int by = 92;
-        int bw = (int)lroundf(38.0f + 158.0f * exp_t);
-        int bh = (int)lroundf(38.0f + 2.0f * exp_t);
+        int bx = (int)lroundf(13.0f + 1.0f * exp_t);
+        int by = 90;
+        int bw = (int)lroundf(38.0f + 186.0f * exp_t);
+        int bh = (int)lroundf(38.0f + 6.0f * exp_t);
         int br = (int)lroundf(12.0f + 2.0f * exp_t);
 
         draw_rounded_glow(r, bx, by, bw, bh, br, 6, 201, 24, 74, 150);
@@ -2330,31 +2331,41 @@ static void render_sidebar(WolodriveApp *app) {
             255
         };
         SDL_Color glow_col = {201, 24, 74, (Uint8)lroundf(150.0f * exp_t)};
-        TTF_Font *pd_p_font = (exp_t > 0.45f && app->font_row_title) ? app->font_row_title : app->font_small;
-        TTF_Font *pd_tail_font = app->font_micro ? app->font_micro : app->font_small;
+        TTF_Font *pd_p_font = (exp_t > 0.35f && app->font_row_title) ? app->font_row_title : app->font_small;
+        TTF_Font *pd_tail_font = (exp_t > 0.35f && app->font_small) ? app->font_small : (app->font_micro ? app->font_micro : app->font_small);
 
-        if (exp_t < 0.12f) {
+        if (exp_t < 0.08f) {
             SDL_Rect pd_box = {bx, by + 2, bw, bh - 4};
             draw_fitted_text(app, app->font_micro ? app->font_micro : app->font_small,
                              "PD", pd_box, (SDL_Color){255, 255, 255, 255}, pd_box, true);
         } else {
             Uint8 slide_a = (Uint8)lroundf(255.0f * exp_t);
             SDL_Color satin_white = {245, 245, 247, slide_a};
-            int tx = bx + (int)lroundf(8.0f + 12.0f * exp_t);
-            int p_y = by + (exp_t > 0.45f ? 5 : 9);
-            int tail_y = by + 13;
-            if (glow_col.a > 10) draw_text(app, pd_p_font, "P", tx + 1, p_y + 2, glow_col, 0);
-            int pw = draw_text(app, pd_p_font, "P", tx, p_y, pd_col, 0);
-            tx += (pw > 0 ? pw - 1 : 14);
+
             int ol_w = 0, ol_h = 0;
             if (pd_tail_font) TTF_SizeUTF8(pd_tail_font, "ol", &ol_w, &ol_h);
-            if (ol_w <= 0) ol_w = 16;
-            if (slide_a > 20) draw_text(app, pd_tail_font, "ol", tx, tail_y, satin_white, 0);
+            if (ol_w <= 0) ol_w = 18;
+            int rive_w = 0, rive_h = 0;
+            if (pd_tail_font) TTF_SizeUTF8(pd_tail_font, "rive", &rive_w, &rive_h);
+            if (rive_w <= 0) rive_w = 34;
+            int full_w = (int)(24.0f + 14.0f + ol_w + rive_w);
+            int cur_total_w = (int)lroundf(32.0f * (1.0f - exp_t) + (float)full_w * exp_t);
+            int tx = bx + (bw - cur_total_w) / 2;
+            int p_y = by + (exp_t > 0.35f ? 7 : 9);
+            int tail_y = by + (exp_t > 0.35f ? 14 : 13);
+
+            if (glow_col.a > 10) draw_text(app, pd_p_font, "P", tx + 1, p_y + 2, glow_col, 0);
+            int pw = draw_text(app, pd_p_font, "P", tx, p_y, pd_col, 0);
+            tx += (pw > 0 ? pw - 1 : 16);
+
+            if (slide_a > 15) draw_text(app, pd_tail_font, "ol", tx, tail_y, satin_white, 0);
             tx += (int)lroundf((float)ol_w * exp_t);
+
             if (glow_col.a > 10) draw_text(app, pd_tail_font, "D", tx + 1, tail_y + 1, glow_col, 0);
             int dw = draw_text(app, pd_tail_font, "D", tx, tail_y, pd_col, 0);
-            tx += (dw > 0 ? dw : 12);
-            if (slide_a > 20) draw_text(app, pd_tail_font, "rive", tx, tail_y, satin_white, 0);
+            tx += (dw > 0 ? dw : 14);
+
+            if (slide_a > 15) draw_text(app, pd_tail_font, "rive", tx, tail_y, satin_white, 0);
         }
     }
     SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,

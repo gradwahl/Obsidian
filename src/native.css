@@ -406,10 +406,10 @@
 /* Faithful structural (u)biquity home: unlike Netflix/Glass this is its own
    composition, adapted to PolDrive's data and controller controls. */
 .tv-theme-ubiquity .tv-main { margin-left: 64px; width: 1856px; }
-.tv-theme-ubiquity .tv-sidebar { width: 64px; background: rgba(7,8,11,.96); border-right: 0; }
+.tv-theme-ubiquity .tv-sidebar { width: 64px; background: rgba(7,8,11,.96); border-right: 0; transition: width 0.48s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.48s ease; }
 .tv-theme-ubiquity .tv-sidebar-collapsed { width: 64px; }
 .tv-theme-ubiquity .tv-sidebar-expanded { width: 252px; }
-.tv-theme-ubiquity .tv-sidebar-dim { left: 64px; }
+.tv-theme-ubiquity .tv-sidebar-dim { left: 64px; transition: opacity 0.48s ease, left 0.48s cubic-bezier(0.25, 1, 0.5, 1); }
 .tv-theme-ubiquity .tv-sidebar-dim-active { left: 252px; }
 .tv-theme-ubiquity .tv-brand-logo { display: none; }
 .tv-theme-ubiquity .tv-language { top: 6px; height: 48px; }
@@ -443,31 +443,33 @@
   border: 1px solid rgba(255, 130, 150, 0.38);
   box-shadow: 0 4px 16px rgba(201, 24, 74, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.35);
   transition:
-    width 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    border-radius 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    background 0.34s ease,
-    border-color 0.34s ease,
-    box-shadow 0.34s ease,
-    padding 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+    left 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    width 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    height 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    border-radius 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    background 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    padding 0.48s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-bubble-expanded {
-  width: 196px;
-  height: 40px;
+  left: 14px;
+  width: 224px;
+  height: 44px;
   border-radius: 14px;
   padding: 0 18px;
   background: rgba(10, 10, 16, 0.86);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 51, 102, 0.38);
-  box-shadow: 0 6px 22px rgba(201, 24, 74, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 24px rgba(201, 24, 74, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.2);
 }
 .ubq-pd-ribbons {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.32s ease;
+  transition: opacity 0.45s ease;
   overflow: hidden;
   border-radius: inherit;
 }
@@ -481,8 +483,8 @@
   mix-blend-mode: screen;
 }
 .ubq-pd-ribbon-1 {
-  width: 96px;
-  height: 16px;
+  width: 108px;
+  height: 18px;
   top: -2px;
   left: -18px;
   background: linear-gradient(90deg, transparent, #ff3366, #c9184a, transparent);
@@ -490,8 +492,8 @@
   animation: ubqCrimsonRibbon1 4.2s ease-in-out infinite alternate;
 }
 .ubq-pd-ribbon-2 {
-  width: 112px;
-  height: 18px;
+  width: 124px;
+  height: 20px;
   bottom: -4px;
   right: -20px;
   background: linear-gradient(90deg, transparent, #c9184a, #ff3366, #590d22, transparent);
@@ -499,10 +501,10 @@
   animation: ubqCrimsonRibbon2 5.1s ease-in-out infinite alternate;
 }
 .ubq-pd-ribbon-3 {
-  width: 84px;
-  height: 14px;
-  top: 12px;
-  left: 36px;
+  width: 96px;
+  height: 16px;
+  top: 14px;
+  left: 42px;
   background: radial-gradient(ellipse at center, rgba(255, 51, 102, 0.78) 0%, rgba(201, 24, 74, 0.42) 55%, transparent 100%);
   animation: ubqCrimsonRibbon3 3.6s ease-in-out infinite alternate;
 }
@@ -528,68 +530,110 @@
   justify-content: center;
   white-space: nowrap;
   line-height: 1;
+  transform: scale(0.98);
+  transform-origin: center center;
+  transition:
+    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    letter-spacing 0.48s cubic-bezier(0.25, 1, 0.5, 1);
 }
-.ubq-pd-char-p,
+.ubq-pd-bubble-expanded .ubq-pd-text {
+  transform: scale(1.12);
+}
+.ubq-pd-char-p {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  display: inline-block;
+  transform-origin: right bottom;
+  transition:
+    color 0.45s ease,
+    font-size 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    text-shadow 0.45s ease,
+    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ubq-pd-slide-ol {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  color: #f5f5f7;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  transform: scaleX(0.2) translateX(-6px);
+  transform-origin: left bottom;
+  transition:
+    max-width 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    opacity 0.42s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    margin 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+}
 .ubq-pd-char-d {
   color: #ffffff;
   font-size: 15px;
   font-weight: 900;
   letter-spacing: -0.5px;
   line-height: 1;
+  display: inline-block;
+  transform-origin: left bottom;
   transition:
-    color 0.3s ease,
-    font-size 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    text-shadow 0.3s ease,
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    color 0.45s ease,
+    font-size 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    text-shadow 0.45s ease,
+    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1);
 }
-.ubq-pd-slide-ol,
 .ubq-pd-slide-rive {
   display: inline-block;
   max-width: 0;
   opacity: 0;
   overflow: hidden;
   color: #f5f5f7;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
-  transform: translateX(-5px);
+  white-space: nowrap;
+  transform: scaleX(0.2) translateX(-6px);
+  transform-origin: left bottom;
   transition:
-    max-width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.26s ease,
-    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    margin 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    max-width 0.48s cubic-bezier(0.25, 1, 0.5, 1),
+    opacity 0.42s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-bubble-expanded .ubq-pd-char-p {
-  font-size: 24px;
+  font-size: 26px;
   line-height: 0.95;
   color: #ff3366;
   background: linear-gradient(135deg, #ff3366 0%, #c9184a 60%, #a4133c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 12px rgba(201, 24, 74, 0.55);
+  text-shadow: 0 2px 14px rgba(201, 24, 74, 0.6);
 }
 .ubq-pd-bubble-expanded .ubq-pd-slide-ol {
-  max-width: 28px;
+  max-width: 32px;
   opacity: 1;
   margin-left: -1px;
-  transform: translateX(0);
+  transform: scaleX(1) translateX(0);
 }
 .ubq-pd-bubble-expanded .ubq-pd-char-d {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   color: #ff3366;
   background: linear-gradient(135deg, #ff3366 0%, #c9184a 60%, #a4133c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 12px rgba(201, 24, 74, 0.55);
+  text-shadow: 0 2px 14px rgba(201, 24, 74, 0.6);
 }
 .ubq-pd-bubble-expanded .ubq-pd-slide-rive {
-  max-width: 46px;
+  max-width: 52px;
   opacity: 1;
-  transform: translateX(0);
+  transform: scaleX(1) translateX(0);
 }
 
 .tv-theme-ubiquity .ubq-home { position: relative; background: #070808; height: 1020px; overflow: hidden; }
