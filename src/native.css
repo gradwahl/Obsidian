@@ -449,13 +449,13 @@
 .ubq-shelf-heading { display: flex; justify-content: space-between; align-items: baseline; margin: 0 50px 17px 0; }
 .ubq-shelf-heading h2 { margin: 0; text-transform: uppercase; font-size: 22px; line-height: 32px; letter-spacing: .32em; font-weight: 500; color: #ededf3; text-shadow: 1px 2px 5px #000; }
 .ubq-shelf-heading > span { color: #d2d2d9; font-size: 15px; font-variant-numeric: tabular-nums; }
-.ubq-shelf-track { position: relative; display: flex; align-items: flex-start; gap: 20px; height: 320px; padding: 28px 36px 32px 28px; margin-left: -28px; margin-top: -16px; overflow-x: auto; overflow-y: visible; scrollbar-width: none; }
+.ubq-shelf-track { position: relative; display: flex; align-items: flex-start; gap: 20px; height: 320px; padding: 28px 36px 32px 28px; margin-left: -28px; margin-top: -16px; overflow: visible; overflow-x: auto; scrollbar-width: none; }
 .ubq-shelf-track::-webkit-scrollbar { display: none; }
 .ubq-virtual-spacer { flex-shrink: 0; flex-grow: 0; pointer-events: none; height: 1px; }
 .tv-virtual-spacer { flex-shrink: 0; flex-grow: 0; pointer-events: none; height: 1px; }
-.ubq-game-cover { position: relative; display: block; flex: 0 0 232px; width: 232px; height: 232px; border: 1px solid rgba(235,235,240,.18); background: #13151c; border-radius: 20px; padding: 0; color: white; overflow: hidden; transform: scale(0.92); opacity: 0.76; filter: brightness(0.8); transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, filter 0.35s ease; }
-.ubq-square-art { position: absolute; inset: 0; display: block; width: 232px; height: 232px; overflow: hidden; background: #11151d; border-radius: 20px; }
-.ubq-square-art img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: 20px; }
+.ubq-game-cover { position: relative; display: block; flex: 0 0 232px; width: 232px; height: 232px; border: 1px solid rgba(235,235,240,.18); background: #13151c; border-radius: 16px; padding: 0; color: white; overflow: hidden; transform: scale(0.92); opacity: 0.76; filter: brightness(0.8); transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, filter 0.35s ease; }
+.ubq-square-art { position: absolute; inset: 0; display: block; width: 232px; height: 232px; overflow: hidden; background: #11151d; border-radius: 16px; }
+.ubq-square-art img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: 16px; }
 .ubq-game-cover-selected {
   z-index: 5;
   transform: scale(1.08) translateY(-4px);
