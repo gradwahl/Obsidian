@@ -54,7 +54,7 @@ static int register_shortcut(FILE *log) {
 static const char param_json[] =
     "{\"titleId\":\"" TITLE_ID "\",\"applicationCategoryType\":65536,"
     "\"deeplinkUri\":\"http://127.0.0.1:8084/loadpayload:/data/pldmgr/payloads/"
-    "Poldrive/Poldrive.elf\","
+    "poldrive/poldrive.elf\","
     "\"localizedParameters\":{\"defaultLanguage\":\"en-US\","
     "\"en-US\":{\"titleName\":\"PolDrive\"}}}\n";
 
@@ -82,6 +82,7 @@ static int asset_matches(const char *path, const void *data, size_t size) {
 int main(void) {
     FILE *log = fopen(WOLO_INSTALL_LOG, "w");
     if (!log) return 1;
+    fprintf(log, "Media launch target: /data/pldmgr/payloads/poldrive/poldrive.elf\n");
     struct stat info;
     int exists = stat(APP_DIR, &info) == 0;
     if (exists && stat(MARKER, &info)) {

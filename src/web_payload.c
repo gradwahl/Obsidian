@@ -1,4 +1,4 @@
-/* Standalone PS5 browser launcher. Serves only compiled, embedded preview files. */
+/* PS5 browser launcher: embedded UI plus an optional console-local file bridge. */
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -15,6 +15,18 @@
 
 #ifndef WOLO_WEB_PORT
 #define WOLO_WEB_PORT 8097
+#endif
+#ifdef WOLO_NATIVE_FALLBACK
+#define WOLO_WEB_SUFFIX "#native-unavailable"
+#elif defined(WOLO_FILE_BRIDGE)
+#define WOLO_WEB_SUFFIX "#ps5-files"
+#else
+#define WOLO_WEB_SUFFIX ""
+#endif
+#ifdef WOLO_FILE_BRIDGE
+#define WOLO_SERVER_ID "wolodrive-server-v10-files-lan-open"
+#else
+#define WOLO_SERVER_ID "wolodrive-server-v7"
 #endif
 static char web_url[64]; /* Set once from getsockname, before starting the worker. */
 #ifdef __PS5__
@@ -123,9 +135,9 @@ static int reuse_running_server(void) {
     int found = 0;
     if (!connect(fd, (struct sockaddr *)&address, sizeof(address)) &&
         !send_all(fd, request, sizeof(request) - 1)) {
-        char response[1024], expected[100];
+        char response[1024], expected[128];
         size_t used = 0;
-        snprintf(expected, sizeof(expected), "wolodrive-server-v7 %s\n", web_build_id);
+        snprintf(expected, sizeof(expected), WOLO_SERVER_ID " %s\n", web_build_id);
         while (used < sizeof(response) - 1) {
             ssize_t got = recv(fd, response + used, sizeof(response) - 1 - used, 0);
             if (got <= 0) break;
@@ -135,7 +147,7 @@ static int reuse_running_server(void) {
         }
     }
     close(fd);
-    if (found) snprintf(web_url, sizeof(web_url), "http://127.0.0.1:%u/", port);
+    if (found) snprintf(web_url, sizeof(web_url), "http://127.0.0.1:%u/" WOLO_WEB_SUFFIX, port);
     return found;
 }
 
@@ -145,7 +157,11 @@ static void respond(int fd, int status, const char *reason, const char *mime,
     int size = snprintf(header, sizeof(header),
         "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
         "Connection: close\r\nCache-Control: no-store\r\n"
-        "X-Content-Type-Options: nosniff\r\n%s\r\n",
+        "X-Content-Type-Options: nosniff\r\n"
+#ifdef WOLO_FILE_BRIDGE
+        "X-PolDrive-Files: 3\r\n"
+#endif
+        "%s\r\n",
         status, reason, mime, length,
         status == 405 ? "Allow: GET, HEAD\r\n" : "");
     if (size < 0 || (size_t)size >= sizeof(header)) return;
@@ -153,11 +169,15 @@ static void respond(int fd, int status, const char *reason, const char *mime,
         send_all(fd, body, length);
 }
 
+#ifdef WOLO_FILE_BRIDGE
+#include "file_bridge.h"
+#endif
+
 static void handle_client(int fd) {
     struct timeval timeout = {2, 0};
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-    char request[8192];
+    char request[32768];
     size_t used = 0;
     int complete = 0;
     while (used < sizeof(request) - 1 && !stopping) {
@@ -168,15 +188,59 @@ static void handle_client(int fd) {
         request[used] = 0;
         if (strstr(request, "\r\n\r\n")) { complete = 1; break; }
     }
-    char method[16], path[2048], version[16], extra;
+    char method[16], path[16384], version[16], extra;
+    char *body = complete ? strstr(request, "\r\n\r\n") + 4 : NULL;
     char *line_end = complete ? strstr(request, "\r\n") : NULL;
     if (line_end) *line_end = 0;
-    if (!line_end || sscanf(request, "%15s %2047s %15s %c", method, path, version, &extra) != 3 ||
+    if (!line_end || sscanf(request, "%15s %16383s %15s %c", method, path, version, &extra) != 3 ||
         (strcmp(version, "HTTP/1.0") && strcmp(version, "HTTP/1.1")) || path[0] != '/') {
         respond(fd, 400, "Bad Request", "text/plain", "Bad request\n", 12, 0);
         return;
     }
     int head = strcmp(method, "HEAD") == 0;
+#ifdef WOLO_FILE_BRIDGE
+    if (!strncmp(path, "/api/wolodrive/files", 20)) {
+        char *headers = line_end + 2;
+        char *query = strchr(path, '?');
+        if (query) *query++ = 0;
+        int is_content=!strcmp(path,"/api/wolodrive/files/content");
+        int is_session=!strcmp(path,"/api/wolodrive/files/session"), local=0;
+        if (!files_request_allowed(fd,headers,&local) || (!is_session && !files_authorized(fd,headers))) {
+            files_failure(fd,403,"File access requires a same-origin LAN session",head); return;
+        }
+        char length[24], transfer[80];
+        int has_length = files_header(headers, "Content-Length", length, sizeof(length));
+        size_t wanted = 0, maximum=is_content ? FM_TRANSFER_LIMIT : is_session ? 1024 : 30000;
+        if (has_length == 1 && length[0]) {
+            for (const char *p = length; *p; ++p) {
+                if (!isdigit((unsigned char)*p) || wanted > maximum) { has_length = -1; break; }
+                wanted = wanted * 10 + (size_t)(*p-'0');
+            }
+        } else if (has_length == 1) has_length = -1;
+        if (has_length < 0 || wanted > maximum || files_header(headers, "Transfer-Encoding", transfer, sizeof(transfer)) != 0) {
+            files_failure(fd, 400, "Invalid request length", head); return;
+        }
+        size_t offset = (size_t)(body-request);
+        char *payload=malloc(wanted+1);
+        if (!payload) { files_failure(fd,500,"Out of memory",head); return; }
+        size_t received=used-offset;
+        if (received>wanted) received=wanted;
+        memcpy(payload,body,received);
+        while (received < wanted) {
+            ssize_t got = recv(fd, payload+received, wanted-received, 0);
+            if (got < 0 && errno == EINTR) continue;
+            if (got <= 0) { free(payload); files_failure(fd, 400, "Incomplete request", head); return; }
+            received += (size_t)got;
+        }
+        if (!is_content && memchr(payload, 0, wanted)) { free(payload); files_failure(fd, 400, "Invalid request body", head); return; }
+        payload[wanted] = 0;
+        files_handle(fd, method, path, query, headers, payload, wanted, head);
+        free(payload);
+        return;
+    }
+#else
+    (void)body;
+#endif
     if (!head && strcmp(method, "GET")) {
         respond(fd, 405, "Method Not Allowed", "text/plain", "GET or HEAD required\n", 21, 0);
         return;
@@ -185,8 +249,8 @@ static void handle_client(int fd) {
     if (query) *query = 0;
     const char *lookup = strcmp(path, "/") ? path : "/index.html";
     if (!strcmp(lookup, "/api/wolodrive/health")) {
-        char identity[100];
-        int size = snprintf(identity, sizeof(identity), "wolodrive-server-v7 %s\n", web_build_id);
+        char identity[128];
+        int size = snprintf(identity, sizeof(identity), WOLO_SERVER_ID " %s\n", web_build_id);
         respond(fd, 200, "OK", "text/plain", identity, (size_t)size, head);
         return;
     }
@@ -199,7 +263,7 @@ static void handle_client(int fd) {
             return;
         }
     }
-    /* No filesystem access, SPA fallback, backend actions or directory listing. */
+    /* Unknown URLs never fall through to the console filesystem. */
     respond(fd, 404, "Not Found", "text/plain", "Not found\n", 10, head);
 }
 
@@ -222,7 +286,7 @@ int main(void) {
     } else perror("open /data/wolodrive-web.log");
 #endif
     setvbuf(stderr, NULL, _IONBF, 0);
-    fprintf(stderr, "[POLDRIVE WEB] Entered main (dashboard-v7); %zu embedded files\n", web_asset_count);
+    fprintf(stderr, "[POLDRIVE WEB] Entered main (%s); %zu embedded files\n", WOLO_SERVER_ID, web_asset_count);
     fprintf(stderr, "[POLDRIVE WEB] Process ID: %ld\n", (long)getpid());
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, stop_server);
@@ -257,7 +321,12 @@ int main(void) {
         close(listener);
         return 1;
     }
-    snprintf(web_url, sizeof(web_url), "http://127.0.0.1:%u/", (unsigned)ntohs(address.sin_port));
+#ifdef WOLO_FILE_BRIDGE
+    if (files_bridge_init((unsigned)ntohs(address.sin_port)))
+        fprintf(stderr, "[POLDRIVE FILES] Session randomness unavailable; bridge disabled\n");
+    else fprintf(stderr, "[POLDRIVE FILES] Filesystem bridge ready; code-free LAN access enabled; initial path /data\n");
+#endif
+    snprintf(web_url, sizeof(web_url), "http://127.0.0.1:%u/" WOLO_WEB_SUFFIX, (unsigned)ntohs(address.sin_port));
     FILE *record = fopen(ENDPOINT_RECORD, "w");
     if (record) {
         fprintf(record, "%u %ld\n", (unsigned)ntohs(address.sin_port), (long)getpid());
@@ -265,7 +334,7 @@ int main(void) {
     } else perror("[POLDRIVE WEB] Save endpoint record");
     fprintf(stderr, "[POLDRIVE WEB] Listening at %s\n", web_url);
     fprintf(stderr, "[POLDRIVE WEB] Listener descriptor: %d\n", listener);
-    fprintf(stderr, "[POLDRIVE WEB] LAN catalogue: http://<PS5-IP>:%u/ (read-only; downloads/install unavailable)\n",
+    fprintf(stderr, "[POLDRIVE WEB] LAN catalogue: http://<PS5-IP>:%u/ (Files accessible to trusted LAN clients; package installation unavailable)\n",
             (unsigned)ntohs(address.sin_port));
     request_browser();
     fprintf(stderr, "[POLDRIVE WEB] HTTP request loop active\n");

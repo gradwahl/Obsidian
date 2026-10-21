@@ -1,6 +1,7 @@
 import { LibraryCompany } from './types';
+import { archiveLibraryUrl } from './archiveAssets';
 
-export const COMPANIES: LibraryCompany[] = [
+const LOCAL_COMPANIES: LibraryCompany[] = [
   {
     name: 'Sony',
     r: 0,
@@ -150,3 +151,24 @@ export const COMPANIES: LibraryCompany[] = [
     ]
   }
 ];
+
+/* Share one verified remote-origin policy for Games/Roms and Emulators.
+   Paths are metadata only; artwork is streamed when a tile becomes visible. */
+export const COMPANIES: LibraryCompany[] = LOCAL_COMPANIES.map(company => ({
+  ...company,
+  artwork_path: archiveLibraryUrl(company.artwork_path),
+  consoles: company.consoles.map(console => ({
+    ...console,
+    artwork_path: archiveLibraryUrl(console.artwork_path),
+    logo_path: archiveLibraryUrl(console.logo_path)
+  }))
+}));
+
+/** Keep PS4 and PS5 in Games/Roms; neither is an emulator target.
+ * All other console entries and their original order are unchanged. */
+export function consolesForSection(company: LibraryCompany, emulatorsView: boolean) {
+  return emulatorsView
+    ? company.consoles.filter(system =>
+        system.platform_id !== 'sony-ps4' && system.platform_id !== 'sony-ps5')
+    : company.consoles;
+}

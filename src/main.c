@@ -1,4 +1,5 @@
 #include "wolodrive.h"
+#include "emulator_download.h"
 #include "frame_timing.h"
 #include "startup_log.h"
 #include <curl/curl.h>
@@ -150,6 +151,7 @@ cleanup:
     startup_log_stage(exit_code ? "Cleaning up after startup failure" : "Cleaning up after app exit");
     app->running = false;
     catalog_stop_sync(app);
+    emulator_download_shutdown(app);
     translation_destroy(app->translations);
     ui_cleanup(app);
     if (app->catalog_mutex) SDL_DestroyMutex(app->catalog_mutex);

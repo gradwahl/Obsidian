@@ -172,6 +172,25 @@ static SDL_Surface *artwork_load(struct ArtworkCache *cache, const ArtworkEntry 
         if (stream) surface = IMG_Load_RW(stream, 1);
     }
     free(download.data);
+    /* Transparent console marks should remain readable against dark cards,
+       matching the former local-image library renderer. */
+    if (surface && (strstr(entry->url, "/assets/library/logos/") ||
+                    strstr(entry->url, "/assets/library/companies/sony.png"))) {
+        SDL_Surface *rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+        if (rgba) {
+            SDL_FreeSurface(surface);
+            surface = rgba;
+            if (SDL_LockSurface(surface) == 0) {
+                for (int y = 0; y < surface->h; y++) {
+                    for (int x = 0; x < surface->w; x++) {
+                        Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
+                        pixel[0] = pixel[1] = pixel[2] = 245;
+                    }
+                }
+                SDL_UnlockSurface(surface);
+            }
+        }
+    }
     return surface;
 }
 

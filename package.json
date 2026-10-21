@@ -9,9 +9,10 @@
     "build:static": "tsc && vite build --outDir static-preview",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "lint": "tsc --noEmit",
-    "test:web": "node tests/test_react_layout.cjs"
+    "test:web": "node tests/test_react_layout.cjs && node tests/test_file_manager.cjs && node tests/test_file_bridge.cjs"
   },
   "dependencies": {
+    "fflate": "^0.8.2",
     "lucide-react": "^1.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

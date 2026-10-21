@@ -106,6 +106,35 @@ const LibraryConsole *library_console_at(int company, int index) {
     return entry && index >= 0 && index < entry->console_count ? &entry->consoles[index] : NULL;
 }
 
+static bool library_console_hidden_in_emulators(const LibraryConsole *system,
+                                                bool emulators_view) {
+    return emulators_view && system && system->title_id_prefix &&
+        (!strcmp(system->title_id_prefix, "CUSA") ||
+         !strcmp(system->title_id_prefix, "PPSA"));
+}
+
+int library_console_visible_count(int company, bool emulators_view) {
+    const LibraryCompany *entry = library_company_at(company);
+    if (!entry) return 0;
+    int count = 0;
+    for (int i = 0; i < entry->console_count; i++)
+        if (!library_console_hidden_in_emulators(&entry->consoles[i], emulators_view))
+            count++;
+    return count;
+}
+
+const LibraryConsole *library_console_visible_at(int company, int index,
+                                                  bool emulators_view) {
+    const LibraryCompany *entry = library_company_at(company);
+    if (!entry || index < 0) return NULL;
+    for (int i = 0; i < entry->console_count; i++) {
+        const LibraryConsole *system = &entry->consoles[i];
+        if (library_console_hidden_in_emulators(system, emulators_view)) continue;
+        if (index-- == 0) return system;
+    }
+    return NULL;
+}
+
 bool library_console_matches_id(const LibraryConsole *console, const char *title_id) {
     if (!console || !console->title_id_prefix || !title_id) return false;
     for (int i = 0; console->title_id_prefix[i]; i++) {

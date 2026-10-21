@@ -31,9 +31,37 @@ const { fittedFontSize } = require('../src/components/FittedText.tsx');
 const { GameDetailModal } = require('../src/components/GameDetailModal.tsx');
 const { UbiquityGameDetails } = require('../src/components/UbiquityGameDetails.tsx');
 const { LibraryBrowser } = require('../src/components/LibraryBrowser.tsx');
+require.extensions['.css'] = () => {};
+const { FileBrowser } = require('../src/components/FileBrowser.tsx');
+const fileMarkup = render(React.createElement(FileBrowser, { language: 'en', sidebarFocused: false, onSidebar() {} }));
+for (const label of ['Open folder', 'Parent folder', 'Refresh', 'Copy', 'Move', 'Paste', 'Delete', 'Unzip'])
+  assert.ok(fileMarkup.includes(label), `Files toolbar: ${label}`);
+assert.ok(fileMarkup.includes('Folder access is unavailable'), 'SSR/no browser API must show truthful unavailable state');
+const filesNative = fs.readFileSync(path.join(root, 'src/file_manager_ui.h'), 'utf8');
+const filesCSS = fs.readFileSync(path.join(root, 'src/files.css'), 'utf8');
+assert.match(filesNative, /130\+index\*210,252,198,52/);
+assert.match(filesCSS, /top: 252px/);
+assert.match(filesCSS, /width: 198px; height: 52px/);
+assert.match(filesNative, /332\+\(index%8\)\*68,1668,64/);
+assert.match(filesCSS, /top:992px; width:1668px; height:28px/,
+  'PC controls must fit inside the 1020px native content area');
+const fileActions = require('../src/fileManager.ts').FILE_ACTIONS;
+assert.deepEqual([...filesNative.match(/file_labels\[\][\s\S]*?};/)[0].matchAll(/TXT_FILES_(\w+)/g)]
+  .map(match => match[1]), fileActions, 'Native/web Files action ordering');
+const { EmulatorReleaseView, getEmulatorRelease, EMULATOR_RELEASES_URL } =
+  require('../src/components/EmulatorReleaseView.tsx');
+const emulatorReleaseData = require('../src/emulatorReleases.json');
+
+const { COMPANIES, consolesForSection } = require('../src/libraryData.ts');
+const { archiveLibraryUrl } = require('../src/archiveAssets.ts');
 const { Sidebar } = require('../src/components/Sidebar.tsx');
 const { SettingsView } = require('../src/components/SettingsView.tsx');
 const { t } = require('../src/translations.ts');
+assert.match(t('en', 'TXT_NATIVE_FALLBACK'), /Native startup failed.*Web fallback is active/);
+const bridgeSource = fs.readFileSync(path.join(root, 'src/fileBridge.ts'), 'utf8');
+assert.match(bridgeSource, /initialTrail\(\).*handle\(''\), this.handle\('data'\)/,
+  'Console browser opens /data with parent access to /, like native');
+assert.match(fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8'), /window.location.hash === '#native-unavailable'/);
 const { INITIAL_CATALOG, withArchiveArtwork } = require('../src/catalog.ts');
 const { coverSources } = require('../src/artworkMatches.ts');
 const native = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
@@ -228,6 +256,100 @@ const library = render(React.createElement(LibraryBrowser, { isEmulatorsView: fa
   language: 'en', onOpenGame: noop, onRefresh: noop, syncInProgress: false,
   filters: { sources_limited: false, sources: [], disabled_formats: [] } }));
 assert.equal((library.match(/class="tv-library-tile /g) || []).length, 8);
+// Every library system links to the release hub, but only exact matches link
+// to verified binaries. Do not fabricate RetroArch core compatibility.
+const emulatorSystems = COMPANIES.flatMap(brand => brand.consoles);
+const sonyCompany = COMPANIES.find(company => company.name === 'Sony');
+assert.ok(sonyCompany);
+const gamesSony = consolesForSection(sonyCompany, false);
+const emulatorsSony = consolesForSection(sonyCompany, true);
+assert.equal(gamesSony.length, 6, 'Games/Roms keeps every Sony console');
+assert.equal(emulatorsSony.length, 4, 'Emulators removes PS4 and PS5');
+assert.deepEqual(emulatorsSony.map(system => system.name), [
+  'PlayStation 1', 'PlayStation 2', 'PlayStation 3 (experimental)',
+  'PlayStation Portable (PSP)'
+]);
+assert.ok(gamesSony.some(system => system.platform_id === 'sony-ps4'));
+assert.ok(gamesSony.some(system => system.platform_id === 'sony-ps5'));
+const availableEmulators = COMPANIES.flatMap(brand => consolesForSection(brand, true));
+assert.equal(availableEmulators.length, 56);
+assert.ok(availableEmulators.every(system =>
+  system.platform_id !== 'sony-ps4' && system.platform_id !== 'sony-ps5'));
+assert.equal(emulatorSystems.length, 58,
+  'The current library has 58 system tiles, including the requested emulator groups');
+assert.equal(EMULATOR_RELEASES_URL, 'https://github.com/PolDrive/PolDrive-Emulators/releases');
+assert.equal(Object.keys(emulatorReleaseData.platforms).length, 9);
+assert.equal(Object.keys(emulatorReleaseData.systems).length, 34,
+  'The owner-designated 34 RetroArch systems should share one v4 asset');
+assert.equal(new Set(Object.values(emulatorReleaseData.systems)
+  .map(match => match.asset.url)).size, 1);
+assert.ok(Object.values(emulatorReleaseData.systems).every(match =>
+  match.engine === 'retroarch' && match.release === 'v4'
+  && match.asset.name === 'PS5_RetroArch-v4.0.0-beta-4.zip'));
+for (const title of Object.keys(emulatorReleaseData.systems)) {
+  assert.ok(availableEmulators.some(system => system.name === title),
+    'No RetroArch title may be outside the existing Emulators library: ' + title);
+}
+
+assert.equal(emulatorReleaseData.releases.length, 7);
+assert.equal(emulatorReleaseData.releases.reduce((n, rel) => n + rel.assets.length, 0), 9);
+for (const system of emulatorSystems) {
+  const rendered = render(React.createElement(EmulatorReleaseView, {
+    system, onBack: () => {}
+  }));
+  assert.doesNotMatch(rendered, /View release|Browse all PolDrive emulator releases/,
+    'Emulator detail pages should not offer release-browsing buttons');
+  const match = getEmulatorRelease(system);
+  if (match) {
+    assert.match(rendered, /Download release asset/);
+    assert.ok(rendered.includes(match.asset.sha256));
+    assert.ok(match.asset.url.startsWith(EMULATOR_RELEASES_URL + '/download/'));
+    assert.match(match.asset.sha256, /^[a-f0-9]{64}$/);
+    if (match.engine === 'retroarch') {
+      assert.match(rendered, /Core availability and gameplay compatibility/);
+      assert.ok(rendered.includes('PS5_RetroArch-v4.0.0-beta-4.zip'));
+    }
+  } else {
+    assert.doesNotMatch(rendered, /Download release asset/);
+    assert.match(rendered, /No verified emulator download is linked/);
+  }
+}
+assert.equal(availableEmulators.filter(system => getEmulatorRelease(system)).length, 43,
+  '9 dedicated systems + 34 user-designated RetroArch systems');
+assert.equal(availableEmulators.filter(system => !getEmulatorRelease(system)).length, 13);
+assert.equal(getEmulatorRelease(sonyCompany.consoles[3]), null, 'PS4 is not an emulator');
+assert.equal(getEmulatorRelease(sonyCompany.consoles[4]), null, 'PS5 is not an emulator');
+
+const assetRoot = 'https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/';
+assert.equal(archiveLibraryUrl('/assets/library/companies/sony.png'),
+  assetRoot + 'assets/library/companies/sony.png');
+assert.equal(archiveLibraryUrl('../secrets.txt'), null);
+assert.equal(archiveLibraryUrl('assets/library/logos/sony-ps5.png'),
+  assetRoot + 'assets/library/logos/sony-ps5.png');
+const allLibraryAssets = COMPANIES.flatMap(company => [
+  company.artwork_path, ...company.consoles.flatMap(console =>
+    [console.artwork_path, console.logo_path])
+]).filter(Boolean);
+assert.equal(allLibraryAssets.length, 119,
+  'All existing company, emulator and console image paths must stream');
+assert.ok(allLibraryAssets.every(uri => uri.startsWith(assetRoot + 'assets/library/')));
+assert.match(library, /raw\.githubusercontent\.com\/PolDrive\/PolDrive-archive\/main\/assets\/library\/companies\/sony\.png/);
+assert.match(library, /loading="lazy"/);
+const importedCoverMap = JSON.parse(
+  fs.readFileSync(path.join(root, 'src/archiveSourceCovers.json'), 'utf8'));
+assert.ok(Object.keys(importedCoverMap).length >= 40000,
+  'The public archive should match imported sources beyond the bundled PS4/PS5 games');
+for (const path of Object.values(importedCoverMap)) {
+  assert.match(path, /^assets\/covers\/[^?#]+\.art$/);
+  assert.ok(!path.split('/').includes('..'), 'Archive cover paths must remain under assets/covers/');
+}
+assert.match(fs.readFileSync(path.join(root, 'src/sourceCatalogues.ts'), 'utf8'),
+  /import\('\.\/archiveSourceCovers\.json'\)/);
+assert.match(fs.readFileSync(path.join(root, 'src/sys_bridge.c'), 'utf8'),
+  /SDL_strlcpy\(game->boxart_url, entry->boxart/);
+assert.match(fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8'),
+  /artwork_get_media\(app, url, 95/);
+
 // Console game routes must forward the current theme instead of falling back to Netflix.
 const librarySource = fs.readFileSync(path.join(root, 'src/components/LibraryBrowser.tsx'), 'utf8');
 const appSourceForLibrary = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');

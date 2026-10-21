@@ -1,68 +1,70 @@
 # Streaming artwork from PolDrive-archive
 
-PolDrive streams verified artwork from `PolDrive/PolDrive-archive` on demand. The
-runtime never clones the archive or downloads its contents in bulk.
+The now-public PolDrive-archive repository serves PolDrive game covers, company
+logos, console artwork and emulator logos **on demand**. No binary artwork or
+GitHub credentials are embedded in the app.
 
-## Before enabling public image delivery
+## Verified public access
 
-At the time of implementation, Git can read the archive **using the configured
-Windows credentials**, but unauthenticated HTTPS requests to
-`https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/README.md`
-return **404**. A PS5 does not have your Windows Git credentials. Therefore,
-archive covers **will not load remotely until they are served anonymously**.
+Anonymous HTTP requests and a headless Chrome decode test succeeded for:
+- assets/library/companies/sony.png (company logo)
+- assets/library/consoles/sony-ps5.png (console artwork)
+- assets/library/logos/sony-ps5.png (console/emulator mark)
+- assets/covers/Sony/PlayStation%205/63%20Days.art (JPEG cover)
 
-Either publish an appropriately licensed/authorized artwork repository, or
-serve only the artwork through a public CDN/mirror that preserves the same
-`assets/covers/<company>/<console>/<filename>.art` paths. Do not put a GitHub
-PAT or private-repository credentials in the PS5 application. If you use a
-different public origin, regenerate the JSON/header mapping with that origin.
+Archive paths are served at:
+https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/
 
-## What is shipped to PS5
+The archive contains 9 company images, 53 console images and 56 console and
+emulator logos. The Games/Roms and Emulators screens in React and SDL2 now use
+these URLs instead of looking for local library image files.
 
-- `src/archiveArtworkUrls.json` and `src/archive_artwork_index.h` hold a
-  **small filename/URL map** generated from the Git tree. They contain no images
-  or authentication material.
-- At the time of generation, **711/862 current catalog records** had unique
-  same-console, same-title matches; 142 were ambiguous and nine absent. No
-  potentially incorrect matches are guessed.
-- The existing source cover URLs remain available as fallback if the archive
-  URL does not load. Custom local artwork overrides take priority.
-- The React UI uses normal `<img>` requests, including lazy loading in the
-  (u)biquity carousel. The browser may maintain its **own** HTTP cache.
-- The PS5 SDL2 app now fetches one image at a time over HTTPS, decodes directly
-  in memory, caps each compressed transfer at **16 MiB** and retains a bounded
-  **48 MiB** texture LRU. It **does not create or write** a persistent image
-  cache directory. This also applies to fallback cover sources.
-- Existing cached covers are **not automatically deleted**. For an older PS5
-  installation, the generated files under
-  `/data/homebrew/wolodrive/covers` may be cleared *after verifying you no
-  longer need them*. Do not delete `/data/homebrew/wolodrive/artwork` if you
-  use hand-selected local overrides.
+## Game covers
 
-## Refresh the filename-only index
+- The original 711 verified bundled PS4/PS5 matches remain in
+  src/archiveArtworkUrls.json and src/archive_artwork_index.h.
+- The new src/archiveSourceCovers.json maps **48,906** additional unambiguous
+  same-console, same-title matches from imported source catalogues.
+- This file is metadata only (6.1 MB uncompressed; about 1 MB gzipped as a
+  separate JS chunk). Paths are resolved to HTTPS URLs only when needed.
+- React imports the metadata chunk asynchronously and displays covers as
+  required, keeping source cover URLs as fallbacks.
+- Native SDL2 compiles archive cover URLs only for its bounded catalogue
+  snapshot; the huge source match index is not embedded in the PS5 binary.
+- Ambiguous and unmatched covers retain their source providers or placeholders.
 
-From the repository root:
+## Storage and fallbacks
 
-```sh
-python scripts/generate_archive_artwork.py
-# For a licensed/public mirror with the same file paths:
-# python scripts/generate_archive_artwork.py --base-url https://your-artwork-cdn.example/
-npm run test:web
-npm run build:static
-```
+- Native SDL2 streams images through its background download worker directly
+  into memory. Each compressed transfer is capped at 16 MiB; decoded textures
+  use the 48 MiB LRU budget shared with game covers.
+- Remote company, emulator, and console art does NOT go into a persistent disk
+  cache. Local user artwork overrides remain supported.
+- React library images use lazy loading and decoding. Browsers may still use
+  their own normal HTTP cache; PolDrive never fetches the entire artwork repo.
+- Previously created cache files are not automatically removed. Old files under
+  /data/homebrew/wolodrive/covers can be cleared after verifying they are
+  unneeded. Do not remove custom /data/homebrew/wolodrive/artwork overrides.
+- If the archive is offline, existing cover-provider URLs or placeholders are
+  used; library tiles fall back to a text label.
 
-The generator performs a shallow partial Git clone *without checkout* and
-reads filename metadata only. It does **not** fetch the approximately 50,000
-binary cover files. The git clone may authenticate on the development PC;
-authentication never becomes part of the output.
+## Regenerate metadata after archive changes
 
-The archive contains artwork, not the individual game-list indexes for the
-17 additional catalogue source adapters. Enabling a source in Settings
-controls filtering; it does not magically populate a missing game index.
-Those separate imports still require functioning, verified metadata feeds.
+From the PolDrive repository root, run in this order:
 
-## Known limitation
+    python scripts/generate_archive_artwork.py
+    python scripts/generate_source_cover_matches.py
+    python scripts/generate_native_sources.py
+    npm run test:web
+    npm run build:static
 
-Until the archive is anonymously reachable, the app will fall back to
-existing cover providers or placeholders. A successful build cannot verify
-GitHub artwork delivery while anonymous requests return HTTP 404.
+The generators perform a shallow partial Git clone *without checkout*,
+inspecting filenames only. They never download the 50k+ image blobs.
+
+The public Raw origin is defined in src/archiveAssets.ts (React) and
+src/ui_netflix.c (native). No GitHub token is needed.
+
+Windows Chrome browser delivery and native Linux/SDL2 compilation have been
+verified. Actual PS5 network/TLS behaviour still requires hardware testing.
+The game catalogue indexes themselves remain separate from the artwork
+archive; see docs/source-catalogues.md.

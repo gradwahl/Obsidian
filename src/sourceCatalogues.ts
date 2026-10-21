@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import type { GameItem } from './types';
+import { ARCHIVE_ASSET_BASE } from './archiveAssets';
 
 interface SourceSnapshot {
   schemaVersion: number;
@@ -28,7 +29,8 @@ export interface SourceLoadResult {
 const indexedFiles = import.meta.glob<{ default: SourceSnapshot }>('../assets/catalogs/*.json');
 
 function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
-                  source: SourceSnapshot['sources'][number]): GameItem | null {
+                  source: SourceSnapshot['sources'][number],
+                  archiveCovers: Record<string, string>): GameItem | null {
   if (!entry || typeof entry.title !== 'string' || typeof entry.id !== 'string' ||
       !entry.title.trim() || !entry.id.trim()) return null;
   const safeUrl = (value?: string) => value && /^https:\/\//i.test(value) ? value : undefined;
@@ -36,6 +38,9 @@ function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
     ? entry.createdAt.slice(0, 10) : '';
   const timestamp = entry.createdAt ? Date.parse(entry.createdAt) : NaN;
   const size = Number(entry.sizeBytes);
+  const artworkPath = archiveCovers[(entry.platform || '') + '|' + entry.title];
+  const streamCover = artworkPath && !artworkPath.split('/').includes('..') && /^assets\/covers\/[a-zA-Z0-9%_./-]+$/.test(artworkPath)
+    ? ARCHIVE_ASSET_BASE + artworkPath : undefined;
   return {
     id_code: entry.id, title: entry.title, version: entry.version || '',
     source_name: source.name,
@@ -44,6 +49,7 @@ function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
     is_dlc: entry.category === 'dlc', screenshot_urls: [],
     platform: entry.platform || '',
     source_url: safeUrl(entry.sourceUrl) || safeUrl(source.website),
+    boxart_url: streamCover,
     cover_url: safeUrl(entry.coverUrl),
     description: entry.description || 'Catalog metadata only - ' + source.name,
     install_path: '',
@@ -58,6 +64,11 @@ function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
 export async function loadSourceCatalogues(
   onProgress?: (status: SourceLoadStatus) => void
 ): Promise<SourceLoadResult> {
+  // Load path-only cover matches as a separate JS chunk. Fail open to source
+  // artwork if that optional metadata chunk is unavailable or outdated.
+  const archiveCovers: Record<string, string> = await import('./archiveSourceCovers.json')
+    .then(module => module.default as Record<string, string>)
+    .catch(() => ({}));
   const snapshots = await Promise.all(
     Object.entries(indexedFiles).map(async ([path, importer]) => {
       try {
@@ -88,7 +99,7 @@ export async function loadSourceCatalogues(
     let added = 0;
     const unique = new Set<string>();
     for (const item of source.packages) {
-      const converted = safeGame(item, source);
+      const converted = safeGame(item, source, archiveCovers);
       if (!converted) continue;
       const key = converted.id_code + '|' + converted.title + '|' + converted.platform;
       if (unique.has(key)) continue;

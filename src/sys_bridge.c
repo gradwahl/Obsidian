@@ -287,6 +287,8 @@ static int sys_import_native_sources(WolodriveApp *app) {
             (strncmp(entry->cover, "https://", 8) == 0 ||
              strncmp(entry->cover, "http://", 7) == 0))
             SDL_strlcpy(game->cover_url, entry->cover, sizeof(game->cover_url));
+        if (strncmp(entry->boxart, "https://", 8) == 0)
+            SDL_strlcpy(game->boxart_url, entry->boxart, sizeof(game->boxart_url));
         game->format = FMT_CATALOG;
         game->state = STATE_AVAILABLE;
         game->is_game = entry->is_game != 0;

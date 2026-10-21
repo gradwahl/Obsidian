@@ -1,11 +1,15 @@
 #include "wolodrive.h"
 #include "artwork.h"
+#include "emulator_download.h"
 #include "screenshots.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include "ui_text.h"
+#ifdef __PS5__
+#include "ps5_renderer.h"
+#endif
 
 static const char *FONT_CANDIDATES_BOLD[] = {
     "assets/font_bold.ttf",
@@ -233,7 +237,7 @@ static SDL_Rect library_tile_target(int index) {
 static int library_console_game_count(WolodriveApp *app, const LibraryConsole *console);
 
 static bool library_matches_console(WolodriveApp *app, const GameItem *item) {
-    const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+    const LibraryConsole *console = library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
     return item->is_game && (library_console_matches_id(console, item->id_code) ||
         (item->format == FMT_CATALOG && library_console_matches_platform(console, item->platform)));
 }
@@ -768,20 +772,22 @@ static void render_cover_or_placeholder(WolodriveApp *app, GameItem *it,
 
 bool ui_create_renderer(WolodriveApp *app) {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+#ifdef __PS5__
+    app->renderer = poldrive_create_ps5_renderer(app->window);
+#else
     Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-#ifndef __PS5__
     /* WSLg can create an accelerated renderer successfully but present only black.
        An explicit SDL_RENDER_DRIVER remains available for driver testing. */
     if (!SDL_GetHint(SDL_HINT_RENDER_DRIVER) &&
         (getenv("WSL_DISTRO_NAME") || getenv("WSL_INTEROP"))) {
         flags = SDL_RENDERER_SOFTWARE;
     }
-#endif
     app->renderer = SDL_CreateRenderer(app->window, -1, flags);
     if (!app->renderer && flags != SDL_RENDERER_SOFTWARE) {
         fprintf(stderr, "[POLDRIVE WARN] Accelerated renderer: %s; trying software\n", SDL_GetError());
         app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_SOFTWARE);
     }
+#endif
     if (!app->renderer) {
         fprintf(stderr, "[POLDRIVE ERROR] SDL_CreateRenderer: %s\n", SDL_GetError());
         return false;
@@ -853,7 +859,10 @@ bool ui_init(WolodriveApp *app) {
     return true;
 }
 
+#include "file_manager_ui.h"
+
 void ui_cleanup(WolodriveApp *app) {
+    files_shutdown();
     text_cache_destroy(app);
     screenshots_destroy(app->screenshots); app->screenshots = NULL;
     artwork_destroy(app);
@@ -1115,8 +1124,8 @@ static void library_open_selected(WolodriveApp *app) {
 
 static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
     if (!is_library_view(app->active_row)) return false;
-    const LibraryCompany *company = library_company_at(app->library_company);
-    int count = app->library_depth == LIBRARY_COMPANIES ? library_company_count() : company->console_count;
+    int count = app->library_depth == LIBRARY_COMPANIES ? library_company_count() :
+                 library_console_visible_count(app->library_company, app->active_row == VIEW_EMULATORS);
     int *selection = app->library_depth == LIBRARY_COMPANIES ?
                      &app->library_company_selection : &app->library_console_selection;
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
@@ -1164,6 +1173,29 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
         }
     }
     if (action == 6) { library_back(app); return true; }
+    /* Native Emulators have their own release detail screen, not empty games. */
+    if (app->active_row == VIEW_EMULATORS && app->library_depth == LIBRARY_GAMES) {
+        const LibraryConsole *console =
+            library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
+        const EmulatorReleaseAsset *match = emulator_release_for_console(console);
+        bool pressed = action == 5 ||
+            (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT &&
+             ev->button.x >= CONTENT_X + 40 && ev->button.x <= CONTENT_X + 700 &&
+             ev->button.y >= 590 && ev->button.y <= 690);
+        if (pressed) {
+            if (match) {
+                if (!emulator_start_download(app, match))
+                    sys_send_notification(app, "Emulator download already active or unavailable");
+                else sys_send_notification(app, "Downloading verified emulator asset", match->filename);
+            } else {
+                /* Most systems are not tied to a specific asset. Show the
+                   repository listing; do not guess a RetroArch core. */
+                if (SDL_OpenURL(EMULATOR_RELEASES_URL) != 0)
+                    sys_send_notification(app, "Releases URL displayed on screen");
+            }
+        }
+        return true;
+    }
     if (app->sidebar_focus) {
         if (action == 2 || action == 5) { app->sidebar_focus = false; return true; }
         if (action == 1) return true;
@@ -1183,7 +1215,7 @@ static bool handle_library_input(WolodriveApp *app, const SDL_Event *ev) {
         }
         if (action == 2 && row->item_count == MAX_ITEMS_PER_ROW &&
             row->selected_col == row->item_count - 1) {
-            const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+            const LibraryConsole *console = library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
             if (library_console_game_count(app, console) > app->library_game_offset + row->item_count) {
                 app->library_game_offset += MAX_ITEMS_PER_ROW;
                 row->selected_col = 0;
@@ -1267,6 +1299,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         app->sidebar_hovered = (mx >= 0 && (float)mx <= sb_limit); if (!app->sidebar_hovered) app->sidebar_focus = false;
     }
 
+    if (app->active_row == VIEW_FILES && files.modal) { handle_files_input(app, ev); return; }
     if (handle_language_input(app, ev)) return;
     if (app->detail_open) { handle_game_details_input(app, ev); return; }
     if (ev->type == SDL_MOUSEBUTTONDOWN && ev->button.button == SDL_BUTTON_LEFT) {
@@ -1315,6 +1348,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         if (enter) { app->sidebar_focus = false; return; }
         if (left) return;
     }
+    if (handle_files_input(app, ev)) return;
     if (handle_settings_input(app, ev)) return;
     if (handle_search_input(app, ev)) return;
     if (handle_library_input(app, ev)) return;
@@ -1682,6 +1716,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
 }
 
 void ui_update_animations(WolodriveApp *app, float dt) {
+    files_poll(app);
     if (app->catalog_dirty) {
         ui_rebuild_carousels(app);
     }
@@ -1815,7 +1850,7 @@ static const char *empty_view_message(WolodriveApp *app) {
     if (app->active_row == VIEW_EMULATORS && app->library_depth == LIBRARY_GAMES)
         return TR(app, TXT_EMULATOR_NOT_CONNECTED);
     if (app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_GAMES) {
-        const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+        const LibraryConsole *console = library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
         if (console && !console->title_id_prefix) return TR(app, TXT_CONSOLE_NOT_CONNECTED);
     }
     if (app->active_row == VIEW_EMULATORS || app->active_row == VIEW_FILES ||
@@ -1826,7 +1861,7 @@ static const char *empty_view_message(WolodriveApp *app) {
 static const char *view_content_title(WolodriveApp *app) {
     if (app->active_row == VIEW_HOME) return home_category_title(app, app->home_cat_index);
     if (is_library_view(app->active_row) && app->library_depth == LIBRARY_GAMES) {
-        const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+        const LibraryConsole *console = library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
         if (console) return console->name;
     }
     return app->rows[app->active_row].title;
@@ -2473,7 +2508,7 @@ static void render_top_bar(WolodriveApp *app) {
 
     char telemetry[256];
 #ifdef __PS5__
-    snprintf(telemetry, sizeof(telemetry), "data: %.0fGB | ext0: %.0fGB | CPU: %.0f°C | GPU: %.0f°C",
+    snprintf(telemetry, sizeof(telemetry), "data: %.0fGB | ext0: %.0fGB | CPU: %d°C | GPU: %d°C",
              app->stats.data_free_gb, app->stats.ext0_free_gb, app->stats.cpu_temp_c, app->stats.gpu_temp_c);
 #else
     snprintf(telemetry, sizeof(telemetry), "data: null | ext0: null | CPU: null | GPU: null");
@@ -2547,7 +2582,7 @@ static void render_library_breadcrumb(WolodriveApp *app) {
     draw_fitted_text(app, app->font_small, TR(app, TXT_LIBRARY_BACK),
                      (SDL_Rect){CONTENT_X + 18, 28, 144, 42}, muted, LIBRARY_BACK_BUTTON, false);
     char path[200];
-    const LibraryConsole *console = library_console_at(app->library_company, app->library_console_selection);
+    const LibraryConsole *console = library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
     snprintf(path, sizeof(path), "%s / %s%s%s", library_section_title(app), company->name,
              app->library_depth == LIBRARY_GAMES ? " / " : "",
              app->library_depth == LIBRARY_GAMES ? console->name : "");
@@ -2555,95 +2590,29 @@ static void render_library_breadcrumb(WolodriveApp *app) {
                      (SDL_Rect){CONTENT_X + 204, 24, 1150, 50});
 }
 
-/* Native alpha defines the product bounds; hardware pixels are never keyed out. */
-static SDL_Rect library_alpha_bounds(SDL_Surface *surface) {
-    int left = surface->w, top = surface->h, right = -1, bottom = -1;
-    if (SDL_LockSurface(surface) != 0) return (SDL_Rect){0, 0, surface->w, surface->h};
-    for (int y = 0; y < surface->h; y++) {
-        for (int x = 0; x < surface->w; x++) {
-            const Uint8 *pixel = (const Uint8 *)surface->pixels + y * surface->pitch + x * 4;
-            if (pixel[3] < 16) continue;
-            left = SDL_min(left, x); top = SDL_min(top, y);
-            right = SDL_max(right, x); bottom = SDL_max(bottom, y);
-        }
-    }
-    SDL_UnlockSurface(surface);
-    return right < left ? (SDL_Rect){0, 0, 0, 0} :
-                         (SDL_Rect){left, top, right - left + 1, bottom - top + 1};
-}
-
-/* Console marks and Sony's black wordmark need white for contrast on charcoal.
-   Other company artwork retains its original brand colors and internal detail. */
-static void prepare_library_logo(SDL_Surface *surface, const char *path) {
-    if (!strstr(path, "/logos/") && !strstr(path, "/companies/sony.png")) return;
-    if (SDL_LockSurface(surface) != 0) return;
-    for (int y = 0; y < surface->h; y++) {
-        for (int x = 0; x < surface->w; x++) {
-            Uint8 *pixel = (Uint8 *)surface->pixels + y * surface->pitch + x * 4;
-            pixel[0] = pixel[1] = pixel[2] = 245;
-        }
-    }
-    SDL_UnlockSurface(surface);
-}
-
-static LibraryArtwork *load_library_artwork(WolodriveApp *app, const char *path) {
-    if (!path || !path[0]) return NULL;
-    for (int i = 0; i < app->library_artwork_count; i++) {
-        if (strcmp(app->library_artwork[i].path, path) == 0) return &app->library_artwork[i];
-    }
-    if (app->library_artwork_count >= MAX_LIBRARY_ARTWORK) return NULL;
-    LibraryArtwork *art = &app->library_artwork[app->library_artwork_count++];
-    art->path = path;
-    SDL_Surface *surface = IMG_Load(path);
-    char resolved[1024];
-#ifdef __PS5__
-    if (!surface) {
-        snprintf(resolved, sizeof(resolved), "%s/%s", WOLODRIVE_DATA_PATH, path);
-        surface = IMG_Load(resolved);
-    }
-#else
-    /* Support running from the repo, beside a bundled assets directory, or
-       from a different working directory with the executable in build/. */
-    char *base = SDL_GetBasePath();
-    if (!surface && base) {
-        snprintf(resolved, sizeof(resolved), "%s%s", base, path);
-        surface = IMG_Load(resolved);
-        if (!surface) {
-            snprintf(resolved, sizeof(resolved), "%s../%s", base, path);
-            surface = IMG_Load(resolved);
-        }
-    }
-    SDL_free(base);
-#endif
-    if (!surface) {
-        fprintf(stderr, "[POLDRIVE ARTWORK] Could not load %s: %s\n", path, IMG_GetError());
-        return art; /* Cache failure too, preserving a usable text fallback. */
-    }
-    art->width = surface->w;
-    art->height = surface->h;
-    SDL_Surface *display = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
-    if (display) {
-        SDL_FreeSurface(surface);
-        surface = display;
-        prepare_library_logo(surface, path);
-        art->source_bounds = library_alpha_bounds(surface);
-    }
-    if (!display) art->source_bounds = (SDL_Rect){0, 0, surface->w, surface->h};
-    art->texture = SDL_CreateTextureFromSurface(app->renderer, surface);
-    SDL_FreeSurface(surface);
-    if (art->texture) SDL_SetTextureBlendMode(art->texture, SDL_BLENDMODE_BLEND);
-    return art;
-}
-
+/* Library company tiles, console images and emulator logos all reside in the
+   public PolDrive-archive. Use the existing asynchronous 48 MiB texture cache
+   instead of synchronous IMG_Load / writing image files to PS5 storage. */
 static bool render_library_artwork(WolodriveApp *app, const char *path, SDL_Rect bounds) {
-    LibraryArtwork *art = load_library_artwork(app, path);
-    if (!art || !art->texture || art->width <= 0 || art->height <= 0) return false;
-    if (art->source_bounds.w <= 0 || art->source_bounds.h <= 0) return false;
-    float scale = fminf((float)bounds.w / art->source_bounds.w, (float)bounds.h / art->source_bounds.h);
-    int width = (int)(art->source_bounds.w * scale), height = (int)(art->source_bounds.h * scale);
-    SDL_Rect destination = {bounds.x + (bounds.w - width) / 2,
-                            bounds.y + (bounds.h - height) / 2, width, height};
-    SDL_RenderCopy(app->renderer, art->texture, &art->source_bounds, &destination);
+    if (!path || !path[0] || strncmp(path, "assets/library/", 15) != 0 ||
+        strstr(path, "..") || strlen(path) > 180) return false;
+    char url[320];
+    snprintf(url, sizeof(url),
+             "https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/%s", path);
+    int width = 0, height = 0;
+    bool failed = false;
+    SDL_Texture *texture = artwork_get_media(app, url, 95, &width, &height, &failed);
+    if (!texture && failed) {
+        /* Support existing locally bundled art when the network is down. */
+        texture = artwork_get_media(app, path, 50, &width, &height, &failed);
+    }
+    if (!texture || width <= 0 || height <= 0) return false;
+    float scale = fminf((float)bounds.w / width, (float)bounds.h / height);
+    int w = SDL_max(1, (int)(width * scale));
+    int h = SDL_max(1, (int)(height * scale));
+    SDL_Rect destination = {bounds.x + (bounds.w - w) / 2,
+                            bounds.y + (bounds.h - h) / 2, w, h};
+    SDL_RenderCopy(app->renderer, texture, NULL, &destination);
     return true;
 }
 
@@ -2653,7 +2622,8 @@ static void render_library_grid(WolodriveApp *app) {
     bool companies = app->library_depth == LIBRARY_COMPANIES;
     const LibraryCompany *company = library_company_at(app->library_company);
     int selected = companies ? app->library_company_selection : app->library_console_selection;
-    int count = companies ? library_company_count() : company->console_count;
+    int count = companies ? library_company_count() :
+        library_console_visible_count(app->library_company, app->active_row == VIEW_EMULATORS);
     int first = selected / LIBRARY_PAGE_SIZE * LIBRARY_PAGE_SIZE;
     draw_text(app, app->font_hero_title, companies ? library_section_title(app) : company->name,
               CONTENT_X, 100, white, 1300);
@@ -2662,7 +2632,7 @@ static void render_library_grid(WolodriveApp *app) {
     for (int i = first; i < count && i < first + LIBRARY_PAGE_SIZE; i++) {
         SDL_Rect tile = library_tile_target(i);
         const LibraryCompany *brand = companies ? library_company_at(i) : company;
-        const LibraryConsole *console = companies ? NULL : library_console_at(app->library_company, i);
+        const LibraryConsole *console = companies ? NULL : library_console_visible_at(app->library_company, i, app->active_row == VIEW_EMULATORS);
         bool focused = !app->sidebar_focus && i == selected;
         fill_rect(r, tile.x, tile.y, tile.w, tile.h, 24, 24, 24, 255);
         SDL_Rect image = companies ? (SDL_Rect){tile.x + 32, tile.y + 66, tile.w - 64, 144} :
@@ -2684,10 +2654,15 @@ static void render_library_grid(WolodriveApp *app) {
             draw_fitted_text(app, app->font_micro, console->name, title, white, title, true);
         }
         char subtitle[100];
-        TextId count_label = companies ? TXT_CONSOLE_COUNT :
-            (app->active_row == VIEW_EMULATORS ? TXT_LIBRARY_EMULATOR_COUNT : TXT_LIBRARY_GAME_COUNT);
-        snprintf(subtitle, sizeof(subtitle), TR(app, count_label), companies ? brand->console_count :
-                 (app->active_row == VIEW_EMULATORS ? 0 : library_console_game_count(app, console)));
+        if (!companies && app->active_row == VIEW_EMULATORS) {
+            SDL_strlcpy(subtitle, emulator_release_for_console(console) ?
+                        "Release download" : "Browse GitHub releases", sizeof(subtitle));
+        } else {
+            TextId count_label = companies ? TXT_CONSOLE_COUNT : TXT_LIBRARY_GAME_COUNT;
+            snprintf(subtitle, sizeof(subtitle), TR(app, count_label),
+                     companies ? library_console_visible_count(i, app->active_row == VIEW_EMULATORS) :
+                     library_console_game_count(app, console));
+        }
         SDL_Rect footer = {tile.x + 24, tile.y + (companies ? 256 : 292), tile.w - 48, companies ? 32 : 20};
         draw_fitted_text(app, companies ? app->font_small : app->font_micro,
                          subtitle, footer, muted, footer, true);
@@ -2753,7 +2728,7 @@ static void render_ubiquity_home(WolodriveApp *app) {
                      desc_box, subdued, desc_box, false);
     const LibraryConsole *selected_console =
         app->active_row == VIEW_GAMES && app->library_depth == LIBRARY_GAMES ?
-            library_console_at(app->library_company, app->library_console_selection) : NULL;
+            library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS) : NULL;
     draw_text(app, app->font_row_title,
               app->active_row == VIEW_HOME ?
                   home_category_title(app, app->home_cat_index) :
@@ -2835,6 +2810,68 @@ static void render_ubiquity_home(WolodriveApp *app) {
     }
 }
 
+/* Emulators are listed by console; specific builds come from validated
+   PolDrive GitHub release assets. Unmatched consoles link to the hub only. */
+static void render_emulator_release_screen(WolodriveApp *app) {
+    SDL_Renderer *renderer = app->renderer;
+    SDL_Color white={246,246,249,255}, muted={184,186,194,255};
+    const LibraryConsole *console =
+        library_console_visible_at(app->library_company, app->library_console_selection, app->active_row == VIEW_EMULATORS);
+    if (!console) return;
+    const EmulatorReleaseAsset *match=emulator_release_for_console(console);
+    fill_rect(renderer,RAIL_WIDTH,0,SCREEN_WIDTH-RAIL_WIDTH,SCREEN_HEIGHT,
+              11,13,20,255);
+    SDL_Rect image={CONTENT_X+40,170,360,340};
+    if (!render_library_artwork(app,console->artwork_path, image))
+        draw_fitted_text(app,app->font_body,console->name,image,white,image,true);
+    SDL_Rect name={CONTENT_X+430,176,980,100};
+    draw_fitted_text(app,app->font_hero_title,console->name,name,white,name,false);
+    draw_text(app,app->font_small,"PolDrive-Emulators / GitHub Releases",
+              CONTENT_X+430,300,muted,930);
+    if(match) {
+        draw_text(app,app->font_row_title,match->filename,CONTENT_X+430,375,white,1060);
+        char size[160];
+        snprintf(size,sizeof(size),"Verified release %s  /  %.1f MB",
+                 match->label,(double)match->size/(1024.0*1024.0));
+        draw_text(app,app->font_small,size,CONTENT_X+430,434,muted,960);
+        draw_text(app,app->font_micro,"SHA-256 recorded in bundled release metadata",
+                  CONTENT_X+430,481,muted,960);
+        if (match == &EMULATOR_RETROARCH_ASSET)
+            draw_text(app,app->font_micro,
+                "Shared RetroArch ZIP; individual PS5 cores not verified",
+                CONTENT_X+430,528,muted,1000);
+    }else{
+        SDL_Rect msg={CONTENT_X+430,370,1080,100};
+        draw_fitted_text(app,app->font_body,
+          "No individual emulator asset is verified for this console. Browse GitHub releases.",
+          msg,muted,msg,false);
+    }
+    SDL_Rect button={CONTENT_X+40,590,660,100};
+    fill_rounded_rect(renderer,button.x,button.y,button.w,button.h,11,30,33,43,250);
+    draw_rounded_border(renderer,button.x,button.y,button.w,button.h,
+                        11,2,246,246,249,245);
+    SDL_Rect label={button.x+15,button.y+8,button.w-30,button.h-16};
+    draw_fitted_text(app,app->font_row_title,
+      match ? "X  Download verified file" : "X  Open releases page",
+      label,white,label,true);
+    draw_text(app,app->font_micro,EMULATOR_RELEASES_URL,CONTENT_X+40,738,muted,1400);
+    draw_text(app,app->font_micro,
+      "Downloaded files are saved only. No automatic extraction, installation or launch.",
+      CONTENT_X+40,785,muted,1400);
+    if(match) {
+        int status=emulator_download_status(app);
+        char report[180];
+        if(status==1) snprintf(report,sizeof(report),"Downloading: %d%%",
+                                  emulator_download_percent(app));
+        else if(status==2) SDL_strlcpy(report,"SHA-256 VERIFIED / SAVED",sizeof(report));
+        else if(status==3) SDL_strlcpy(report,"Download failed or checksum mismatch",sizeof(report));
+        else if(status==4) SDL_strlcpy(report,"Download cancelled",sizeof(report));
+        else SDL_strlcpy(report,"Ready to download",sizeof(report));
+        draw_text(app,app->font_body,report,CONTENT_X+40,848,white,970);
+    }
+    render_library_breadcrumb(app);
+}
+
 void ui_render(WolodriveApp *app) {
     SDL_Renderer *r = app->renderer;
 
@@ -2856,12 +2893,16 @@ void ui_render(WolodriveApp *app) {
     SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
     SDL_RenderClear(r);
 
-    if (app->active_row == VIEW_SETTINGS) {
+    if (app->active_row == VIEW_FILES) {
+        render_files(app);
+    } else if (app->active_row == VIEW_SETTINGS) {
         render_settings(app);
     } else if (app->active_row == VIEW_SEARCH) {
         render_search(app);
     } else if (is_library_view(app->active_row) && app->library_depth != LIBRARY_GAMES) {
         render_library_grid(app);
+    } else if (app->active_row == VIEW_EMULATORS && app->library_depth == LIBRARY_GAMES) {
+        render_emulator_release_screen(app);
     } else {
         if (ubiquity_carousel_enabled(app)) {
             render_ubiquity_home(app);
@@ -2873,6 +2914,7 @@ void ui_render(WolodriveApp *app) {
     }
     render_sidebar(app);
     render_top_bar(app);
+    if (app->active_row == VIEW_FILES) render_files_dialog(app);
     if (app->detail_open) render_game_details(app);
     render_toast_notification(app);
     render_language_menu(app);

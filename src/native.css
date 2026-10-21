@@ -198,6 +198,8 @@
 .tv-library-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .tv-library-brand { top: 66px; left: 32px; width: 256px; height: 144px; }
 .tv-library-logo { position: absolute; top: 220px; left: 36px; width: 248px; height: 36px; object-fit: contain; }
+/* Match native contrast for transparent console/emulator logos on dark cards. */
+.tv-library-logo { filter: brightness(0) invert(1); }
 .tv-library-tile strong { position: absolute; top: 264px; left: 16px; right: 16px; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tv-library-tile:has(.tv-library-brand) strong { top: 218px; font-size: 20px; }
 .tv-library-tile > span { position: absolute; top: 292px; font-size: 16px; color: #aaa; }
@@ -578,3 +580,49 @@
 .tv-theme-ubiquity .tv-library-ubiquity-games .tv-breadcrumb button:hover {
   border-color: rgba(255,255,255,.85);
 }
+
+/* Emulators: explicit GitHub Releases download details, shared by both themes. */
+.tv-emulator-release-view {
+  position: relative; height: 100%; min-height: 720px; padding: 65px 68px;
+  color: #f5f5f7; overflow-y: auto;
+  background: radial-gradient(circle at 70% 30%, #202634, #0a0c13 65%);
+}
+.tv-emulator-back {
+  padding: 11px 20px; color: white; background: rgba(25,27,35,.92);
+  border: 1px solid rgba(255,255,255,.32); border-radius: 8px;
+}
+.tv-emulator-release-main {
+  margin-top: 62px; display: grid; grid-template-columns: minmax(230px, 330px) minmax(0, 1fr);
+  gap: 48px; align-items: start; max-width: 1300px;
+}
+.tv-emulator-art {
+  max-width: 100%; max-height: 430px; object-fit: contain; border-radius: 9px;
+}
+.tv-emulator-release-content h1 { font-size: clamp(34px, 4vw, 64px); margin: 12px 0 24px; }
+.tv-emulator-release-content p { color: rgba(235,236,241,.85); line-height: 1.55; }
+.tv-emulator-kicker { text-transform: uppercase; letter-spacing: .13em; font-size: 14px; }
+.tv-emulator-actions { display: flex; flex-wrap: wrap; gap: 14px; margin: 35px 0 22px; }
+.tv-emulator-action, .tv-emulator-all {
+  display: inline-flex; align-items: center; padding: 12px 21px;
+  text-decoration: none; color: #f8f8fa; background: rgba(40,42,48,.82);
+  border: 1px solid rgba(255,255,255,.42); border-radius: 8px;
+}
+.tv-emulator-action-primary { background: #e50914; border-color: #e50914; }
+.tv-emulator-action:hover, .tv-emulator-all:hover { border-color: white; filter: brightness(1.2); }
+.tv-emulator-hash { font-size: 12px; overflow-wrap: anywhere; opacity: .78; }
+.tv-emulator-all { margin-top: 16px; }
+.tv-emulator-library-link { margin-top: 24px; font-size: 14px; }
+.tv-emulator-note { font-size: 14px; margin-top: 30px; max-width: 700px; }
+.tv-theme-ubiquity .tv-emulator-action-primary {
+  background: rgba(20,19,28,.65); border-color: #fff; box-shadow: 0 0 17px rgba(229,9,20,.5);
+}
+@media (max-width: 820px) {
+  .tv-emulator-release-view { padding: 25px; }
+  .tv-emulator-release-main { grid-template-columns: 1fr; margin-top: 24px; gap: 12px; }
+  .tv-emulator-art { max-height: 190px; }
+}
+
+.tv-emulator-additional { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.tv-emulator-additional a { color: #ecedf7; text-decoration: underline; }
+
+.tv-emulator-core-note { max-width: 710px; font-size: 14px; opacity: .88; }

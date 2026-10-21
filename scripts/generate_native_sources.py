@@ -44,6 +44,9 @@ def main():
                 src["packages"] = sample
                 src["status"] = "partial"
                 break
+    archive_file = ROOT / "src/archiveSourceCovers.json"
+    archive_map = json.loads(archive_file.read_text("utf8")) if archive_file.exists() else {}
+    archive_origin = "https://raw.githubusercontent.com/PolDrive/PolDrive-archive/main/"
     rows = []
     for source in sources:
         if source["id"] == "retrogamechampion":
@@ -57,9 +60,11 @@ def main():
             if not str(source_url).startswith("https://"): source_url = source["website"]
             # Separate public page information from any package download URL.
             desc = "Catalog metadata only. Source page: " + str(source_url)
+            path = archive_map.get(str(item.get("platform", "")) + "|" + str(item["title"]))
+            boxart = archive_origin + path if path and len((archive_origin + path).encode("utf8")) < 512 else ""
             rows.append((
                 item["id"],item["title"],source["name"],item.get("platform",""),
-                item.get("version",""),item.get("coverUrl",""),
+                item.get("version",""),item.get("coverUrl",""),boxart,
                 desc, date, item.get("sizeBytes",0),
                 item.get("category","game")!="dlc"
             ))
@@ -69,17 +74,17 @@ def main():
         "#ifndef POLDRIVE_NATIVE_SOURCE_INDEX_H",
         "#define POLDRIVE_NATIVE_SOURCE_INDEX_H",
         "typedef struct {",
-        " const char *id, *title, *source, *platform, *version, *cover, *description, *date;",
+        " const char *id, *title, *source, *platform, *version, *cover, *boxart, *description, *date;",
         " float size_gb; unsigned char is_game;",
         "} NativeSourceSeed;",
         "static const NativeSourceSeed NATIVE_SOURCE_CATALOGUE[] = {",
     ]
-    for id_, title, source, plat, ver, cover, desc, date, size, is_game in rows:
+    for id_, title, source, plat, ver, cover, boxart, desc, date, size, is_game in rows:
         try:size_gb=float(size)/1073741824
         except (ValueError,TypeError):size_gb=0
         if not isfinite(size_gb) or size_gb<0:size_gb=0
         fields = [c_string(v,limit) for v,limit in zip(
-            [id_,title,source,plat,ver,cover,desc,date],[31,127,63,47,31,511,500,23])]
+            [id_,title,source,plat,ver,cover,boxart,desc,date],[31,127,63,47,31,511,511,500,23])]
         header.append(" {" + ",".join(fields)+f",{size_gb:.4f}f,{int(is_game)}"+"},")
     header.extend([
         "};",

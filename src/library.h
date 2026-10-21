@@ -25,6 +25,10 @@ typedef struct {
 int library_company_count(void);
 const LibraryCompany *library_company_at(int index);
 const LibraryConsole *library_console_at(int company, int index);
+/* Emulators omit PS4/PS5; Games/Roms uses the complete console list.
+ * Visible selection indices are dense, so D-pad and page navigation remain valid. */
+int library_console_visible_count(int company, bool emulators_view);
+const LibraryConsole *library_console_visible_at(int company, int index, bool emulators_view);
 bool library_console_matches_id(const LibraryConsole *console, const char *title_id);
 bool library_console_matches_platform(const LibraryConsole *console, const char *platform);
 

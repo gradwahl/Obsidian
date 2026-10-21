@@ -77,8 +77,22 @@ int sceAppInstUtilAppInstallAll(void *params) {
         self.assertEqual(param["titleId"], "WOLO00001")
         self.assertEqual(param["applicationCategoryType"], 65536)
         self.assertEqual(param["localizedParameters"]["en-US"]["titleName"], "PolDrive")
-        self.assertTrue(param["deeplinkUri"].endswith("/Poldrive/Poldrive.elf"))
+        self.assertEqual(param["deeplinkUri"],
+                         "http://127.0.0.1:8084/loadpayload:/data/pldmgr/payloads/poldrive/poldrive.elf")
         self.assertEqual((system / "icon0.png").read_bytes(), (self.directory / "icon.png").read_bytes())
+
+    def test_repairs_previously_registered_uppercase_folder(self):
+        self.assertEqual(self.run_installer().returncode, 0)
+        system = self.app_root / "WOLO00001/sce_sys"
+        metadata = system / "param.json"
+        metadata.write_text(metadata.read_text().replace('/poldrive/poldrive.elf', '/Poldrive/poldrive.elf'))
+        self.assertTrue((system / "wolodrive-shortcut.registered").exists())
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn(b"REGISTER", result.stdout)
+        self.assertIn('/payloads/poldrive/poldrive.elf', json.loads(metadata.read_text())["deeplinkUri"])
+        self.assertIn('Media launch target: /data/pldmgr/payloads/poldrive/poldrive.elf', self.log.read_text())
+        self.assertNotIn(b"INITIALIZE", self.run_installer().stdout)
 
     def test_refuses_unowned_existing_title(self):
         system = self.app_root / "WOLO00001/sce_sys"

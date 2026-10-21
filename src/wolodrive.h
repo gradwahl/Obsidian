@@ -184,6 +184,7 @@ typedef struct {
     struct ScreenshotService *screenshots;
     bool screenshot_viewer;
     struct ArtworkCache *artwork;
+    struct EmulatorDownload *emulator_download; /* verified GitHub asset worker */
     SDL_Thread *catalog_thread;
     TranslationService *translations;
     GameItem *description_item;

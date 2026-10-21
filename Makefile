@@ -23,46 +23,46 @@ src/native_catalog_snapshot.h: scripts/generate_native_snapshot.py src/catalogDa
 build-linux: src/native_catalog_snapshot.h
 	@mkdir -p build assets/covers
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 \
-	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -o build/wolodrive \
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` \
-	    -lm -lpthread
+	    -lz -lm -lpthread
 	@echo "[POLDRIVE] Zbudowano natywną binarkę Linux: build/wolodrive"
 
 test-native-snapshot: src/native_catalog_snapshot.h
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_native_snapshot.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    tests/test_native_snapshot.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -o build/test_native_snapshot \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	./build/test_native_snapshot
 
 benchmark-ui: src/native_catalog_snapshot.h
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/benchmark_ui.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    tests/benchmark_ui.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -o build/benchmark_ui \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	SDL_VIDEODRIVER=dummy ./build/benchmark_ui
 
-test: src/native_catalog_snapshot.h
+test: src/native_catalog_snapshot.h test-files test-ps5-renderer
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
 	    -o build/test_i18n \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_regressions.c src/screenshots.c src/artwork.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c \
+	    tests/test_regressions.c src/screenshots.c src/artwork.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c \
 	    -o build/test_regressions \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
-	    tests/test_translation.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c \
+	    tests/test_translation.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c \
 	    -o build/test_translation \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc tests/test_artwork.c -o build/test_artwork \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc tests/test_screenshots.c src/text.c -o build/test_screenshots \
-	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lm -lpthread
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	python3 -m unittest discover -s tests -p test_download_artwork.py
 	python3 -m unittest discover -s tests -p test_import_sources.py
 	python3 -m unittest discover -s tests -p test_full_sources.py
@@ -75,33 +75,58 @@ test: src/native_catalog_snapshot.h
 	python3 tests/run_tests.py
 
 .PHONY: build-windows windows
+.PHONY: test-ps5-renderer
+test-ps5-renderer:
+	@mkdir -p build
+	gcc -Wall -Wextra -Werror -O2 -Isrc tests/test_ps5_renderer.c -o build/test_ps5_renderer `pkg-config --cflags --libs sdl2`
+	SDL_VIDEODRIVER=dummy ./build/test_ps5_renderer
+
+.PHONY: test-files
+test-files:
+	python3 tests/test_file_manager.py
+	@mkdir -p build
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+	    tests/test_file_ui.c src/file_manager.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c \
+	    -o build/test_file_ui \
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
+	SDL_VIDEODRIVER=dummy ./build/test_file_ui
+
 build-windows:
 	@mkdir -p build assets/covers
-	gcc -D_GNU_SOURCE -Wall -Wextra -O2 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c 	    -o build/wolodrive.exe 	     	    -lm -lpthread
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c 	    -o build/wolodrive.exe 	     	    -lz -lm -lpthread
 	@echo "[POLDRIVE] Zbudowano natywna binarke Windows: build/wolodrive.exe"
 
 windows: build-windows
 	@echo "[POLDRIVE] Uruchamianie Wolodrive 2.0 (Windows)..."
 	./build/wolodrive.exe
 
-ps5: src/native_catalog_snapshot.h
+ps5: src/native_catalog_snapshot.h ps5-web-assets
 	@mkdir -p build
 	@if [ ! -d "${PS5_PAYLOAD_SDK}" ]; then \
 	    echo "[BŁĄD] Nie znaleziono PS5_PAYLOAD_SDK w ${PS5_PAYLOAD_SDK}."; \
 	    exit 1; \
 	fi
 	@"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --exists sdl2 SDL2_ttf SDL2_image libcurl
-	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -O2 -Wall -D__PS5__ \
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -O2 -Wall -D__PS5__ -Dmain=wolodrive_native_main \
 	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags sdl2 SDL2_ttf SDL2_image libcurl` \
-	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
+	    -c src/main.c -o build/poldrive-native-main.o
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE -DWOLO_NATIVE_FALLBACK -Dmain=wolodrive_web_main -O2 -Wall -Wextra \
+	    -Ibuild -c src/web_payload.c -o build/poldrive-web-fallback.o
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -O2 -Wall -Wextra -Ibuild \
+	    src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/poldrive-shortcut-helper.elf
+	python3 scripts/embed_shortcut_helper.py build/poldrive-shortcut-helper.elf build/ps5_shortcut_helper.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -O2 -Wall -Wextra -D__PS5__ -Ibuild \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags sdl2 SDL2_ttf SDL2_image libcurl` \
+	    src/ps5_unified_launcher.c build/poldrive-native-main.o build/poldrive-web-fallback.o \
+	    src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
 	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --libs --static sdl2 SDL2_ttf SDL2_image libcurl` \
-	    -lm \
-	    -o build/wolodrive.elf
-	@echo "[POLDRIVE] Zbudowano payload PS5: build/wolodrive.elf"
+	    -lz -lm -lpthread \
+	    -o build/poldrive.elf
+	@echo "[POLDRIVE] Unified PS5 payload: build/poldrive.elf (native UI, Media shortcut, web startup fallback)"
 
 # This additive target preserves the native PS5 build and the AI Studio output.
-.PHONY: ps5-web ps5-shortcut test-web-payload
-ps5-web:
+.PHONY: ps5-web ps5-web-assets ps5-shortcut test-web-payload
+ps5-web-assets:
 	npm run build:static
 	python3 scripts/embed_web_preview.py static-preview build/ps5_web_assets.h
 	python3 scripts/generate_ps5_shortcut_icon.py build/wolodrive-icon0.png build/ps5_shortcut_icon.h
@@ -111,28 +136,32 @@ ps5-web:
 	    src/web_browser_helper.c build/wolodrive-shortcut.o -lSceIpmi -lSceAppInstUtil \
 	    -lSceSystemService -lSceUserService -o build/wolodrive-browser-helper.elf
 	python3 scripts/embed_browser_helper.py build/wolodrive-browser-helper.elf build/ps5_browser_helper.h
-	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -O2 -Wall -Wextra \
-	    -Ibuild src/web_payload.c -lpthread -o build/wolodrive-web.elf
-	cp build/wolodrive-web.elf build/Poldrive.elf
 
-ps5-shortcut: ps5-web
+# Browser-only diagnostic build cannot overwrite the unified distributable.
+ps5-web: ps5-web-assets
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE -O2 -Wall -Wextra \
+	    -Ibuild src/web_payload.c src/file_manager.c -lz -lpthread -o build/wolodrive-web.elf
+
+ps5-shortcut: ps5
 
 test-web-payload:
+	python3 tests/test_file_bridge.py
 	python3 tests/test_web_payload.py
 	python3 tests/test_browser_helper.py
 	python3 tests/test_ps5_shortcut.py
+	python3 tests/test_unified_launcher.py
 
 deploy:
-	@if [ ! -f "build/wolodrive.elf" ]; then \
+	@if [ ! -f "build/poldrive.elf" ]; then \
 	    make ps5; \
 	fi
-	@echo "[POLDRIVE] Wysyłanie build/wolodrive.elf do ${PS5_IP}:${PS5_PORT}..."
-	nc -q 0 "${PS5_IP}" "${PS5_PORT}" < build/wolodrive.elf || \
-	socat -u FILE:build/wolodrive.elf TCP:"${PS5_IP}":"${PS5_PORT}"
+	@echo "[POLDRIVE] Wysyłanie build/poldrive.elf do ${PS5_IP}:${PS5_PORT}..."
+	nc -q 0 "${PS5_IP}" "${PS5_PORT}" < build/poldrive.elf || \
+	socat -u FILE:build/poldrive.elf TCP:"${PS5_IP}":"${PS5_PORT}"
 	@echo "[POLDRIVE] Payload wysłany pomyślnie!"
 
 deploy-ftp:
-	curl -T build/wolodrive.elf "ftp://${PS5_IP}:${PS5_FTP_PORT}/data/homebrew/wolodrive/wolodrive.elf" --ftp-create-dirs
+	curl -T build/poldrive.elf "ftp://${PS5_IP}:${PS5_FTP_PORT}/data/pldmgr/payloads/poldrive/poldrive.elf" --ftp-create-dirs
 
 clean:
 	rm -rf build/*

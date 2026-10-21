@@ -1,0 +1,577 @@
+{
+  "repository": "PolDrive/PolDrive-Emulators",
+  "releasesUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases",
+  "platforms": {
+    "sony-ps1": {
+      "release": "v2",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v2",
+      "asset": {
+        "name": "PSXS5-v2.2.0.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v2/PSXS5-v2.2.0.zip",
+        "size": 18360114,
+        "sha256": "8904a734f99ecd837071f78167214cb2fa867870936afe996f6f3c95f7b4af60"
+      }
+    },
+    "sony-ps2": {
+      "release": "v3",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v3",
+      "asset": {
+        "name": "PS5SX2Installer.elf",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v3/PS5SX2Installer.elf",
+        "size": 1196432,
+        "sha256": "6b1be3ea24ec8144b27b2a1f3e279cd17574f3093e9431abf8579dcc6c0bfae9"
+      }
+    },
+    "sony-ps3": {
+      "release": "V4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/V4",
+      "asset": {
+        "name": "PS5SX3-Installer.elf",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/V4/PS5SX3-Installer.elf",
+        "size": 985248,
+        "sha256": "6f0715149504ce85438e4993314390316089f2ee6954e81f77a7fc9bf0ddf2a1"
+      }
+    },
+    "microsoft-xbox": {
+      "release": "v1",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v1",
+      "asset": {
+        "name": "PPSA97358.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v1/PPSA97358.zip",
+        "size": 21413061,
+        "sha256": "494682ff5073985422fd8961cc617b8e3bdbdb2dedd85b69dadbd06f709953e9"
+      }
+    },
+    "microsoft-xbox360": {
+      "release": "v6",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v6",
+      "asset": {
+        "name": "PPSA50011.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v6/PPSA50011.zip",
+        "size": 24745309,
+        "sha256": "b2bf7a7d242428cfa002ec557210dc885403580b58bda8d67a436a2550b67dd2"
+      }
+    },
+    "nintendo-wiiu": {
+      "release": "v5",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v5",
+      "asset": {
+        "name": "PS5-ECAM-v5.0.0.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v5/PS5-ECAM-v5.0.0.zip",
+        "size": 81474275,
+        "sha256": "5e29977effb819b884630aaeda212e10b082b243a72c6440b21ed7d286432299"
+      }
+    },
+    "nintendo-ds": {
+      "release": "v5",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v5",
+      "asset": {
+        "name": "PS5-ECAM-v5.0.0.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v5/PS5-ECAM-v5.0.0.zip",
+        "size": 81474275,
+        "sha256": "5e29977effb819b884630aaeda212e10b082b243a72c6440b21ed7d286432299"
+      }
+    },
+    "nintendo-3ds": {
+      "release": "v5",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v5",
+      "asset": {
+        "name": "PS5-ECAM-v5.0.0.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v5/PS5-ECAM-v5.0.0.zip",
+        "size": 81474275,
+        "sha256": "5e29977effb819b884630aaeda212e10b082b243a72c6440b21ed7d286432299"
+      }
+    },
+    "nintendo-switch": {
+      "release": "v5",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v5",
+      "asset": {
+        "name": "PS5-ECAM-v5.0.0.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v5/PS5-ECAM-v5.0.0.zip",
+        "size": 81474275,
+        "sha256": "5e29977effb819b884630aaeda212e10b082b243a72c6440b21ed7d286432299"
+      }
+    }
+  },
+  "systems": {
+    "PlayStation Portable (PSP)": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "SG-1000": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Master System": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Mega Drive / Genesis": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Game Gear": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Mega-CD / Sega CD": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Sega 32X": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Sega Saturn": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Dreamcast": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "NES / Famicom": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "SNES / Super Famicom": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Nintendo 64": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "GameCube": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Wii": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Game Boy": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Game Boy Color": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Game Boy Advance": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Virtual Boy": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Pokémon Mini": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Atari 2600": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Atari 5200": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Atari 7800": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Atari Lynx": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Atari Jaguar": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Neo Geo AES": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Neo Geo CD": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Neo Geo Pocket": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "Neo Geo Pocket Color": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "PC Engine / TurboGrafx-16": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "PC Engine CD / TurboGrafx-CD": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "SuperGrafx": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "PC-FX": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "WonderSwan": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    },
+    "WonderSwan Color": {
+      "release": "v4",
+      "releaseUrl": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "asset": {
+        "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+        "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+        "size": 1553672845,
+        "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+      },
+      "engine": "retroarch"
+    }
+  },
+  "releases": [
+    {
+      "tag": "v6",
+      "name": "Xbox 360 - PS5X360",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v6",
+      "assets": [
+        {
+          "name": "PPSA50011.zip",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v6/PPSA50011.zip",
+          "size": 24745309,
+          "sha256": "b2bf7a7d242428cfa002ec557210dc885403580b58bda8d67a436a2550b67dd2"
+        },
+        {
+          "name": "PS5X360-AutoLog-v1.0.9-preview.elf",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v6/PS5X360-AutoLog-v1.0.9-preview.elf",
+          "size": 941920,
+          "sha256": "5da64c23263e6868696aa0f8b1bfd0eb97581bae73124d08066b507652adfbfb"
+        }
+      ]
+    },
+    {
+      "tag": "v5",
+      "name": "ECAM - WiiU/DS/3DS/Switch",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v5",
+      "assets": [
+        {
+          "name": "PS5-ECAM-v5.0.0.zip",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v5/PS5-ECAM-v5.0.0.zip",
+          "size": 81474275,
+          "sha256": "5e29977effb819b884630aaeda212e10b082b243a72c6440b21ed7d286432299"
+        }
+      ]
+    },
+    {
+      "tag": "v4",
+      "name": "Retroarch",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v4",
+      "assets": [
+        {
+          "name": "PS5_RetroArch-v4.0.0-beta-4.zip",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v4/PS5_RetroArch-v4.0.0-beta-4.zip",
+          "size": 1553672845,
+          "sha256": "dad4f20204446a66dd05edb67cdf720988ca06119396f79a5e9ed876dc3d6012"
+        }
+      ]
+    },
+    {
+      "tag": "v3",
+      "name": "PS2 - PS5SX2",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v3",
+      "assets": [
+        {
+          "name": "PS5SX2Installer.elf",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v3/PS5SX2Installer.elf",
+          "size": 1196432,
+          "sha256": "6b1be3ea24ec8144b27b2a1f3e279cd17574f3093e9431abf8579dcc6c0bfae9"
+        }
+      ]
+    },
+    {
+      "tag": "v2",
+      "name": "PS1 - PSXS5",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v2",
+      "assets": [
+        {
+          "name": "PSXS5-v2.2.0.zip",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v2/PSXS5-v2.2.0.zip",
+          "size": 18360114,
+          "sha256": "8904a734f99ecd837071f78167214cb2fa867870936afe996f6f3c95f7b4af60"
+        }
+      ]
+    },
+    {
+      "tag": "v1",
+      "name": "Xbox - XPSemu v.1",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/v1",
+      "assets": [
+        {
+          "name": "helper.elf",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v1/helper.elf",
+          "size": 111032,
+          "sha256": "31c8a3479937e310f758d36d87c937c91ae942921fa4645473b3d228a7d88959"
+        },
+        {
+          "name": "PPSA97358.zip",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/v1/PPSA97358.zip",
+          "size": 21413061,
+          "sha256": "494682ff5073985422fd8961cc617b8e3bdbdb2dedd85b69dadbd06f709953e9"
+        }
+      ]
+    },
+    {
+      "tag": "V4",
+      "name": "PS3 - PS5SX3",
+      "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/tag/V4",
+      "assets": [
+        {
+          "name": "PS5SX3-Installer.elf",
+          "url": "https://github.com/PolDrive/PolDrive-Emulators/releases/download/V4/PS5SX3-Installer.elf",
+          "size": 985248,
+          "sha256": "6f0715149504ce85438e4993314390316089f2ee6954e81f77a7fc9bf0ddf2a1"
+        }
+      ]
+    }
+  ]
+}

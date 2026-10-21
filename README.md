@@ -42,7 +42,7 @@ The native app and browser use related catalogue data, but **do not yet have ide
 | 🎛️ | **Filters and preferences** | Filter by catalogue source and package format; save language and filter preferences. |
 | 🌐 | **Nine UI languages** | English, Polish, French, Dutch, German, Spanish, Italian, Simplified Chinese and Russian. |
 | 🕹️ | **Multiple input methods** | Keyboard and mouse in the web preview; controller-oriented navigation in the native interface. Input parity is still being checked. |
-| 📡 | **PS5 LAN access** | Serve the embedded web catalogue from the PS5 to browsers on the same local network. The service is read-only. |
+| 📡 | **PS5 LAN access** | Browse the catalogue; pair with the code on the console to browse, edit and transfer PS5 files from a PC. |
 
 **Not implemented yet:** actual package downloads, queues, installations, mounting, game launching, and remote control of these actions. The browser preview also does not import live catalogue entries when it checks the remote source manifest. See [remote-install-workflow.md](docs/remote-install-workflow.md) for the outstanding work.
 
@@ -95,23 +95,23 @@ make linux
 
 The executable is generated at `build/wolodrive`. Windows users can run this Linux build using **WSL/WSLg** with a suitable graphical environment; that is *not* a native Windows build.
 
-### 3. PlayStation 5 (browser payload)
+### 3. PlayStation 5 (unified payload)
 
 **Requirements:** a PS5 environment capable of loading homebrew ELFs, [PS5 Payload Manager](https://github.com/itsPLK/ps5-payload-manager), and a compatible loader. Building from source additionally requires the [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) with the required dependencies.
 
-With the SDK installed and `PS5_PAYLOAD_SDK` configured, build the self-contained browser payload:
+With the SDK installed and `PS5_PAYLOAD_SDK` configured, build the unified payload:
 
 ```bash
-make ps5-web
+make ps5
 ```
 
-1. Copy the generated `build/Poldrive.elf` to `/data/pldmgr/payloads/Poldrive/Poldrive.elf` on the console.
-2. Launch **PolDrive** from Payload Manager. The payload hosts the embedded catalogue and attempts to register a **PolDrive** tile under **Home / Media**.
-3. Open the catalogue on the PS5, or from another device on the same LAN at `http://<PS5-IP>:<port>/`. The service prefers port **8097** but may choose another available port; find the actual port in `/data/wolodrive-web.log` or `/data/wolodrive-web.endpoint`.
+1. Copy the generated `build/poldrive.elf` to `/data/pldmgr/payloads/poldrive/poldrive.elf` on the console (both folder and filename are lowercase).
+2. Launch **PolDrive** from Payload Manager. The payload attempts to register a **PolDrive** tile under **Home / Media**, then starts the native app with its file manager.
+3. If native startup returns an error, the same ELF opens the embedded web fallback. On the console, **Files → Open folder** browses `/data`; **Parent folder** reaches `/` and accessible USB/system directories. On the PC, visit `http://<PS5-IP>:<port>/`, open **Files**. PCs on your trusted local network can edit UTF-8 text (1 MiB), download/upload/replace files (8 MiB), and use the shared copy/move/delete/unzip actions, subject to console permissions. Find the port in `/data/wolodrive-web.log` or `/data/wolodrive-web.endpoint` (8097 preferred). See [Files manager](docs/file-manager.md) for limits and device verification requirements.
 
 Payload Manager's loopback service (port 8084) and an ELF loader must be available for the Home / Media shortcut to relaunch the app after each jailbreak. A previously compiled ELF can be used without building it yourself; this repository does **not** guarantee that a ready-to-install release is published.
 
-The native PS5 SDL build (`make ps5`) is **experimental** and distinct from `make ps5-web`. Earlier on-device testing hit an SDL renderer startup failure; use the browser payload for the documented PS5 experience. See the [PS5 build and setup notes](docs/ps5-build.md) for technical details, verification and limitations.
+Native PS5 SDL rendering remains **experimental**: earlier on-device testing hit a renderer startup failure, and combining the launchers does not fix that underlying issue. `make ps5-shortcut` now aliases `make ps5`; both produce `build/poldrive.elf`. `make ps5-web` produces only `build/wolodrive-web.elf` for browser diagnostics and never overwrites the unified payload. See the [PS5 build and setup notes](docs/ps5-build.md) for logs, verification and limitations.
 
 ## Supported systems
 
@@ -125,7 +125,7 @@ There is a difference between **devices that run PolDrive** and **consoles repre
 | **Linux** | Native SDL2 app | Build path available; graphical behaviour depends on drivers and environment |
 | **Windows** | Browser preview, or native Linux app via WSL/WSLg | Browser path available; native Windows executable not verified |
 | **macOS** | Browser preview | Expected with a compatible modern browser; not separately verified |
-| **Other devices on the PS5 LAN** | Web browser connecting to the PS5's HTTP service | Read-only browsing; requires network reachability |
+| **Other devices on the PS5 LAN** | Web browser connecting to the PS5's HTTP service | Catalogue browsing; paired PC file editing/transfers require the console's access code |
 
 ### Consoles shown in the library
 
@@ -147,7 +147,7 @@ Controller input is part of the native UX; **the browser implements only a subse
 
 ## Development
 
-The frontend uses **React 19, TypeScript and Vite**. The native implementation uses **C, SDL2 and libcurl**. The PS5 web ELF embeds the statically built browser UI and serves it over a minimal read-only HTTP service.
+The frontend uses **React 19, TypeScript and Vite**. The native implementation uses **C, SDL2 and libcurl**. The PS5 web ELF embeds the statically built browser UI, serves the catalogue over HTTP, and provides a filesystem bridge with paired LAN access. Ordinary static hosting, including AI Studio, remains independent of that bridge.
 
 ```bash
 npm run lint              # TypeScript checks

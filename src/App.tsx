@@ -7,6 +7,7 @@ import { GameDetailModal } from './components/GameDetailModal';
 import { UbiquityGameDetails } from './components/UbiquityGameDetails';
 import { SearchGrid } from './components/SearchGrid';
 import { LibraryBrowser } from './components/LibraryBrowser';
+import { FileBrowser } from './components/FileBrowser';
 import { SettingsView } from './components/SettingsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
@@ -111,7 +112,9 @@ export function App() {
 
   // Initial welcome notification matching C code: Started PolDrive (2.0.0-PRO (PS5 13.60))
   useEffect(() => {
-    showToast(t(language, 'TXT_STARTED', 'PolDrive', '2.0.0-PRO (PS5 13.60)'));
+    showToast(window.location.hash === '#native-unavailable'
+      ? t(language, 'TXT_NATIVE_FALLBACK')
+      : t(language, 'TXT_STARTED', 'PolDrive', '2.0.0-PRO (PS5 13.60)'));
   }, []);
 
   // Update document title on language change
@@ -239,6 +242,16 @@ export function App() {
   // Keyboard navigation & Gamepad support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (currentView === 'files' && languageMenuOpen) {
+        const choices = Array.from(document.querySelectorAll<HTMLButtonElement>('#tv-language-options button'));
+        const index = choices.indexOf(document.activeElement as HTMLButtonElement);
+        if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); setLanguageMenuOpen(false); return; }
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault(); choices[Math.max(0, Math.min(choices.length - 1, index + (e.key === 'ArrowUp' ? -1 : 1)))]?.focus(); return;
+        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choices[Math.max(0, index)]?.click(); return; }
+      }
+      if (currentView === 'files' && !isSidebarFocused && !['l', 'L'].includes(e.key)) return;
       // Escape or Backspace: close modal or focus sidebar
       if (e.key === 'Escape') {
         if (detailGame && uiTheme === 'ubiquity') {
@@ -305,7 +318,7 @@ export function App() {
 
       const target = e.target as HTMLElement;
       if (target.closest('input,textarea,select')) return;
-      if (target.closest('button') && !target.closest('.tv-carousel,.tv-navigation')) return;
+      if (!isSidebarFocused && target.closest('button') && !target.closest('.tv-carousel,.tv-navigation')) return;
       if ((currentView === 'home' || isSidebarFocused) && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(e.key)) e.preventDefault();
 
       // Arrow keys navigation for Home carousel (Horizontal within category, Vertical across categories)
@@ -368,7 +381,8 @@ export function App() {
     activeHeroGame,
     themeChoiceIndex,
     uiTheme,
-    detailActionIndex
+    detailActionIndex,
+    languageMenuOpen
   ]);
 
   // Gamepad polling loop
@@ -382,6 +396,17 @@ export function App() {
       if (gp) {
         const now = Date.now();
         if (now - lastGamepadPress.current > 165) {
+          if (currentView === 'files' && !isSidebarFocused) {
+            const keys: Record<number, string> = { 0: 'Enter', 1: 'Escape', 2: 'l', 3: 'r',
+              12: 'ArrowUp', 13: 'ArrowDown', 14: 'ArrowLeft', 15: 'ArrowRight' };
+            const button = Object.keys(keys).map(Number).find(index => gp.buttons[index]?.pressed);
+            if (button !== undefined) {
+              lastGamepadPress.current = now;
+              window.dispatchEvent(new KeyboardEvent('keydown', { key: keys[button], bubbles: true }));
+            }
+            animId = requestAnimationFrame(pollGamepad);
+            return;
+          }
           // Cross (Button 0): select / open
           if (gp.buttons[0]?.pressed) {
             lastGamepadPress.current = now;
@@ -614,7 +639,10 @@ export function App() {
           )}
 
           {/* Empty categories and Downloads share the native hero/carousel layout. */}
-          {['files', 'payloads', 'downloads'].includes(currentView) &&
+          <div hidden={currentView !== 'files'}><FileBrowser language={language}
+            sidebarFocused={isSidebarFocused || languageMenuOpen || currentView !== 'files'}
+            onSidebar={() => setIsSidebarFocused(true)} /></div>
+          {['payloads', 'downloads'].includes(currentView) &&
             <HomeView games={currentView === 'downloads' ? downloadItems : []} uiTheme={uiTheme} language={language}
               title={t(language, currentView === 'files' ? 'TXT_NAV_FILES' : currentView === 'payloads' ? 'TXT_NAV_PAYLOADS' : 'TXT_NAV_DOWNLOADS')}
               emptyMessage={t(language, currentView === 'downloads' ? 'TXT_NO_DOWNLOADS' : 'TXT_SECTION_UNAVAILABLE')}
