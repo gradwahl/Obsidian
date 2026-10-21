@@ -158,6 +158,8 @@ assert.match(ubiquity, /data-layout="ubiquity"/);
 assert.match(ubiquity, /ubq-cinematic-background/);
 assert.match(ubiquity, /ubq-feature-title/);
 assert.match(ubiquity, /ubq-shelf-track/);
+assert.match(ubiquity, /ubq-focus-scroll-layer/,
+  'Focus glow must have a separate layer so scrolling does not animate its offset');
 assert.equal((ubiquity.match(/class="ubq-game-cover/g) || []).length, games.length);
 assert.equal((ubiquity.match(/class="ubq-square-art"/g) || []).length, games.length,
   '(u)biquity artwork should be separate square images');
@@ -165,6 +167,38 @@ assert.equal((ubiquity.match(/class="ubq-cover-footer"/g) || []).length, games.l
   '(u)biquity titles should overlay the bottom of the square artwork');
 assert.equal((ubiquity.match(/class="ubq-cover-download"/g) || []).length, games.length,
   'Downloadable games should have a download-arrow indicator');
+// Regression: the first/selected game still renders the original cover source.
+const firstFocused = render(React.createElement(HomeView, {
+  ...homeProps, uiTheme: 'ubiquity', selected: 0
+}));
+assert.match(firstFocused,
+  /class="ubq-game-cover ubq-game-cover-selected"[^>]*>[\s\S]*?src="\/assets\/covers\/PPSA00001\.cover"/,
+  'Selected index 0 must retain its cover <img>, not become an empty black tile');
+const styleBody = selector => css.match(new RegExp('\\.' + selector + ' \\{([^}]+)\\}'))?.[1] || '';
+const selectedZ = Number(styleBody('ubq-game-cover-selected').match(/z-index:\s*(\d+)/)?.[1]);
+const frameZ = Number(styleBody('ubq-focus-pill').match(/z-index:\s*(\d+)/)?.[1]);
+assert.ok(selectedZ > frameZ,
+  'Crimson focus frame must paint behind the selected cover, not over its artwork');
+assert.match(styleBody('ubq-focus-pill'), /background-image:\s*linear-gradient\(/,
+  'The focus frame gradient must remain intact');
+assert.match(styleBody('ubq-focus-pill'), /box-shadow:/,
+  'The focus frame glow must remain intact');
+assert.match(styleBody('ubq-shelf-track'), /z-index:\s*5/,
+  'Every cover must paint above the glow while focus glides between cards');
+assert.match(styleBody('ubq-focus-scroll-layer'), /z-index:\s*4/,
+  'The glow wrapper must remain behind the carousel track');
+assert.match(styleBody('ubq-game-cover-selected'), /transform:\s*scale\(1\.08\) translateY\(-4px\)/,
+  'The selected-card scale animation must remain intact');
+assert.match(styleBody('ubq-focus-pill'), /top:\s*42px/, 'Focus ring vertical placement follows the enlarged card');
+const ubiquitySource = fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8');
+assert.match(ubiquitySource, /index \* 252 - 15/,
+  'Focus ring still uses the original 252px card stride');
+assert.match(ubiquitySource, /layer\.style\.transform = `translate3d\(\$\{-track\.scrollLeft\}px, 0, 0\)`/,
+  'Scroll compensation must follow actual scrollLeft, independently of React renders');
+assert.match(ubiquitySource, /track\.addEventListener\('scroll', syncFocusScroll, \{ passive: true \}\)/,
+  'Frame offset must update throughout smooth scrolling, not just when focus changes');
+assert.match(ubiquitySource, /track\.removeEventListener\('scroll', syncFocusScroll\)/,
+  'The scroll listener must be cleaned up when the carousel changes');
 const nonDownloadable = render(React.createElement(HomeView, {
   ...homeProps, uiTheme: 'ubiquity',
   games: [ { ...game, state: 'installed' }, { ...game, state: 'downloading' },
@@ -201,6 +235,11 @@ assert.match(nativeThemeSource, /static void render_ubiquity_home\(/);
 assert.match(nativeThemeSource, /render_ubiquity_home\(app\)/);
 assert.match(nativeThemeSource, /UBQ_CARD_W = 232, UBQ_CARD_GAP = 20, UBQ_CARD_Y = 755, UBQ_CARD_H = 232/);
 assert.match(nativeThemeSource, /SDL_Rect cover_rect = \{card.x, card.y, card.w, card.h\}/);
+// SDL already draws the pill before the texture; keep that ordering.
+const nativeHome = nativeThemeSource.slice(nativeThemeSource.indexOf('static void render_ubiquity_home('));
+assert.ok(nativeHome.indexOf('draw_rounded_border(r, pill_x') <
+          nativeHome.indexOf('SDL_RenderCopy(r, cover, &src, &cover_rect)'),
+  'Native SDL must draw the crimson focus ring behind the cover texture');
 assert.match(nativeThemeSource, /SDL_Rect footer = \{card.x, card.y \+ card.h - 40, card.w, 40\}/);
 assert.match(nativeThemeSource, /item->state == STATE_AVAILABLE && item->format != FMT_CATALOG/);
 assert.match(nativeThemeSource, /SDL_RenderDrawLine\(r, ax, ay, ax, ay \+ 13\)/);

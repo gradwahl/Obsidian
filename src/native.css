@@ -449,7 +449,7 @@
 .ubq-shelf-heading { display: flex; justify-content: space-between; align-items: baseline; margin: 0 50px 17px 0; }
 .ubq-shelf-heading h2 { margin: 0; text-transform: uppercase; font-size: 22px; line-height: 32px; letter-spacing: .32em; font-weight: 500; color: #ededf3; text-shadow: 1px 2px 5px #000; }
 .ubq-shelf-heading > span { color: #d2d2d9; font-size: 15px; font-variant-numeric: tabular-nums; }
-.ubq-shelf-track { position: relative; display: flex; align-items: flex-start; gap: 20px; height: 320px; padding: 28px 36px 32px 28px; margin-left: -28px; margin-top: -16px; overflow: visible; overflow-x: auto; scrollbar-width: none; }
+.ubq-shelf-track { position: relative; z-index: 5; display: flex; align-items: flex-start; gap: 20px; height: 320px; padding: 28px 36px 32px 28px; margin-left: -28px; margin-top: -16px; overflow: visible; overflow-x: auto; scrollbar-width: none; }
 .ubq-shelf-track::-webkit-scrollbar { display: none; }
 .ubq-virtual-spacer { flex-shrink: 0; flex-grow: 0; pointer-events: none; height: 1px; }
 .tv-virtual-spacer { flex-shrink: 0; flex-grow: 0; pointer-events: none; height: 1px; }
@@ -469,16 +469,20 @@
 .ubq-game-cover-selected::after {
   display: none !important;
 }
+/* Scroll-following layer sits behind every cover; its offset updates with scrollLeft
+   while the inner focus ring keeps its original 0.38s glide animation. */
+.ubq-focus-scroll-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .ubq-focus-pill {
   position: absolute;
-  top: 75px;
+  top: 42px;
   left: 0;
   width: 262px;
   height: 262px;
   border-radius: 24px;
   overflow: visible;
   pointer-events: none;
-  z-index: 10;
+  /* Keep the glow behind the selected cover, never on top of its image. */
+  z-index: 4;
   box-sizing: border-box;
   border: 3.5px solid transparent;
   background-image: linear-gradient(rgba(15, 15, 20, 0.95), rgba(15, 15, 20, 0.95)), linear-gradient(135deg, #ff3366 0%, #c9184a 50%, #590d22 100%);

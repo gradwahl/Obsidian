@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { GameItem, LanguageCode, HomeCategoryId } from '../types';
 import { nextCoverSource, coverSources } from '../artworkMatches';
 import { t } from '../translations';
@@ -108,6 +108,22 @@ export function UbiquityHomeView({
   const windowStart = list.length > 64 ? Math.max(0, index - 6) : 0;
   const windowEnd = list.length > 64 ? Math.min(list.length, index + 15) : list.length;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const focusScrollRef = useRef<HTMLDivElement>(null);
+
+  // The carousel scrolls independently of React renders. Compensate the glow
+  // layer for every scroll change, without introducing another animated
+  // transform that would lag behind the moving artwork.
+  useLayoutEffect(() => {
+    const track = scrollRef.current;
+    const layer = focusScrollRef.current;
+    if (!track || !layer) return;
+    const syncFocusScroll = () => {
+      layer.style.transform = `translate3d(${-track.scrollLeft}px, 0, 0)`;
+    };
+    track.addEventListener('scroll', syncFocusScroll, { passive: true });
+    syncFocusScroll();
+    return () => track.removeEventListener('scroll', syncFocusScroll);
+  }, [activeCategoryIndex, sidebarFocused, list.length]);
 
   useEffect(() => {
     const row = scrollRef.current;
@@ -153,12 +169,11 @@ export function UbiquityHomeView({
           <span>{list.length ? index + 1 : 0} / {list.length}</span>
         </div>
         {!sidebarFocused && list.length > 0 && (
-          <div
-            className="ubq-focus-pill"
-            style={{
-              transform: `translate3d(${28 + index * 252 - 15 - (scrollRef.current?.scrollLeft || 0)}px, 0, 0)`,
-            }}
-          />
+          <div className="ubq-focus-scroll-layer" ref={focusScrollRef}
+            style={{ transform: `translate3d(${-(scrollRef.current?.scrollLeft || 0)}px, 0, 0)` }}>
+            <div className="ubq-focus-pill"
+              style={{ transform: `translate3d(${index * 252 - 15}px, 0, 0)` }} />
+          </div>
         )}
         <div className="ubq-shelf-track" ref={scrollRef}>
           {windowStart > 0 && <span aria-hidden="true" className="ubq-virtual-spacer"
