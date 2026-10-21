@@ -546,9 +546,34 @@ assert.match(css, /background-position:\s*0% 100%/,
   'PD letters must smoothly transition from white to matte-glossy crimson');
 assert.match(css, /0\.5s cubic-bezier\(0\.25,\s*1,\s*0\.5,\s*1\)/,
   'Sidebar PolDrive expansion must use 0.5s cubic-bezier(0.25, 1, 0.5, 1) smooth physics');
+assert.match(css, /\.tv-theme-ubiquity \.tv-main \{[^}]*height:\s*1080px;/,
+  'Ubiquity main container must span full 1080px so bottom category filter buttons are not clipped');
+assert.match(css, /\.tv-theme-ubiquity \.tv-sidebar \{[\s\S]*?border-radius:\s*28px;/,
+  'Collapsed Ubiquity sidebar must be a single cohesive vertical glass pill');
+assert.match(css, /\.tv-theme-ubiquity \.tv-nav-item::before \{[\s\S]*?opacity:\s*0;/,
+  'Collapsed Ubiquity sidebar must hide separate inactive item tiles so icons sit cleanly inside the vertical pill');
+assert.match(css, /\.tv-theme-ubiquity \.tv-sidebar-expanded \.tv-nav-item:not\(\.tv-nav-active\)::before \{[\s\S]*?opacity:\s*1;/,
+  'Expanded Ubiquity sidebar must show 3D glass pills for inactive menu items');
+const ubiquityWithCats = render(React.createElement(HomeView, {
+  ...homeProps,
+  uiTheme: 'ubiquity',
+  categories: [
+    { id: 'ps5', titleKey: 'TXT_CAT_PS5', games },
+    { id: 'ps4', titleKey: 'TXT_CAT_PS4', games },
+    { id: 'popular', titleKey: 'TXT_CAT_POPULAR', games }
+  ],
+  activeCategoryIndex: 0
+}));
+assert.match(ubiquityWithCats, /class="ubq-category-select"/,
+  'Ubiquity home must render bottom category filter buttons');
+assert.match(ubiquityWithCats, /class="ubq-category-current"/,
+  'Ubiquity home must mark the active bottom category filter button');
 assert.match(native, /draw_poldrive_premium_logo/);
 assert.match(native, /255,\s*51,\s*102,\s*255/);
 assert.match(native, /fill_rounded_rect\(r,\s*bx,\s*by,\s*bw,\s*bh,\s*br,\s*8,\s*8,\s*12,\s*240\)/);
+assert.match(native, /int pill_y = 1022;/,
+  'Native SDL2 must render bottom category pills at y=1022 matching React bottom: 20px');
 console.log('PASS: layout, Netflix motion, Ubiquity switch, web SSR and native appearance contracts');
+
 
 

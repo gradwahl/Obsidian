@@ -1405,21 +1405,22 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         }
 
         if (app->ui_theme == UI_THEME_UBIQUITY && !app->home_grid_expanded &&
-            my >= 996 && my <= 1020) {
+            my >= 1018 && my <= 1064) {
             int pos = CONTENT_X + 24;
             for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
                 const char *name = home_category_title(app, cat);
                 int width = 0, height = 0;
                 if (app->font_micro) TTF_SizeUTF8(app->font_micro, name, &width, &height);
-                int slot = SDL_max(125, width + 26);
-                if (mx >= pos && mx < pos + slot) {
+                if (width <= 0) width = 84;
+                int pill_w = width + 40;
+                if (mx >= pos && mx < pos + pill_w) {
                     app->sidebar_focus = false;
                     app->home_cat_index = cat;
                     sync_home_active_row(app);
                     track_description_focus(app, get_focused_item(app));
                     return;
                 }
-                pos += slot;
+                pos += pill_w + 12;
             }
         }
         for (int cat = 0; cat < HOME_CAT_COUNT && app->ui_theme != UI_THEME_UBIQUITY; cat++) {
@@ -2253,9 +2254,17 @@ static void render_sidebar(WolodriveApp *app) {
     }
 
     if (app->ui_theme == UI_THEME_UBIQUITY) {
-        Uint8 sb_alpha = (Uint8)lroundf(118.0f + 86.0f * app->sidebar_expand);
-        fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 10, 11, 16, sb_alpha);
-        fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 255, 255, 255, 38);
+        /* Single cohesive vertical translucent 3D glass pill for the sidebar */
+        int sb_pill_x = 8;
+        int sb_pill_y = 14;
+        int sb_pill_w = sb_w - 8;
+        int sb_pill_h = SCREEN_HEIGHT - 28;
+        int sb_pill_r = 28;
+        Uint8 sb_alpha = (Uint8)lroundf(158.0f + 68.0f * app->sidebar_expand);
+        draw_rounded_glow(r, sb_pill_x, sb_pill_y, sb_pill_w, sb_pill_h, sb_pill_r, 8, 255, 255, 255, 20);
+        fill_rounded_rect(r, sb_pill_x, sb_pill_y, sb_pill_w, sb_pill_h, sb_pill_r, 18, 20, 28, sb_alpha);
+        fill_rounded_rect(r, sb_pill_x + 2, sb_pill_y + 2, sb_pill_w - 4, sb_pill_h / 3, sb_pill_r - 2, 44, 46, 62, 52);
+        draw_rounded_border(r, sb_pill_x, sb_pill_y, sb_pill_w, sb_pill_h, sb_pill_r, 1, 255, 255, 255, 72);
     } else {
         fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 12, 12, 12, 250);
         fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
@@ -2383,10 +2392,12 @@ static void render_sidebar(WolodriveApp *app) {
         /* Upper organic glass reflection dome unifying the cosmic background and letters */
         fill_rounded_rect(r, bx + 2, by + 2, bw - 4, bh / 2 - 2, SDL_max(4, br - 2), 255, 255, 255, 22);
     }
-    SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,
-                            sb_w - 16, sidebar_target(app->active_row).h - 16};
+    SDL_Rect active_pill = {app->ui_theme == UI_THEME_UBIQUITY ? 14 : 8,
+                            (int)lroundf(app->sidebar_indicator_y) + 8,
+                            sb_w - (app->ui_theme == UI_THEME_UBIQUITY ? 22 : 16),
+                            sidebar_target(app->active_row).h - 16};
     if (app->ui_theme == UI_THEME_UBIQUITY) {
-        int pill_r = (int)lroundf(15.0f + 5.0f * app->sidebar_expand);
+        int pill_r = (int)lroundf(22.0f + 2.0f * app->sidebar_expand);
         draw_rounded_glow(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
                           pill_r, 8, 201, 24, 74, 145);
         fill_rounded_rect(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
@@ -2396,7 +2407,7 @@ static void render_sidebar(WolodriveApp *app) {
         fill_rounded_rect(r, active_pill.x + 2, active_pill.y + active_pill.h / 2, active_pill.w - 4, active_pill.h / 2 - 2,
                           pill_r - 2, 122, 9, 36, 120);
         draw_rounded_border(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                            pill_r, 1, 255, 95, 115, 175);
+                            pill_r, 1, 255, 130, 155, 185);
     } else {
         draw_rounded_glow(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
                           14, 5, 229, 9, 20, 38);
@@ -2409,15 +2420,21 @@ static void render_sidebar(WolodriveApp *app) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
 
-        if (app->ui_theme == UI_THEME_UBIQUITY && !selected) {
-            int item_r = (int)lroundf(15.0f + 5.0f * app->sidebar_expand);
-            fill_rounded_rect(r, 8, target.y + 8, sb_w - 16, target.h - 16, item_r, 24, 24, 34, 150);
-            draw_rounded_border(r, 8, target.y + 8, sb_w - 16, target.h - 16, item_r, 1, 255, 255, 255, 42);
+        /* In collapsed state, icons sit cleanly inside the single vertical glass pill.
+           When expanded, inactive items appear as 3D grey-gradient "Details" pills with white border & glow. */
+        if (app->ui_theme == UI_THEME_UBIQUITY && !selected && app->sidebar_expand > 0.05f) {
+            float exp_a = app->sidebar_expand;
+            int ix = 14, iy = target.y + 8, iw = sb_w - 22, ih = target.h - 16, ir_rad = 24;
+            draw_rounded_glow(r, ix, iy, iw, ih, ir_rad, 5, 255, 255, 255, (Uint8)lroundf(28.0f * exp_a));
+            fill_rounded_rect(r, ix, iy, iw, ih, ir_rad, 38, 40, 52, (Uint8)lroundf(216.0f * exp_a));
+            fill_rounded_rect(r, ix + 2, iy + 2, iw - 4, ih / 2, ir_rad - 2, 78, 82, 98, (Uint8)lroundf(120.0f * exp_a));
+            fill_rounded_rect(r, ix + 2, iy + ih / 2, iw - 4, ih / 2 - 2, ir_rad - 2, 22, 24, 34, (Uint8)lroundf(115.0f * exp_a));
+            draw_rounded_border(r, ix, iy, iw, ih, ir_rad, 1, 255, 255, 255, (Uint8)lroundf(98.0f * exp_a));
         }
 
-        Uint8 ir = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 235) : (selected ? 255 : 215);
-        Uint8 ig = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 236) : (selected ? 35 : 32);
-        Uint8 ib = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 244) : (selected ? 45 : 40);
+        Uint8 ir = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 238) : (selected ? 255 : 215);
+        Uint8 ig = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 240) : (selected ? 35 : 32);
+        Uint8 ib = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 246) : (selected ? 45 : 40);
         Uint8 ia = selected ? 255 : 235;
 
         int x = 28, y = target.y + (target.h - 30) / 2;
@@ -2500,7 +2517,11 @@ static void render_sidebar(WolodriveApp *app) {
                 const char *label_text = sidebar_item_title(app, row);
                 if (label_text && label_text[0] != '\0') {
                     TTF_Font *font = app->font_small ? app->font_small : app->font_body;
-                    SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){225, 140, 145, 255};
+                    SDL_Color text_color = selected
+                        ? (SDL_Color){255, 255, 255, 255}
+                        : (app->ui_theme == UI_THEME_UBIQUITY
+                               ? (SDL_Color){238, 240, 246, 255}
+                               : (SDL_Color){225, 140, 145, 255});
                     UiTextEntry *entry = cached_text(app, font, label_text, text_color, 0);
                     if (entry && entry->texture) {
                         int text_x = 84;
@@ -2575,9 +2596,9 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_Color muted = {165, 165, 175, 255};
 
     if (ubiquity_carousel_enabled(app)) {
-        fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 5, 6, 9, 220);
+        render_language_control(app);
         draw_text(app, app->font_micro, "[X] Details    [Triangle] Download / Install    [O] Back",
-                  CONTENT_X + 24, 1040, muted, 900);
+                  SCREEN_WIDTH - 480, 1031, muted, 440);
         return;
     }
     fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 10, 10, 14, 248);
@@ -3027,7 +3048,7 @@ static void render_ubiquity_home(WolodriveApp *app) {
     draw_text(app, app->font_micro, count, SCREEN_WIDTH - 175, 719, subdued, 0);
     if (app->active_row == VIEW_HOME) {
         int pos = CONTENT_X + 24;
-        int pill_y = 982;
+        int pill_y = 1022;
         int pill_h = 38;
         int pill_r = 19;
         for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
@@ -3042,13 +3063,16 @@ static void render_ubiquity_home(WolodriveApp *app) {
                 fill_rounded_rect(r, pos, pill_y, pill_w, pill_h, pill_r, 201, 24, 74, 250);
                 fill_rounded_rect(r, pos + 2, pill_y + 2, pill_w - 4, pill_h / 2, pill_r - 2, 255, 51, 102, 135);
                 fill_rounded_rect(r, pos + 2, pill_y + pill_h / 2, pill_w - 4, pill_h / 2 - 2, pill_r - 2, 143, 4, 11, 120);
-                draw_rounded_border(r, pos, pill_y, pill_w, pill_h, pill_r, 1, 255, 140, 165, 145);
+                draw_rounded_border(r, pos, pill_y, pill_w, pill_h, pill_r, 1, 255, 140, 165, 175);
                 draw_text(app, app->font_micro, name, pos + 20, pill_y + 10, (SDL_Color){255, 255, 255, 255}, 0);
             } else {
-                /* Inactive category: PS5 Library "Details" button style (smoked glass + subtle border) */
-                fill_rounded_rect(r, pos, pill_y, pill_w, pill_h, pill_r, 24, 24, 34, 166);
-                draw_rounded_border(r, pos, pill_y, pill_w, pill_h, pill_r, 1, 255, 255, 255, 46);
-                draw_text(app, app->font_micro, name, pos + 20, pill_y + 10, (SDL_Color){240, 240, 246, 220}, 0);
+                /* Inactive category: PS5 Library "Details" 3D glass pill style (grey gradient center + white border + glow) */
+                draw_rounded_glow(r, pos, pill_y, pill_w, pill_h, pill_r, 5, 255, 255, 255, 28);
+                fill_rounded_rect(r, pos, pill_y, pill_w, pill_h, pill_r, 38, 40, 52, 216);
+                fill_rounded_rect(r, pos + 2, pill_y + 2, pill_w - 4, pill_h / 2, pill_r - 2, 78, 82, 98, 120);
+                fill_rounded_rect(r, pos + 2, pill_y + pill_h / 2, pill_w - 4, pill_h / 2 - 2, pill_r - 2, 22, 24, 34, 115);
+                draw_rounded_border(r, pos, pill_y, pill_w, pill_h, pill_r, 1, 255, 255, 255, 98);
+                draw_text(app, app->font_micro, name, pos + 20, pill_y + 10, (SDL_Color){242, 243, 248, 235}, 0);
             }
             pos += pill_w + 12;
         }
