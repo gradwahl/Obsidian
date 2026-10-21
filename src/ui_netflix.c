@@ -2313,19 +2313,26 @@ static void render_sidebar(WolodriveApp *app) {
             fill_rounded_rect(r, (r1_x + r2_x) / 2, by + bh / 2 - 4, rib3_w, 8, 4, 89, 13, 34, 84);
         }
 
-        draw_rounded_border(r, bx, by, bw, bh, br, 1, 255, 51, 102, 112);
+        draw_rounded_border(r, bx, by, bw, bh, br, 1, 255, 51, 102, 118);
 
-        /* Silk crimson P and D in both states, unfolding and scaling proportionally to fill the capsule */
-        SDL_Color pd_col = {255, 51, 102, 255};
-        SDL_Color glow_col = {201, 24, 74, 150};
-        TTF_Font *pd_p_font = (exp_t > 0.55f && app->font_logo)
+        /* White PD in collapsed state, smoothly transitioning to matte-glossy silk crimson with organic glass depth */
+        SDL_Color pd_col = {
+            255,
+            (Uint8)lroundf(255.0f * (1.0f - exp_t) + 51.0f * exp_t),
+            (Uint8)lroundf(255.0f * (1.0f - exp_t) + 102.0f * exp_t),
+            238
+        };
+        SDL_Color spec_col = {255, 232, 240, (Uint8)lroundf(95.0f + 50.0f * exp_t)};
+        SDL_Color inset_col = {10, 6, 14, 175};
+        SDL_Color glow_col = {201, 24, 74, (Uint8)lroundf(95.0f + 65.0f * exp_t)};
+        TTF_Font *pd_p_font = (exp_t > 0.50f && app->font_logo)
                                   ? app->font_logo
-                                  : ((exp_t > 0.22f && app->font_row_title) ? app->font_row_title : app->font_small);
-        TTF_Font *pd_tail_font = (exp_t > 0.55f && app->font_row_title)
+                                  : ((exp_t > 0.20f && app->font_row_title) ? app->font_row_title : app->font_small);
+        TTF_Font *pd_tail_font = (exp_t > 0.50f && app->font_row_title)
                                      ? app->font_row_title
-                                     : ((exp_t > 0.22f && app->font_body) ? app->font_body : app->font_small);
+                                     : ((exp_t > 0.20f && app->font_body) ? app->font_body : app->font_small);
 
-        Uint8 slide_a = (Uint8)lroundf(255.0f * exp_t);
+        Uint8 slide_a = (Uint8)lroundf(236.0f * exp_t);
         SDL_Color satin_white = {245, 245, 247, slide_a};
 
         int p_w = 0, p_h = 0, d_w = 0, d_h = 0, ol_w = 0, ol_h = 0, rive_w = 0, rive_h = 0;
@@ -2335,10 +2342,10 @@ static void render_sidebar(WolodriveApp *app) {
             TTF_SizeUTF8(pd_tail_font, "D", &d_w, &d_h);
             TTF_SizeUTF8(pd_tail_font, "rive", &rive_w, &rive_h);
         }
-        if (p_w <= 0) p_w = (exp_t > 0.55f) ? 28 : 13;
-        if (d_w <= 0) d_w = (exp_t > 0.55f) ? 22 : 12;
-        if (ol_w <= 0) ol_w = (exp_t > 0.55f) ? 28 : 16;
-        if (rive_w <= 0) rive_w = (exp_t > 0.55f) ? 56 : 32;
+        if (p_w <= 0) p_w = (exp_t > 0.50f) ? 32 : 13;
+        if (d_w <= 0) d_w = (exp_t > 0.50f) ? 25 : 12;
+        if (ol_w <= 0) ol_w = (exp_t > 0.50f) ? 32 : 16;
+        if (rive_w <= 0) rive_w = (exp_t > 0.50f) ? 64 : 32;
 
         int cur_ol_w = (int)lroundf((float)ol_w * exp_t);
         int cur_rive_w = (int)lroundf((float)rive_w * exp_t);
@@ -2348,21 +2355,30 @@ static void render_sidebar(WolodriveApp *app) {
         int tail_y = p_y + SDL_max(0, (p_h - d_h) - 2);
 
         draw_text(app, pd_p_font, "P", tx + 1, p_y + 2, glow_col, 0);
+        draw_text(app, pd_p_font, "P", tx, p_y + 1, inset_col, 0);
         int pw = draw_text(app, pd_p_font, "P", tx, p_y, pd_col, 0);
+        draw_text(app, pd_p_font, "P", tx, p_y - 1, spec_col, 0);
         tx += (pw > 0 ? pw - 1 : p_w);
 
         if (slide_a > 12 && cur_ol_w > 2) {
+            draw_text(app, pd_tail_font, "ol", tx, tail_y + 1, inset_col, 0);
             draw_text(app, pd_tail_font, "ol", tx, tail_y, satin_white, 0);
         }
         tx += cur_ol_w;
 
-        draw_text(app, pd_tail_font, "D", tx + 1, tail_y + 1, glow_col, 0);
+        draw_text(app, pd_tail_font, "D", tx + 1, tail_y + 2, glow_col, 0);
+        draw_text(app, pd_tail_font, "D", tx, tail_y + 1, inset_col, 0);
         int dw = draw_text(app, pd_tail_font, "D", tx, tail_y, pd_col, 0);
+        draw_text(app, pd_tail_font, "D", tx, tail_y - 1, spec_col, 0);
         tx += (dw > 0 ? dw : d_w);
 
         if (slide_a > 12 && cur_rive_w > 2) {
+            draw_text(app, pd_tail_font, "rive", tx, tail_y + 1, inset_col, 0);
             draw_text(app, pd_tail_font, "rive", tx, tail_y, satin_white, 0);
         }
+
+        /* Upper organic glass reflection dome unifying the cosmic background and letters */
+        fill_rounded_rect(r, bx + 2, by + 2, bw - 4, bh / 2 - 2, SDL_max(4, br - 2), 255, 255, 255, 22);
     }
     SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,
                             sb_w - 16, sidebar_target(app->active_row).h - 16};

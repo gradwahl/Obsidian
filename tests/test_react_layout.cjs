@@ -521,10 +521,12 @@ assert.match(css, /\.ubq-pd-bubble \{[\s\S]*?background:\s*rgba\(10,\s*10,\s*16,
   'Collapsed PD square must have the same dark smoked-glass background as expanded state');
 assert.match(css, /\.ubq-pd-ribbons \{[\s\S]*?opacity:\s*1;/,
   'Cosmic crimson ribbons must be visible in both collapsed and expanded sidebar states');
-assert.match(css, /\.ubq-pd-bubble-expanded \.ubq-pd-char-p \{[\s\S]*?font-size:\s*46px/,
+assert.match(css, /\.ubq-pd-bubble-expanded \.ubq-pd-char-p \{[\s\S]*?font-size:\s*50px/,
   'Expanded PolDrive P must scale proportionally to fill the capsule');
-assert.match(css, /\.ubq-pd-bubble-expanded \.ubq-pd-slide-ol \{[\s\S]*?font-size:\s*31px/,
+assert.match(css, /\.ubq-pd-bubble-expanded \.ubq-pd-slide-ol \{[\s\S]*?font-size:\s*36px/,
   'Expanded PolDrive ol/rive must scale proportionally to fill the capsule');
+assert.match(css, /background-position:\s*0% 100%/,
+  'PD letters must smoothly transition from white to matte-glossy crimson');
 assert.match(css, /0\.5s cubic-bezier\(0\.25,\s*1,\s*0\.5,\s*1\)/,
   'Sidebar PolDrive expansion must use 0.5s cubic-bezier(0.25, 1, 0.5, 1) smooth physics');
 assert.match(native, /draw_poldrive_premium_logo/);
