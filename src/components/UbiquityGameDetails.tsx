@@ -1,4 +1,5 @@
 import { MemoryImage } from './MemoryImage';
+import { GlassLiquid } from './GlassLiquid';
 import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
@@ -109,9 +110,9 @@ export function UbiquityGameDetails({
             {(game.rating_score || 0) > 0 && <><span aria-hidden="true">•</span><span>★ {(game.rating_score || 0).toFixed(1)}/10</span></>}
           </div>
           <div className="ubq-detail-tags">
-            <span className="glass-pill glass-pill--sm">{game.format.toUpperCase()}</span>
-            <span className="glass-pill glass-pill--sm">{game.id_code}</span>
-            {game.version && <span className="glass-pill glass-pill--sm">v{game.version}</span>}
+            <span className="glass-pill glass-pill--sm"><GlassLiquid />{game.format.toUpperCase()}</span>
+            <span className="glass-pill glass-pill--sm"><GlassLiquid />{game.id_code}</span>
+            {game.version && <span className="glass-pill glass-pill--sm"><GlassLiquid />v{game.version}</span>}
           </div>
           <div className="ubq-detail-description" ref={descriptionRef}>
             {description || game.title}

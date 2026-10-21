@@ -1,0 +1,267 @@
+
+/* Shared convex liquid-glass surface: all size and state variations inherit this.
+   Existing graphite/plum and selection crimson are the ONLY chromatic tones.
+   Negative-z decorative layers sit above the backdrop and below the label. */
+.glass-pill:not(.tv-nav-tooltip) {
+  --gel-top: rgba(92,98,116,.27);
+  --gel-bottom: rgba(16,20,32,.32);
+  --gel-lumen: rgba(117,124,146,.075);
+  --gel-lumen-soft: rgba(92,98,116,.055);
+  --gel-below: rgba(117,124,146,.17);
+  --gel-edge: rgba(255,255,255,.25);
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  box-sizing:border-box;
+  border-radius:9999px;
+  border:1px solid rgba(255,255,255,.085);
+  background:linear-gradient(180deg,var(--gel-top),var(--gel-bottom));
+  -webkit-backdrop-filter:blur(12px) saturate(138%);
+  backdrop-filter:blur(12px) saturate(138%);
+  box-shadow:
+    inset 0 1.1px 0 rgba(255,255,255,.20),
+    inset 0 -1px 0 rgba(8,8,12,.34),
+    inset 0 -3px 7px rgba(8,8,12,.18),
+    0 2px 3px rgba(0,0,0,.35),
+    0 9px 22px rgba(0,0,0,.19);
+  text-shadow:0 1px 2px rgba(0,0,0,.62);
+  transform-origin:center;
+  transition:transform .32s cubic-bezier(.22,1,.36,1),box-shadow .32s ease,filter .35s ease;
+}
+/* Thin rim: brighter toward the top; bottom edge merges into the body. */
+.glass-pill:not(.tv-nav-tooltip)::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  padding:1px;
+  border:0;
+  pointer-events:none;
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.32) 0%,rgba(255,255,255,.12) 25%,
+    rgba(255,255,255,.06) 55%,rgba(8,8,12,.28) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+}
+/* One continuous, full-width window reflection. A horizontal end fade
+   prevents the appearance of an artificial small oval inside the caps. */
+.glass-pill:not(.tv-nav-tooltip)::after {
+  content:"";
+  position:absolute;
+  inset:1px 0 auto;
+  z-index:-1;
+  height:65%;
+  left:0;
+  right:0;
+  border-radius:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 3px 2px at 14% 13%,rgba(255,255,255,.26),transparent 100%),
+    linear-gradient(180deg,rgba(255,255,255,.19) 0%,
+      rgba(255,255,255,.07) 24%,rgba(255,255,255,.012) 72%,transparent 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 17%,#000 83%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0%,#000 17%,#000 83%,transparent 100%);
+  transform:translate3d(0,0,0);
+  animation:gel-window 17s ease-in-out infinite alternate;
+}
+/* Decorative layer never affects measured size, labels, tab order or events. */
+.glass-pill .glass-liquid {
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  border-radius:inherit;
+  overflow:hidden;
+  isolation:isolate;
+  opacity:1;
+  animation:gel-breathe 6.4s ease-in-out infinite;
+}
+.glass-pill .glass-drift {
+  position:absolute;
+  inset:-22% -8%;
+  border-radius:inherit;
+  opacity:.36;
+  will-change:transform,opacity;
+  filter:blur(10px);
+  transform:translate3d(0,0,0);
+  background:radial-gradient(ellipse 35% 70% at 42% 42%,
+    var(--gel-lumen) 0%,var(--gel-lumen-soft) 43%,transparent 100%);
+}
+.glass-pill .glass-drift--a {animation:gel-drift-a 13s ease-in-out infinite;}
+.glass-pill .glass-drift--b {
+  opacity:.30;
+  background:radial-gradient(ellipse 26% 90% at 59% 77%,var(--gel-below),transparent 88%);
+  animation:gel-drift-b 15.8s ease-in-out infinite;
+}
+.glass-pill .glass-drift--c {
+  opacity:.22;
+  background:radial-gradient(ellipse 32% 83% at 24% 72%,var(--gel-lumen),transparent 94%);
+  animation:gel-drift-c 9.7s ease-in-out infinite;
+}
+/* Subtle full-width lower refraction; the rim alone determines the silhouette. */
+.glass-pill .glass-liquid::before {
+  content:"";
+  position:absolute;
+  inset:auto 0 0;
+  height:48%;
+  pointer-events:none;
+  background:linear-gradient(0deg,var(--gel-below),transparent 70%);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 19%,#000 81%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 19%,#000 81%,transparent);
+  opacity:.34;
+}
+/* Press wave is an inner light displacement, not a hard ring. */
+.glass-pill .glass-liquid::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:0;
+  pointer-events:none;
+  background:radial-gradient(ellipse 65% 90% at 50% 58%,
+    rgba(255,255,255,.10),rgba(255,255,255,.025) 60%,transparent 100%);
+  transform:scale3d(.35,.72,1);
+}
+.glass-pill .glass-specks {position:absolute;inset:0;pointer-events:none;}
+.glass-pill .glass-specks i {
+  display:block;position:absolute;bottom:2px;
+  width:2px;height:2px;border-radius:50%;
+  background:var(--gel-below);
+  box-shadow:0 0 2px 1px var(--gel-lumen);
+  opacity:0;
+  animation:gel-rise 11.3s linear infinite;
+}
+.glass-pill .glass-specks i:nth-child(1){left:24%;animation-delay:-3.8s;animation-duration:11.4s;}
+.glass-pill .glass-specks i:nth-child(2){left:41%;width:1px;height:1px;animation-delay:-8s;animation-duration:13.6s;}
+.glass-pill .glass-specks i:nth-child(3){left:68%;animation-delay:-6.4s;animation-duration:10.3s;}
+.glass-pill .glass-specks i:nth-child(4){left:79%;width:1px;height:1px;animation-delay:-1.8s;animation-duration:14.5s;}
+/* Existing active palette, lowered opacity. No new chromatic color. */
+.glass-pill--active:not(.tv-nav-tooltip),
+.glass-pill.ubq-category-current,
+.glass-pill.is-demo-active {
+  --gel-top:rgba(253,115,150,.31);
+  --gel-bottom:rgba(59,15,40,.34);
+  --gel-lumen:rgba(253,115,150,.13);
+  --gel-lumen-soft:rgba(172,32,78,.10);
+  --gel-below:rgba(224,45,99,.25);
+  border-color:rgba(255,192,208,.18);
+  background:linear-gradient(180deg,var(--gel-top),rgba(172,32,78,.27) 54%,var(--gel-bottom));
+  box-shadow:inset 0 1.1px 0 rgba(255,234,241,.26),
+    inset 0 -1px 0 rgba(25,1,17,.30),
+    inset 0 -3px 7px rgba(25,1,17,.19),
+    0 2px 4px rgba(0,0,0,.36),
+    0 9px 21px rgba(0,0,0,.19),
+    0 5px 19px rgba(203,37,89,.15);
+}
+.glass-pill--active .glass-liquid,
+.glass-pill.ubq-category-current .glass-liquid,
+.glass-pill.is-demo-active .glass-liquid {animation-duration:5.7s;}
+/* Other existing selectors must not redraw a flat active plate over the glass. */
+.tv-theme-ubiquity .glass-pill:not(.tv-nav-tooltip) {
+  border-radius:9999px;
+  border-width:1px;
+  background:linear-gradient(180deg,var(--gel-top),var(--gel-bottom));
+  -webkit-backdrop-filter:blur(12px) saturate(138%);
+  backdrop-filter:blur(12px) saturate(138%);
+}
+.tv-theme-ubiquity .glass-pill--active:not(.tv-nav-tooltip),
+.tv-theme-ubiquity .glass-pill.ubq-category-current {
+  background:linear-gradient(180deg,var(--gel-top),rgba(172,32,78,.27) 54%,var(--gel-bottom));
+  box-shadow:inset 0 1.1px 0 rgba(255,234,241,.26),
+    inset 0 -1px 0 rgba(25,1,17,.30),inset 0 -3px 7px rgba(25,1,17,.19),
+    0 2px 4px rgba(0,0,0,.36),0 9px 21px rgba(0,0,0,.19),
+    0 5px 19px rgba(203,37,89,.15);
+}
+.tv-theme-ubiquity .ubq-category-select > button {border-radius:9999px;}
+.tv-theme-ubiquity .ubq-category-select > .ubq-category-current {
+  border-color:rgba(255,192,208,.18);
+  background:linear-gradient(180deg,var(--gel-top),rgba(172,32,78,.27) 54%,var(--gel-bottom));
+}
+/* A slowly breathing liquid lens should not override movement of sliding marker. */
+button.glass-pill:not(:disabled):hover,
+button.glass-pill:focus-visible,.glass-pill.is-demo-hover {
+  filter:brightness(1.07);
+  transform:scale(1.014);
+}
+button.glass-pill:not(:disabled):hover .glass-drift,
+button.glass-pill:focus-visible .glass-drift,.glass-pill.is-demo-hover .glass-drift {animation-duration:10.5s;}
+button.glass-pill:not(:disabled):active,
+.glass-pill.is-demo-pressed {transform:scale(.982);transition-duration:.14s;}
+button.glass-pill:not(:disabled):active .glass-liquid::after,
+.glass-pill.is-demo-pressed .glass-liquid::after {animation:gel-press .52s ease-out both;}
+/* Mask the entire lens to its true pill boundary, not separate inner capsules. */
+.glass-pill:not(.tv-nav-tooltip) {background-clip:padding-box;}
+.glass-pill > :not(.glass-liquid):not(.highlight-glow) {position:relative;z-index:1;}
+/* SlidingHighlight positions itself using measured absolute coordinates.
+   Without this, the generic glass-pill position:relative makes the marker a
+   flex item; its centered static position is then added to the translation,
+   producing two overlapping, offset bubbles around the nav icon. */
+.glass-pill.sliding-highlight {
+  position:absolute;
+  top:0;
+  left:0;
+  right:auto;
+  bottom:auto;
+  margin:0;
+  overflow:hidden;
+}
+.glass-pill.sliding-highlight .highlight-glow {box-shadow:none;}
+/* Center-stage refreshes don't cause layout work: transforms and opacity only. */
+@keyframes gel-drift-a {
+  0%,100%{transform:translate3d(-4%,2%,0);opacity:.31;}
+  38%{transform:translate3d(4%,-5%,0);opacity:.39;}
+  70%{transform:translate3d(1%,3%,0);opacity:.35;}
+}
+@keyframes gel-drift-b {
+  0%,100%{transform:translate3d(5%,1%,0) scale3d(.99,1,1);opacity:.25;}
+  48%{transform:translate3d(-5%,-3%,0) scale3d(1.02,1,1);opacity:.34;}
+  75%{transform:translate3d(-2%,2%,0);opacity:.29;}
+}
+@keyframes gel-drift-c {
+  0%,100%{transform:translate3d(-3%,-3%,0);opacity:.20;}
+  42%{transform:translate3d(5%,3%,0);opacity:.25;}
+  67%{transform:translate3d(0,-2%,0);opacity:.21;}
+}
+@keyframes gel-breathe {
+  0%,100%{opacity:.91;}
+  50%{opacity:1;}
+}
+@keyframes gel-window {
+  0%,100%{transform:translate3d(-1.5%,0,0);opacity:.83;}
+  50%{transform:translate3d(1.5%,0,0);opacity:1;}
+}
+@keyframes gel-rise {
+  0%,100%{transform:translate3d(-2px,3px,0);opacity:0;}
+  17%{opacity:.20;}
+  55%{transform:translate3d(3px,-12px,0);opacity:.22;}
+  88%{opacity:.07;}
+  99%{transform:translate3d(-1px,-26px,0);opacity:0;}
+}
+@keyframes gel-press {
+  0%{opacity:.3;transform:scale3d(.35,.72,1);}
+  53%{opacity:.22;transform:scale3d(1.1,1.2,1);}
+  100%{opacity:0;transform:scale3d(1.5,1.5,1);}
+}
+/* Never animate a full room of cards. IntersectionObserver chooses visible ones;
+   paused/memory-limited UI retains all static layers and reflections. */
+.glass-pill[data-glass-motion="rest"] .glass-drift,
+.glass-pill[data-glass-motion="rest"] .glass-specks i,
+.glass-pill[data-glass-motion="static"] .glass-drift,
+.glass-pill[data-glass-motion="static"] .glass-specks i,
+.glass-pill[data-glass-motion="static"] .glass-liquid,
+.glass-pill[data-glass-motion="static"]::after {
+  animation:none!important;
+  will-change:auto;
+}
+.glass-pill[data-glass-motion="rest"] .glass-liquid {animation-duration:6.4s;}
+@media (prefers-reduced-motion:reduce) {
+  .glass-pill:not(.tv-nav-tooltip)::after,.glass-pill .glass-liquid,
+  .glass-pill .glass-drift,.glass-pill .glass-specks i,
+  .glass-pill .glass-liquid::after {animation:none!important;will-change:auto;}
+  .glass-pill:not(.tv-nav-tooltip){transition:none!important;}
+}
+@media (hover:none) and (pointer:coarse) {
+  .glass-pill .glass-drift,.glass-pill .glass-specks i {animation:none!important;will-change:auto;}
+}

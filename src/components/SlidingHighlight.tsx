@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react';
+import { GlassLiquid } from './GlassLiquid';
 
 // Coordinates are in the logical native stage, not scaled browser pixels.
 export function SlidingHighlight({ activeKey, axis = 'y', className = '', motionEnabled = true }: {
@@ -78,5 +79,5 @@ export function SlidingHighlight({ activeKey, axis = 'y', className = '', motion
     return () => { disposed = true; observer?.disconnect(); window.removeEventListener('resize', windowResize); };
   }, [activeKey, axis, motionEnabled]);
   useLayoutEffect(() => () => { flight.current?.cancel(); glowFlight.current?.cancel(); }, []);
-  return <div ref={ref} aria-hidden="true" className={`glass-pill glass-pill--active sliding-highlight ${className}`}><span className="highlight-glow" /></div>;
+  return <div ref={ref} aria-hidden="true" className={`glass-pill glass-pill--active sliding-highlight ${className}`}><GlassLiquid /><span className="highlight-glow" /></div>;
 }

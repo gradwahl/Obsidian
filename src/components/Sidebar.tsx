@@ -145,32 +145,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Native PS5 wordmark: a red P on the collapsed rail, 'oldrive' revealed when expanded. */}
+          {/* Native PS5 wordmark for non-Ubiquity layouts. */}
           <div className="tv-brand-logo" aria-label="PolDrive">
             <span className="tv-brand-mark" aria-hidden="true">P</span>
             <span className="tv-brand-title" aria-hidden="true">olDrive</span>
           </div>
 
-          {/* Ubiquity theme emblem: 38x38 crimson squircle 'PD' when collapsed,
-              transforming into dark smoked glass with animated crimson ribbons and 'PolDrive' when expanded. */}
-          {uiTheme === 'ubiquity' && (
-            <div
-              className={`ubq-pd-bubble ${isExpanded ? 'ubq-pd-bubble-expanded' : 'ubq-pd-bubble-collapsed'}`}
-              aria-label="PolDrive"
-            >
-              <span className="ubq-pd-ribbons" aria-hidden="true">
-                <span className="ubq-pd-ribbon ubq-pd-ribbon-1" />
-                <span className="ubq-pd-ribbon ubq-pd-ribbon-2" />
-                <span className="ubq-pd-ribbon ubq-pd-ribbon-3" />
-              </span>
-              <span className="ubq-pd-text" aria-hidden="true">
-                <span className="ubq-pd-char-p">P</span>
-                <span className="ubq-pd-slide-ol">ol</span>
-                <span className="ubq-pd-char-d">D</span>
-                <span className="ubq-pd-slide-rive">rive</span>
-              </span>
-            </div>
-          )}
+          {/* Animated PD emblem unfolds into PolDrive with the focused/hovered rail. */}
+          <div
+            className={`ubq-pd-bubble ${isExpanded ? 'ubq-pd-bubble-expanded' : 'ubq-pd-bubble-collapsed'}`}
+            aria-label="PolDrive"
+          >
+            <span className="ubq-pd-ribbons" aria-hidden="true">
+              <span className="ubq-pd-ribbon ubq-pd-ribbon-1" />
+              <span className="ubq-pd-ribbon ubq-pd-ribbon-2" />
+              <span className="ubq-pd-ribbon ubq-pd-ribbon-3" />
+            </span>
+            <span className="ubq-pd-text" aria-hidden="true">
+              <span className="ubq-pd-char-p">P</span>
+              <span className="ubq-pd-slide-ol">ol</span>
+              <span className="ubq-pd-char-d">D</span>
+              <span className="ubq-pd-slide-rive">rive</span>
+            </span>
+          </div>
 
           {/* Navigation list */}
           <nav className="tv-navigation">

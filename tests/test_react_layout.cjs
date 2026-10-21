@@ -23,7 +23,7 @@ for (const extension of ['.ts', '.tsx']) {
   };
 }
 const root = path.resolve(__dirname, '..');
-const { TV_LAYOUT, fitViewport } = require('../src/layout.ts');
+const { TV_LAYOUT, fitViewport, fitEdgeToEdgeViewport } = require('../src/layout.ts');
 const { GameCard, CoverArt } = require('../src/components/GameCard.tsx');
 const { HomeView } = require('../src/components/HomeView.tsx');
 const { NativeViewport } = require('../src/components/NativeViewport.tsx');
@@ -119,7 +119,57 @@ for (const [width, height, scale, left, top] of [
   [1080, 1920, 1080/1920, 0, 656.25]
 ]) {
   assert.deepEqual(fitViewport(width, height), { scale, left, top });
+  const edge = fitEdgeToEdgeViewport(width, height);
+  assert.equal(edge.left, 0, 'The sidebar must sit against the left screen edge');
+  assert.equal(edge.top, top, 'The existing TV vertical fitting must be preserved');
+  assert.equal(edge.scale, scale, 'Game cards must retain their aspect ratio');
+  assert.ok(Math.abs(edge.stageWidth * scale - Math.max(width, 1920 * scale)) < .01,
+    'The fitted stage must reach the full right screen edge without black gutters');
 }
+const widescreen = fitEdgeToEdgeViewport(2048, 1016);
+assert.equal(widescreen.left, 0);
+assert.ok(Math.abs(widescreen.stageWidth * widescreen.scale - 2048) < .01);
+assert.match(fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8'),
+  /width: var\(--tv-bleed-width, 1920px\)/,
+  'The game wallpaper must extend across the fitted widescreen stage');
+const glassLiquidCSS = fs.readFileSync(path.join(root, 'src/glass-liquid.css'), 'utf8');
+const glassLiquidComponent = fs.readFileSync(path.join(root, 'src/components/GlassLiquid.tsx'), 'utf8');
+const nativeGlass = fs.readFileSync(path.join(root, 'src/ui_glass.h'), 'utf8');
+assert.match(glassLiquidCSS, /blur\(12px\) saturate\(138%\)/,
+  'The shared bubble must let artwork show through real 12px backdrop blur');
+assert.match(glassLiquidCSS, /rgba\(92,98,116,\.27\)/,
+  'Neutral capsules should use a translucent graphite-purple fill');
+assert.match(glassLiquidCSS, /\.glass-pill\.sliding-highlight \{\s*position:absolute;\s*top:0;\s*left:0;/,
+  'The glass highlight must remain absolutely positioned so its translate does not double the flex offset');
+assert.match(glassLiquidCSS, /@keyframes gel-drift-a/);
+assert.match(glassLiquidCSS, /@keyframes gel-drift-b/);
+assert.match(glassLiquidCSS, /@keyframes gel-drift-c/);
+assert.match(glassLiquidCSS, /@keyframes gel-rise/);
+assert.match(glassLiquidCSS, /@keyframes gel-press/);
+assert.match(glassLiquidCSS, /@media \(prefers-reduced-motion:reduce\)/,
+  'Reduced motion must keep static depth without movement');
+assert.match(glassLiquidComponent, /IntersectionObserver/,
+  'Off-screen pills should suspend moving interior layers');
+assert.match(nativeGlass, /SDL_CreateTextureFromSurface/,
+  'Native SDL2 must reuse cached pre-softened liquid light textures');
+assert.match(nativeGlass, /SDL_GetTicks\(\)/,
+  'Native liquid movement must follow elapsed real time');
+assert.match(fs.readFileSync(path.join(root, 'src/main.tsx'), 'utf8'),
+  /import '\.\/glass-liquid\.css'/,
+  'All real pills should share the glass surface stylesheet');
+const mobileCSS = fs.readFileSync(path.join(root, 'src/mobile.css'), 'utf8');
+const mobileViewport = fs.readFileSync(path.join(root, 'src/components/NativeViewport.tsx'), 'utf8');
+assert.match(mobileViewport, /viewport\.width <= 1024/, 'Small screens need an unscaled layout');
+assert.match(mobileViewport, /mobile \? 'none' : `scale/, 'Phone buttons must not shrink with TV-scale');
+assert.match(fs.readFileSync(path.join(root, 'src/main.tsx'), 'utf8'), /import '\.\/mobile\.css'/);
+assert.match(mobileCSS, /\.tv-stage-mobile \.tv-sidebar \.tv-nav-item[\s\S]*?min-width:48px/,
+  'Mobile navigation needs 48px-wide touch targets');
+assert.match(mobileCSS, /\.tv-stage-mobile \.tv-theme-ubiquity \.ubq-feature-title/,
+  'Game title should reflow rather than shrink to phone-scale');
+assert.match(mobileCSS, /\.tv-stage-mobile \.ubq-category-select \{[\s\S]*?overflow-x:auto/,
+  'All game categories must be horizontally swipeable');
+assert.match(mobileCSS, /\.tv-stage-mobile \.tv-theme-ubiquity \.tv-sidebar\.glass-surface \{[\s\S]*?backdrop-filter:none!important/,
+  'Fixed-position language and PD buttons must not anchor to the bottom navbar');
 const noop = () => {};
 const game = { id_code: 'PPSA00001', title: 'Example <game>', version: '01.00', source_name: 'Fixture',
   is_game: true, is_dlc: false, screenshot_urls: [], catalog_added_at: 20261019120000,
@@ -197,6 +247,12 @@ const ubiquity = render(React.createElement(HomeView, {
 }));
 assert.match(ubiquity, /data-layout="ubiquity"/);
 assert.match(ubiquity, /ubq-cinematic-background/);
+const verifiedBackdrop = render(React.createElement(HomeView, {
+  ...homeProps, games: [{ ...game, boxart_url: '/verified-art.jpg',
+    cover_local_path: '/assets/covers/PPSA00001.cover' }], selected: 0
+}));
+assert.match(verifiedBackdrop, /class="ubq-backdrop-current"[^>]*src="\/verified-art\.jpg"/,
+  'Cinematic background must choose verified artwork before missing legacy .cover files');
 assert.match(ubiquity, /ubq-feature-title/);
 assert.match(ubiquity, /ubq-shelf-track/);
 assert.match(ubiquity, /ubq-focus-scroll-layer/,
@@ -461,7 +517,17 @@ assert.match(collapsedSidebar, /data-state="collapsed"/);
 assert.ok(!collapsedSidebar.includes('tv-sidebar-dim-active'));
 assert.ok(collapsedSidebar.includes('tv-brand-mark'));
 assert.ok(collapsedSidebar.includes('olDrive'));
+assert.match(collapsedSidebar, /ubq-pd-bubble-collapsed/,
+  'The animated PD emblem must render on the default Ubiquity sidebar');
+assert.match(collapsedSidebar, /ubq-pd-ribbon-1/,
+  'The PD emblem needs its moving crimson ribbons');
+assert.match(css, /@keyframes ubqCrimsonRibbon1/,
+  'The crimson emblem animation must be included in the web CSS');
+assert.match(css, /\.ubq-cinematic-background \{[^}]*left: -92px; width: 1920px; height: 1080px/,
+  'Cinematic artwork must extend behind the rail to fill the entire 1920x1080 screen');
 const focusedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, isSidebarFocused: true }));
+assert.match(focusedSidebar, /ubq-pd-bubble-expanded/,
+  'The PD emblem must unfold to PolDrive when sidebar receives focus');
 assert.match(focusedSidebar, /tv-sidebar-expanded/);
 assert.match(focusedSidebar, /data-state="expanded"/);
 assert.match(focusedSidebar, /tv-sidebar-dim-active/);
@@ -512,8 +578,52 @@ assert.equal(declaration('.tv-hero-btn', 'border-radius'), 25);
 assert.equal(declaration('.tv-meta-pill', 'height'), 30);
 assert.equal(declaration('.tv-card', 'border-radius'), 18);
 assert.match(fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8'), /border-radius: 9999px/);
-assert.match(home, /<b>P<\/b>olDrive/);
+assert.match(home, /class="ubq-system-label ubq-glass-capsule"/,
+  'The PD-branding PolDrive glass capsule should replace the old PS5 Library label');
+assert.match(home, /class="ubq-logo-d">D<\/span>/);
+assert.doesNotMatch(home, /PS5 LIBRARY/);
 assert.doesNotMatch(home, /Poldrive/);
+const glassCss = fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar\.glass-surface\.tv-sidebar-collapsed \{ width: 64px; \}/,
+  'The collapsed Ubiquity rail must be 64px wide');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar-collapsed \.tv-nav-item \{[^}]*width: 44px;[^}]*height: 44px;[^}]*border-radius: 50%/s,
+  'Collapsed navigation bubbles must be actual 44px circles');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar-collapsed \.tv-nav-item > \.tv-nav-label \{[^}]*display: none/s,
+  'Invisible labels must not steal flex space from centered collapsed icons');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar-collapsed \.tv-nav-icon \{[^}]*justify-content: center/s,
+  'The icon container must center its SVG within the circular button');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar-collapsed \.tv-language-trigger \{[^}]*width: 44px;[^}]*height: 44px;[^}]*border-radius: 11px/s,
+  'The language trigger must be a compact square');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar-collapsed \.tv-nav-item:last-child \{[^}]*margin-top: auto/s,
+  'Settings stays pinned to the bottom of the narrow rail');
+assert.match(native, /SIDEBAR_COLLAPSED_W = 64, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 220/,
+  'Native and web collapsed/expanded sidebar sizes should agree');
+assert.match(native, /\(SDL_Rect\)\{10, 8, 44, 44\}/,
+  'Native Ubiquity language control should be the same 44px square');
+assert.match(glassCss, /\.tv-theme-ubiquity \.ubq-pd-bubble-collapsed \{ top: 80px;/,
+  'The collapsed PD mark should sit lower under the language button');
+assert.match(glassCss, /\.tv-theme-ubiquity \.ubq-pd-bubble-expanded \{ top: 77px;/,
+  'The expanded PolDrive mark must also clear the language control');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar\.glass-surface::after \{[^}]*content: none/s,
+  'The bright white glass sheen at the top of the sidebar must be removed');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar \.tv-language \{ z-index: 30; \}/,
+  'Language stacking context must paint above the PD emblem');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar \.tv-language-options \{[^}]*width: 100%;[^}]*max-width: 100%;/s,
+  'Language menu must fit inside the expanded rail rather than retain a fixed 244px width');
+assert.match(native, /LANGUAGE_MENU = \{8, 92, SIDEBAR_EXPANDED_W - 16, LANG_COUNT \* 44 \+ 16\}/,
+  'Native language menu must also remain within the expanded sidebar');
+assert.match(glassCss, /\.tv-theme-ubiquity \.tv-sidebar \.ubq-pd-bubble \{ z-index: 3; \}/,
+  'PD branding must stay behind the language dropdown');
+assert.match(native, /by = expanded \? 77 : 80/,
+  'Native logo placement must match the web sidebar');
+assert.match(fs.readFileSync(path.join(root, 'src/ui_glass.h'), 'utf8'),
+  /if\(state!=GLASS_PANEL_UBQ\)/,
+  'Native Ubiquity panel must not draw the bright upper-half glass sheen');
+assert.match(glassCss, /\.tv-theme-ubiquity \.sliding-highlight\.glass-pill--active \{/,
+  'Selected capsules need their own translucent multi-stop bevel gradient');
+assert.match(glassCss, /rgba\(255, 136, 166, \.60\)/);
+assert.match(glassCss, /\.tv-theme-ubiquity \.ubq-feature-title \{[^}]*font-size: 84px/s,
+  'The featured game title uses the original larger PD-branding sizing');
 const nativeSettings = fs.readFileSync(path.join(root, 'src/ui_settings.h'), 'utf8');
 const persistedTheme = fs.readFileSync(path.join(root, 'src/settings.c'), 'utf8');
 const componentSettings = render(React.createElement(SettingsView, {
@@ -553,7 +663,7 @@ assert.match(highlightSource, /document.fonts\?\.ready/);
 assert.match(ubiquitySource, /<SlidingHighlight activeKey=\{String\(activeCategoryIndex\)\} axis="x"/);
 assert.match(fs.readFileSync(path.join(root, 'src/components/Sidebar.tsx'), 'utf8'), /<SlidingHighlight activeKey=\{language\}/);
 assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'),
-  /<span className="tv-meta-pill glass-pill glass-pill--sm">\{game.id_code\}<\/span>/);
+  /<span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid \/>\{game.id_code\}<\/span>/);
 for (const markup of [componentSettings, componentDefault]) {
   assert.doesNotMatch(markup, /Appearance|Wygląd|Netflix \/ Glass|tv-theme-option/);
   assert.match(markup, /role="button" tabindex="0"/);

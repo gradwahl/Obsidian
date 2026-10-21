@@ -113,3 +113,330 @@ button.glass-pill:active { transform: translateY(0) scale(.98); }
 @supports not ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
   .glass-pill::before, .glass-surface::before { background: none; border: 1px solid var(--pill-border); padding: 0; }
 }
+
+/* PD-branding glass restoration: depth without hiding the selected artwork.
+   These are optically layered surfaces, not opaque red/black plates. */
+.tv-theme-ubiquity {
+  --pill-bg-top: rgba(92, 98, 116, .28);
+  --pill-bg-bottom: rgba(16, 20, 32, .42);
+  --pill-active-1: rgba(253, 115, 150, .55);
+  --pill-active-2: rgba(172, 32, 78, .43);
+  --pill-active-3: rgba(59, 15, 40, .55);
+  --pill-border: rgba(255, 255, 255, .27);
+  --pill-glow: rgba(224, 45, 99, .28);
+  --glass-highlight: rgba(255, 255, 255, .36);
+  --glass-shadow: rgba(0, 0, 0, .42);
+}
+.tv-theme-ubiquity .glass-pill {
+  border: 1px solid rgba(255, 255, 255, .24);
+  background: linear-gradient(160deg, rgba(117, 124, 146, .28) 0%,
+    rgba(43, 47, 66, .33) 47%, rgba(14, 17, 30, .47) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, .34),
+    inset 0 -2px 4px rgba(0, 0, 0, .34),
+    inset 0 0 15px rgba(255, 255, 255, .045),
+    0 5px 16px rgba(0, 0, 0, .32);
+}
+.tv-theme-ubiquity .glass-pill::after {
+  top: 1px;
+  height: 51%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22), transparent);
+}
+.tv-theme-ubiquity .sliding-highlight.glass-pill--active {
+  border-color: rgba(255, 192, 208, .48);
+  background: linear-gradient(160deg,
+    rgba(255, 136, 166, .60) 0%, rgba(209, 47, 101, .49) 34%,
+    rgba(117, 21, 65, .48) 70%, rgba(34, 13, 34, .62) 100%);
+  box-shadow: inset 0 1.5px 2px rgba(255, 234, 241, .50),
+    inset 0 -3px 6px rgba(25, 1, 17, .42),
+    0 6px 16px rgba(10, 4, 12, .42),
+    0 0 20px rgba(203, 37, 89, .24);
+}
+.tv-theme-ubiquity .sliding-highlight .highlight-glow {
+  box-shadow: 0 5px 18px rgba(205, 33, 86, .23);
+}
+.tv-theme-ubiquity .ubq-category-select > button {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 23px;
+  color: rgba(245, 245, 250, .89);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+}
+.tv-theme-ubiquity .ubq-category-select > .ubq-category-current {
+  color: white;
+  border: 1px solid rgba(255, 193, 209, .42);
+  background: linear-gradient(155deg,
+    rgba(255, 145, 176, .19) 0%, rgba(161, 28, 75, .12) 55%, rgba(32, 10, 31, .17) 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 235, 241, .33),
+    inset 0 -2px 3px rgba(36, 7, 24, .25),
+    0 5px 12px rgba(8, 2, 8, .18);
+  font-weight: 800;
+}
+.tv-theme-ubiquity .ubq-category-select > button:not(.ubq-category-current):hover {
+  background: linear-gradient(150deg, rgba(132, 140, 158, .40), rgba(35, 39, 58, .46));
+}
+
+/* The native content grid keeps its coordinates, while the glass rail takes
+   less room and touches the physical left edge of the screen. */
+.tv-theme-ubiquity .tv-sidebar.glass-surface {
+  top: 0;
+  left: 0;
+  height: 100%;
+  padding: 8px 5px 12px;
+  border-radius: 0 29px 29px 0;
+  background: linear-gradient(105deg, rgba(21, 25, 37, .46),
+    rgba(10, 13, 24, .56) 55%, rgba(7, 9, 16, .64));
+  -webkit-backdrop-filter: blur(20px) saturate(115%);
+  backdrop-filter: blur(20px) saturate(115%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, .09),
+    9px 0 28px rgba(0, 0, 0, .20);
+}
+.tv-theme-ubiquity .tv-sidebar.glass-surface.tv-sidebar-collapsed { width: 64px; }
+.tv-theme-ubiquity .tv-sidebar.glass-surface.tv-sidebar-expanded { width: 220px; }
+.tv-theme-ubiquity .tv-sidebar-dim-active { left: 220px; background: rgba(0, 0, 0, .22); }
+.tv-theme-ubiquity .tv-sidebar .tv-navigation {
+  top: 136px;
+  left: 5px;
+  width: calc(100% - 10px);
+  bottom: 20px;
+}
+.tv-theme-ubiquity .tv-sidebar .tv-nav-item {
+  padding: 0 15px;
+  gap: 15px;
+  border-radius: 24px;
+  color: rgba(237, 239, 246, .77);
+}
+.tv-theme-ubiquity .tv-sidebar .tv-nav-item:hover {
+  background: linear-gradient(145deg, rgba(160, 165, 185, .21), rgba(27, 30, 45, .24));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .17);
+}
+.tv-theme-ubiquity .tv-sidebar .tv-nav-active {
+  background: linear-gradient(150deg, rgba(255, 179, 195, .12), rgba(113, 23, 62, .09));
+  color: #fff;
+}
+.tv-theme-ubiquity .tv-sidebar .tv-language { left: 5px; right: 5px; }
+.tv-theme-ubiquity .tv-sidebar .tv-language-trigger {
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: linear-gradient(150deg, rgba(107, 116, 135, .19), rgba(9, 12, 22, .23));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+.tv-theme-ubiquity .tv-sidebar .tv-language-trigger:hover {
+  background: linear-gradient(150deg, rgba(115, 125, 145, .29), rgba(18, 22, 36, .31));
+}
+.tv-theme-ubiquity .tv-sidebar .tv-language-options {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 8px 6px;
+  border-radius: 23px;
+  z-index: 50;
+  background: linear-gradient(145deg, rgba(43, 47, 68, .97), rgba(9, 13, 24, .98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 18px 30px rgba(0, 0, 0, .36);
+}
+.tv-theme-ubiquity .tv-sidebar .tv-language-option.is-highlighted {
+  background: linear-gradient(150deg, rgba(255, 154, 185, .13), rgba(115, 22, 61, .12));
+}
+.tv-theme-ubiquity .ubq-pd-bubble-collapsed { top: 80px; left: 13px; }
+.tv-theme-ubiquity .ubq-pd-bubble-expanded { top: 77px; left: 10px; width: 198px; }
+.tv-theme-ubiquity .ubq-pd-bubble {
+  background-color: rgba(11, 13, 25, .66);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+.tv-theme-ubiquity .ubq-pd-bubble-expanded .ubq-pd-text { transform: scale(1.02); }
+
+/* Full-bleed artwork, the larger game heading and the top-right brand capsule. */
+.tv-theme-ubiquity .ubq-cinematic-background {
+  left: -92px;
+  right: auto;
+  width: 1920px;
+  height: 1080px;
+}
+.tv-theme-ubiquity .ubq-cinematic-vignette {
+  background:
+    linear-gradient(90deg, rgba(8, 9, 13, .68) 0%,
+      rgba(8, 9, 13, .48) 26%, rgba(8, 9, 13, .10) 60%, transparent 100%),
+    linear-gradient(0deg, rgba(5, 6, 8, .95) 0%, rgba(5, 6, 8, .72) 12%,
+      rgba(5, 6, 8, .14) 38%, transparent 69%),
+    linear-gradient(180deg, rgba(5, 6, 8, .23), transparent 19%);
+}
+.tv-theme-ubiquity .ubq-feature {
+  left: 30px;
+  top: 52px;
+  width: 1020px;
+  max-height: 520px;
+  text-shadow: 0 3px 15px rgba(0, 0, 0, .65);
+}
+.tv-theme-ubiquity .ubq-feature-title {
+  width: 1000px;
+  max-height: 234px;
+  font-size: 84px;
+  line-height: 1.02;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, .72);
+}
+.tv-theme-ubiquity .ubq-ambient-top {
+  top: 18px;
+  left: auto;
+  right: 30px;
+  pointer-events: none;
+}
+.tv-theme-ubiquity .ubq-system-label.ubq-glass-capsule {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 42px;
+  padding: 0 18px;
+  margin-left: auto;
+  border-radius: 23px;
+  opacity: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #f9f9fb;
+  border: 1px solid rgba(255, 255, 255, .30);
+  background: linear-gradient(160deg, rgba(103, 113, 136, .29),
+    rgba(22, 27, 44, .41));
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, .28),
+    inset 0 -2px 4px rgba(0, 0, 0, .29),
+    0 8px 20px rgba(0, 0, 0, .33);
+}
+.ubq-logo-lockup, .ubq-logo-tail { display: inline-flex; align-items: baseline; white-space: nowrap; }
+.ubq-logo-lockup { letter-spacing: normal; text-transform: none; user-select: none; }
+.ubq-logo-tail { margin-left: -1px; font-weight: 800; letter-spacing: -.02em; }
+.ubq-logo-p, .ubq-logo-d {
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff789d, #de315f 60%, #ad1c46);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.ubq-logo-white { color: #f5f5f7; }
+.ubq-logo-capsule .ubq-logo-p { font-size: 24px; line-height: .95; }
+.ubq-logo-capsule .ubq-logo-tail { font-size: 15px; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-theme-ubiquity .ubq-feature,
+  .tv-theme-ubiquity .ubq-pd-bubble,
+  .tv-theme-ubiquity .glass-pill { animation: none; transition-duration: .01ms; }
+}
+
+/* Leave the upper-right PolDrive capsule visible while notifications appear. */
+.tv-theme-ubiquity .tv-toast { top: 82px; }
+
+/* Full-bleed widescreen: scale the 1080px TV controls uniformly while
+   allowing the backdrop and main container to use extra viewport width.
+   The 64px sidebar stays at the true left edge, without stretching cards. */
+.tv-theme-ubiquity .tv-main {
+  width: calc(var(--tv-bleed-width, 1920px) - 92px);
+}
+.tv-theme-ubiquity .ubq-cinematic-background {
+  left: -92px;
+  width: var(--tv-bleed-width, 1920px);
+}
+
+/* Compact, symmetric 64px rail: circles for navigation, a square language key.
+   Expanded labels remain in full-width capsules for keyboard/controller clarity. */
+.tv-theme-ubiquity .tv-sidebar-dim { left: 64px; }
+.tv-theme-ubiquity .tv-sidebar-dim-active { left: 220px; }
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-navigation {
+  left: 0;
+  width: 100%;
+  align-items: center;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-item {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  margin: 0 auto;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border-radius: 50%;
+}
+/* An opacity-zero label still claims flex width and pushes the icon left.
+   Remove only collapsed navigation labels from layout so each glyph is centered
+   over its circular highlight; expanded rail labels keep their normal layout. */
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-item > .tv-nav-label {
+  display: none;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-marker,
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-marker .highlight-glow {
+  border-radius: 50%;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-icon {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  align-items: center;
+  justify-content: center;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-icon svg {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+}
+.tv-theme-ubiquity .tv-sidebar-expanded .tv-nav-item {
+  width: 100%;
+  padding: 0 12px;
+  gap: 14px;
+  justify-content: flex-start;
+  border-radius: 22px;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-language {
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-language-trigger {
+  display: flex;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  border-radius: 11px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(104, 115, 136, .22), rgba(11, 15, 29, .42));
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .3),
+    inset 0 -2px 3px rgba(0, 0, 0, .24), 0 4px 12px rgba(0, 0, 0, .25);
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-language-trigger > div:first-child {
+  width: 20px;
+  flex: 0 0 20px;
+  justify-content: center;
+  gap: 0;
+}
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-language-trigger .tv-nav-label { display: none; }
+.tv-theme-ubiquity .tv-sidebar-expanded .tv-language-trigger { border-radius: 16px; }
+/* Keep the original hover/click/slider behaviour, including the glowing glass. */
+.tv-theme-ubiquity .tv-sidebar-collapsed .tv-nav-item:last-child {
+  margin-top: auto;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* No white glare across the top of the rail; retain its subtle right edge. */
+.tv-theme-ubiquity .tv-sidebar.glass-surface::before,
+.tv-theme-ubiquity .tv-sidebar.glass-surface::after {
+  content: none;
+}
+.tv-theme-ubiquity .tv-sidebar .tv-language-trigger {
+  border-color: rgba(255, 255, 255, .09);
+  box-shadow: inset 0 -1px 3px rgba(0, 0, 0, .30),
+    0 4px 12px rgba(0, 0, 0, .20);
+}
+/* Put the whole language stacking context above the animated PD branding.
+   Giving only the dropdown a high z-index cannot escape its parent. */
+.tv-theme-ubiquity .tv-sidebar .tv-language { z-index: 30; }
+.tv-theme-ubiquity .tv-sidebar .ubq-pd-bubble { z-index: 3; }

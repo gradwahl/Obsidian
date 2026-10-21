@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PolDrive / Liquid Glass Capsule States</title>
+  <style>
+    :root{color-scheme:dark}*{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font:16px "Segoe UI",Arial,sans-serif;background:#08090f;color:#f5f5f5}
+    .preview{padding:45px clamp(20px,4vw,72px);max-width:1300px;margin:auto}
+    h1{font-size:31px;margin:0 0 7px}p{margin:0 0 28px;color:#c8c3d4;font-size:15px}
+    .sheet{border-radius:30px;overflow:hidden;position:relative;padding:31px 30px 38px;
+      background:linear-gradient(125deg,rgba(9,9,18,.45),rgba(20,9,28,.28)),
+      radial-gradient(ellipse at 68% 40%,#d63d67 0%,#722947 20%,transparent 65%),
+      radial-gradient(ellipse at 18% 26%,#597aab 0%,#263652 25%,transparent 60%),
+      linear-gradient(130deg,#311e3e,#751d40 47%,#171b35)}
+    .sheet:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 45% 55%,transparent 35%,rgba(5,6,12,.12));pointer-events:none}
+    .size-row{position:relative;z-index:1}
+    .size-row+ .size-row{margin-top:35px}
+    .size-label{font-weight:700;letter-spacing:.15em;font-size:12px;text-transform:uppercase;color:#ddd4e5;margin-bottom:13px}
+    .examples{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+    .sample{min-width:0}
+    .sample-title{font-size:13px;margin:0 0 15px;color:#fff;text-shadow:0 1px 4px #000}
+    .sample .glass-pill{display:inline-flex;padding:0 18px;width:100%;max-width:215px;font-size:13px;font-weight:700;white-space:nowrap}
+    .sample .glass-pill--sm{height:30px}
+    .sample .glass-pill--md{height:40px}
+    .sample .glass-pill>span:last-child{position:relative;z-index:2}
+    .glass-pill {--text:#faf9fc}
+    .helper{margin-top:17px;font-size:12px;color:#c8c3d4}
+    @media(max-width:750px){.examples{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}.sheet{padding:20px 14px}.preview{padding:23px 14px}}
+  </style>
+</head>
+<body class="tv-theme-ubiquity">
+<main class="preview">
+<h1>Liquid glass / PolDrive</h1>
+<p>Same capsule geometry, typography, and base graphite-plum. Hover, focus or press any sample to compare its live response.</p>
+<div class="sheet" id="sheet"></div>
+<div class="helper">Original-size samples: 30px and 40px. The colorful background is deliberately visible through every capsule.</div>
+</main>
+<script type="module">
+import './src/glass.css';
+import './src/glass-liquid.css';
+const lens='<span class="glass-liquid" aria-hidden="true"><span class="glass-drift glass-drift--a"></span><span class="glass-drift glass-drift--b"></span><span class="glass-drift glass-drift--c"></span><span class="glass-specks"><i></i><i></i><i></i><i></i></span></span>';
+const sheet=document.getElementById('sheet');
+for(const size of [30,40]){
+ const row=document.createElement('section');
+ row.className='size-row';
+ row.innerHTML='<div class="size-label">'+size+' px capsules</div><div class="examples"></div>';
+ for(const state of ['Normal','Hover','Active','Pressed']){
+  const cell=document.createElement('div');
+  cell.className='sample';
+  const pill=document.createElement('button');
+  pill.type='button';
+  pill.className='glass-pill '+(size===30?'glass-pill--sm':'glass-pill--md')+
+    (state==='Hover'?' is-demo-hover':state==='Active'?' is-demo-active':state==='Pressed'?' is-demo-pressed':'');
+  pill.innerHTML=lens+'<span>Pegasus-DL / PolDrive</span>';
+  const name=document.createElement('div');name.className='sample-title';name.textContent=state;
+  cell.append(name,pill);row.lastChild.append(cell);
+ }
+ sheet.append(row);
+}
+</script>
+</body>
+</html>

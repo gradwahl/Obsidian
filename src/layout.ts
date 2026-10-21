@@ -11,6 +11,16 @@ export function fitViewport(width: number, height: number) {
     top: (height - TV_LAYOUT.height * scale) / 2 };
 }
 
+/** Keep TV controls at their native aspect ratio while allowing the stage to
+ *  extend horizontally on ultrawide browser screens. Unlike letterboxing,
+ *  this keeps the sidebar at x=0 and lets the artwork reach the right edge. */
+export function fitEdgeToEdgeViewport(width: number, height: number) {
+  const fit = fitViewport(width, height);
+  const stageWidth = Math.max(TV_LAYOUT.width,
+    fit.scale > 0 ? width / fit.scale : TV_LAYOUT.width);
+  return { scale: fit.scale, left: 0, top: fit.top, stageWidth };
+}
+
 export function platformLabel(id: string) {
   if (/^PPSA/i.test(id)) return 'PS5';
   if (/^CUSA/i.test(id)) return 'PS4';

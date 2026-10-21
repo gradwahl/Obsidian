@@ -1,5 +1,6 @@
 import { useLanguagePresentation } from '../useLanguagePresentation';
 import { SlidingHighlight } from './SlidingHighlight';
+import { GlassLiquid } from './GlassLiquid';
 import { MemoryImage } from './MemoryImage';
 import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -31,8 +32,13 @@ interface Props {
 // Preserve the previous backdrop until the next artwork finishes loading.
 function CinematicBackground({ game }: { game: GameItem | null }) {
   const [failed, setFailed] = useState<string[]>([]);
-  const candidate = [game?.backdrop_url, game?.cover_local_path,
-    game?.cover_url].find(src => src && !failed.includes(src)) || '';
+  // Reuse the verified artwork order (including archive matches and fallbacks).
+  // Legacy .cover paths often do not exist in the standalone web preview;
+  // leave them as a last resort rather than showing a blank backdrop first.
+  const sources = game ? coverSources(game, true) : [];
+  const candidate = [...sources.filter(src => !src.endsWith('.cover')),
+    ...sources.filter(src => src.endsWith('.cover'))]
+    .find(src => !failed.includes(src)) || '';
   const [visible, setVisible] = useState(candidate);
   const [next, setNext] = useState('');
   const [ready, setReady] = useState(false);
@@ -152,21 +158,28 @@ export function UbiquityHomeView({
     <div className="tv-home ubq-home" data-layout="ubiquity">
       <CinematicBackground game={game} />
       <div className="ubq-ambient-top">
-        <span className="ubq-menu-glyph" aria-hidden="true">☰</span>
-        <span className="ubq-product-name"><b>P</b>olDrive</span>
-        <span className="ubq-system-label">PS5 LIBRARY</span>
+        <div className="ubq-system-label ubq-glass-capsule" aria-label="PolDrive">
+          <span className="ubq-logo-lockup ubq-logo-capsule">
+            <b className="ubq-logo-p">P</b>
+            <span className="ubq-logo-tail">
+              <span className="ubq-logo-white">ol</span>
+              <span className="ubq-logo-d">D</span>
+              <span className="ubq-logo-white">rive</span>
+            </span>
+          </span>
+        </div>
       </div>
 
       <div className="ubq-feature" key={game?.id_code || heading}>
         <h1 className="ubq-feature-title">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
         {game && <div className="ubq-feature-metadata">
-          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.source_name || 'PolDrive'}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.id_code}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm">v{game.version}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.format.toUpperCase()}</span>
-          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.size_gb.toFixed(1)} GB</span>
-          {(game.rating_score || 0) > 0 && <span className="tv-meta-pill glass-pill glass-pill--sm ubq-score">★ {(game.rating_score || 0).toFixed(1)}/10</span>}
-          {showDate && year && <span className="tv-meta-pill glass-pill glass-pill--sm">{year}</span>}
+          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.source_name || 'PolDrive'}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.id_code}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />v{game.version}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.format.toUpperCase()}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{game.size_gb.toFixed(1)} GB</span>
+          {(game.rating_score || 0) > 0 && <span className="tv-meta-pill glass-pill glass-pill--sm ubq-score"><GlassLiquid />★ {(game.rating_score || 0).toFixed(1)}/10</span>}
+          {showDate && year && <span className="tv-meta-pill glass-pill glass-pill--sm"><GlassLiquid />{year}</span>}
         </div>}
         <p className="ubq-feature-description">{summary}</p>
       </div>
@@ -206,7 +219,7 @@ export function UbiquityHomeView({
             className={'glass-pill glass-pill--md' + (catIndex === activeCategoryIndex ? ' ubq-category-current' : '')}
             aria-current={catIndex === activeCategoryIndex ? 'page' : undefined}
             onClick={() => onSelectCategory?.(catIndex)}>
-            <span className="language-copy" data-language-fading={fading}>{t(displayLanguage, cat.titleKey)}</span>
+            <GlassLiquid /><span className="language-copy" data-language-fading={fading}>{t(displayLanguage, cat.titleKey)}</span>
           </button>
         ))}
       </nav>}

@@ -43,7 +43,7 @@ static void updateHighlight(HighlightAnim *a, SDL_FRect target, bool snap) {
 /* Cached at 2x, including halo and gloss. Nine-slice copies preserve the
    circular caps during liquid stretching, without generating per-frame textures. */
 enum { GLASS_NEUTRAL, GLASS_ACTIVE, GLASS_PANEL, GLASS_PANEL_UBQ, GLASS_PRIMARY };
-static struct { SDL_Renderer *renderer; SDL_Texture *texture; int h, state; } glass_cache[12];
+static struct { SDL_Renderer *renderer; SDL_Texture *texture; SDL_Texture *liquid[3]; int h, state; } glass_cache[20];
 
 static void glass_shape(SDL_Renderer *r, float x,float y,float w,float h,float radius,
                         SDL_Color top, SDL_Color bottom) {
@@ -71,10 +71,10 @@ static void drawGlassPill(SDL_Renderer *r, SDL_FRect rect, int state) {
     int h=SDL_min(128,(int)ceilf(rect.h));
     if(rect.w<=0||h<=0) return;
     bool panel=state==GLASS_PANEL||state==GLASS_PANEL_UBQ;
-    int slot=(h==30?0:h==40?1:h==44?2:3)+state*2;
-    slot%=12;
+    int slot=state*4+(h==30?0:h==40?1:h==44?2:3);
     if(glass_cache[slot].renderer!=r||glass_cache[slot].h!=h||glass_cache[slot].state!=state) {
         if(glass_cache[slot].texture) SDL_DestroyTexture(glass_cache[slot].texture);
+        for(int j=0;j<3;j++) if(glass_cache[slot].liquid[j]) SDL_DestroyTexture(glass_cache[slot].liquid[j]);
         memset(&glass_cache[slot],0,sizeof(glass_cache[slot]));
     }
     SDL_Texture *tex=glass_cache[slot].texture;
@@ -89,7 +89,7 @@ static void drawGlassPill(SDL_Renderer *r, SDL_FRect rect, int state) {
         SDL_SetRenderDrawColor(r,0,0,0,0); SDL_RenderClear(r); SDL_SetRenderDrawBlendMode(r,SDL_BLENDMODE_BLEND);
         float radius=panel?34:h/2.0f;
         for(int spread=24;spread>=1;spread--) {
-            SDL_Color shadow={0,0,0,(Uint8)(spread<5?20:3)};
+            SDL_Color shadow={0,0,0,(Uint8)(spread<5?16:3)};
             glass_shape(r,pad-spread,pad+6-spread,size+2*spread,h+2*spread,radius+spread,shadow,shadow);
         }
         if(state==GLASS_ACTIVE||state==GLASS_PRIMARY) {
@@ -98,19 +98,64 @@ static void drawGlassPill(SDL_Renderer *r, SDL_FRect rect, int state) {
                 glass_shape(r,pad-spread,pad+8-spread,size+2*spread,h+2*spread,radius+spread,glow,glow);
             }
         }
-        glass_shape(r,pad,pad,size,h,radius,(SDL_Color){255,255,255,115},(SDL_Color){255,255,255,46});
-        SDL_Color top={28,28,38,184},bottom={22,22,30,199};
-        if(state==GLASS_ACTIVE) top=bottom=(SDL_Color){229,9,20,89};
+        glass_shape(r,pad,pad,size,h,radius,
+                    (SDL_Color){255,255,255,(Uint8)(panel?(state==GLASS_PANEL_UBQ?28:115):53)},
+                    (SDL_Color){255,255,255,(Uint8)(panel?(state==GLASS_PANEL_UBQ?14:46):17)});
+        SDL_Color top={92,98,116,72},bottom={16,20,32,84};
+        if(state==GLASS_ACTIVE) {
+            top=(SDL_Color){253,115,150,84};
+            bottom=(SDL_Color){59,15,40,98};
+        }
         if(state==GLASS_PRIMARY) {top=(SDL_Color){255,30,39,255};bottom=(SDL_Color){200,8,18,255};}
-        if(panel) top=bottom=state==GLASS_PANEL_UBQ?(SDL_Color){7,8,11,245}:(SDL_Color){12,12,12,250};
+        if(panel) top=bottom=state==GLASS_PANEL_UBQ?(SDL_Color){12,16,28,150}:(SDL_Color){12,12,12,250};
         SDL_SetRenderDrawBlendMode(r,SDL_BLENDMODE_NONE);
         glass_shape(r,pad+1,pad+1,size-2,h-2,radius-1,top,bottom);
         SDL_SetRenderDrawBlendMode(r,SDL_BLENDMODE_BLEND);
-        glass_shape(r,pad+size*.06f,pad+1,size*.88f,h*.45f,SDL_min(radius,h*.225f),
-                    (SDL_Color){255,255,255,41},(SDL_Color){255,255,255,0});
+        if(state==GLASS_PANEL)
+            glass_shape(r,pad+size*.06f,pad+1,size*.88f,h*.45f,SDL_min(radius,h*.225f),
+                        (SDL_Color){255,255,255,41},(SDL_Color){255,255,255,0});
+        else if(state!=GLASS_PANEL_UBQ)
+            glass_shape(r,pad+1,pad+1,size-2,h-2,radius-1,
+                        (SDL_Color){255,255,255,18},(SDL_Color){255,255,255,0});
         SDL_SetRenderTarget(r,previous); SDL_RenderSetScale(r,sx,sy); SDL_RenderSetViewport(r,&viewport); SDL_RenderSetClipRect(r,clipped?&clip:NULL);
         SDL_SetTextureBlendMode(tex,SDL_BLENDMODE_BLEND);
         glass_cache[slot].renderer=r;glass_cache[slot].texture=tex;glass_cache[slot].h=h;glass_cache[slot].state=state;
+
+        /* Bake three heavily softened gel fields once per cached height/state.
+           Their end caps are masked to the SAME parent silhouette, never
+           drawn as little ovals. Underlying artwork stays visible. */
+        if(!panel) for(int field=0;field<3;field++) {
+            const int ww=(size+pad*2)*2, hh=(h+pad*2)*2;
+            SDL_Surface *surface=SDL_CreateRGBSurfaceWithFormat(0,ww,hh,32,SDL_PIXELFORMAT_RGBA8888);
+            if(!surface) continue;
+            SDL_LockSurface(surface);
+            for(int py=0;py<hh;py++) {
+                Uint32 *row=(Uint32 *)((Uint8 *)surface->pixels+py*surface->pitch);
+                for(int px=0;px<ww;px++) {
+                    float x=px*.5f-pad,y=py*.5f-pad;
+                    float mid=SDL_max(radius,SDL_min(size-radius,x));
+                    float dist=hypotf(x-mid,y-h*.5f);
+                    float edge=SDL_max(0.0f,SDL_min(1.0f,(radius-dist)*2.0f));
+                    float u=x/size,v=y/h;
+                    float cx=field==0?.29f:field==1?.73f:.51f;
+                    float cy=field==0?.31f:field==1?.77f:.55f;
+                    float rx=field==0?.37f:field==1?.29f:.43f;
+                    float ry=field==0?.53f:field==1?.62f:.70f;
+                    float d=(u-cx)*(u-cx)/(rx*rx)+(v-cy)*(v-cy)/(ry*ry);
+                    float glow=expf(-d*1.1f);
+                    Uint8 alpha=(Uint8)(edge*(1.0f+glow*(state==GLASS_ACTIVE?24.0f:17.0f)));
+                    Uint8 rr=state==GLASS_ACTIVE?253:117;
+                    Uint8 gg=state==GLASS_ACTIVE?115:124;
+                    Uint8 bb=state==GLASS_ACTIVE?150:146;
+                    row[px]=SDL_MapRGBA(surface->format,rr,gg,bb,alpha);
+                }
+            }
+            SDL_UnlockSurface(surface);
+            SDL_Texture *layer=SDL_CreateTextureFromSurface(r,surface);
+            SDL_FreeSurface(surface);
+            if(layer) { SDL_SetTextureBlendMode(layer,SDL_BLENDMODE_BLEND); glass_cache[slot].liquid[field]=layer; }
+        }
+
     }
     float cap=panel?34:h/2.0f-.5f;
     float xs[]={0,pad+cap,pad+size-cap,(float)(size+2*pad)};
@@ -122,13 +167,52 @@ static void drawGlassPill(SDL_Renderer *r, SDL_FRect rect, int state) {
         SDL_FRect dst={dx[x],dy[y],dx[x+1]-dx[x],dy[y+1]-dy[y]};
         if(src.w>0&&src.h>0&&dst.w>0&&dst.h>0) SDL_RenderCopyF(r,tex,&src,&dst);
     }
+
+    /* GPU-friendly compositor: three cached, softly blurred transparent fields.
+       Distinct real-time phases drift a little beneath the same capsule rim. */
+    if(!panel) {
+        const float seconds=SDL_GetTicks()*.001f;
+        SDL_RendererInfo info;
+        bool software=SDL_GetRendererInfo(r,&info)==0 && (info.flags&SDL_RENDERER_SOFTWARE);
+        const float periods[3]={13.0f,15.8f,9.7f};
+        for(int layer=0;layer<3;layer++) {
+            SDL_Texture *gel=glass_cache[slot].liquid[layer];
+            if(!gel) continue;
+            float phase=seconds*6.2831853f/periods[layer]+layer*2.1f;
+            float breath=software?0.5f:(0.5f+0.5f*sinf(phase));
+            Uint8 alpha=(Uint8)(software?170:175+25*breath);
+            SDL_SetTextureAlphaMod(gel,alpha);
+            int shift=software?0:(int)roundf(sinf(phase)*3.0f);
+            for(int yy=0;yy<3;yy++) for(int xx=0;xx<3;xx++) {
+                SDL_Rect src={(int)(xs[xx]*2),(int)(ys[yy]*2),
+                    (int)((xs[xx+1]-xs[xx])*2),(int)((ys[yy+1]-ys[yy])*2)};
+                SDL_FRect dst={dx[xx],dy[yy],dx[xx+1]-dx[xx],dy[yy+1]-dy[yy]};
+                if(xx==1) src.x+=shift;
+                if(src.w>0&&src.h>0&&dst.w>0&&dst.h>0) SDL_RenderCopyF(r,gel,&src,&dst);
+            }
+        }
+        if(!software) for(int i=0;i<4;i++) {
+            float period=10.3f+i*1.37f;
+            float progress=fmodf(seconds/period+i*.27f,1.0f);
+            float glow=sinf(progress*3.14159265f);
+            Uint8 alpha=(Uint8)(glow*(state==GLASS_ACTIVE?11:7));
+            SDL_SetRenderDrawColor(r,state==GLASS_ACTIVE?253:117,
+                state==GLASS_ACTIVE?115:124,state==GLASS_ACTIVE?150:146,alpha);
+            float x=rect.x+rect.w*(.26f+i*.15f)+sinf(progress*6.2831853f+i)*1.5f;
+            float y=rect.y+rect.h*(.86f-progress*.60f);
+            SDL_RenderDrawPointF(r,x,y);
+        }
+    }
+
 }
 static void drawHighlight(SDL_Renderer *r,HighlightAnim *a,SDL_FRect rect,bool snap) {
     updateHighlight(a,rect,snap); drawGlassPill(r,a->current,GLASS_ACTIVE);
 }
 static void glass_cleanup(SDL_Renderer *r) {
-    for(int i=0;i<12;i++) if(glass_cache[i].renderer==r) {
-        SDL_DestroyTexture(glass_cache[i].texture); memset(&glass_cache[i],0,sizeof(glass_cache[i]));
+    for(int i=0;i<20;i++) if(glass_cache[i].renderer==r) {
+        SDL_DestroyTexture(glass_cache[i].texture);
+        for(int j=0;j<3;j++) if(glass_cache[i].liquid[j]) SDL_DestroyTexture(glass_cache[i].liquid[j]);
+        memset(&glass_cache[i],0,sizeof(glass_cache[i]));
     }
 }
 #endif

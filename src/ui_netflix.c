@@ -157,18 +157,21 @@ static TTF_Font *open_first_available_font(const char **candidates, int ptsize) 
 static const Language LANGUAGE_ORDER[LANG_COUNT] = {
     LANG_PL, LANG_EN, LANG_FR, LANG_NL, LANG_DE, LANG_ES, LANG_IT, LANG_ZH, LANG_RU
 };
-enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 272,
+enum { SIDEBAR_COLLAPSED_W = 64, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 220,
        CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
        CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40,
        HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
-static const SDL_Rect LANGUAGE_BUTTON = {8, 32, SIDEBAR_EXPANDED_W - 16, 44};
+static const SDL_Rect LANGUAGE_BUTTON = {8, 8, SIDEBAR_EXPANDED_W - 16, 44};
 static SDL_Rect language_button_rect(const WolodriveApp *app) {
     int w = (int)lroundf(app->sidebar_width);
     if (w < SIDEBAR_COLLAPSED_W) w = SIDEBAR_COLLAPSED_W;
     if (w > SIDEBAR_EXPANDED_W) w = SIDEBAR_EXPANDED_W;
-    return (SDL_Rect){8, 32, w-16, 44};
+    return w <= SIDEBAR_COLLAPSED_W + 8
+        ? (SDL_Rect){10, 8, 44, 44}
+        : (SDL_Rect){8, 8, w-16, 44};
 }
-static const SDL_Rect LANGUAGE_MENU = {8, 92, 244, LANG_COUNT * 44 + 16};
+/* Match the 220px expanded sidebar: 8px inset on either side. */
+static const SDL_Rect LANGUAGE_MENU = {8, 92, SIDEBAR_EXPANDED_W - 16, LANG_COUNT * 44 + 16};
 static const char *action_label(WolodriveApp *app, GameItem *item);
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static void get_hero_button_rects(WolodriveApp *app, GameItem *hero,
@@ -2263,7 +2266,9 @@ static void render_sidebar(WolodriveApp *app) {
         fill_rect(r, sb_w, 0, SCREEN_WIDTH - sb_w, SCREEN_HEIGHT, 0, 0, 0, dim_alpha);
     }
 
-    drawGlassPill(r,(SDL_FRect){0,16,sb_w,ui_height(r)-32},
+    drawGlassPill(r, app->ui_theme == UI_THEME_UBIQUITY
+                  ? (SDL_FRect){0,0,sb_w,ui_height(r)}
+                  : (SDL_FRect){0,16,sb_w,ui_height(r)-32},
                   app->ui_theme==UI_THEME_UBIQUITY?GLASS_PANEL_UBQ:GLASS_PANEL);
     SDL_Rect prev_clip; bool was_clipped=SDL_RenderIsClipEnabled(r);
     SDL_RenderGetClipRect(r,&prev_clip);
@@ -2284,8 +2289,26 @@ static void render_sidebar(WolodriveApp *app) {
     }
 
     }
+    if (app->ui_theme == UI_THEME_UBIQUITY) {
+        /* Edge-aligned miniature PD emblem, unfolding with the translucent rail. */
+        bool expanded = sb_w > SIDEBAR_COLLAPSED_W + 8;
+        int bx = expanded ? 10 : 13, by = expanded ? 77 : 80;
+        int bw = expanded ? 198 : 38, bh = expanded ? 54 : 38;
+        fill_rounded_rect(r, bx, by, bw, bh, 12, 21, 18, 37, 168);
+        draw_rounded_border(r, bx, by, bw, bh, 12, 1, 255, 114, 152, 138);
+        if (expanded) {
+            draw_text(app, app->font_small, "PolDrive", bx + 18, by + 15,
+                      (SDL_Color){249, 241, 247, 255}, 0);
+        } else {
+            draw_text(app, app->font_micro ? app->font_micro : app->font_small,
+                      "PD", bx + 8, by + 11, (SDL_Color){255, 169, 192, 255}, 0);
+        }
+    }
     SDL_Rect nav_target=sidebar_target(app->active_row);
-    drawHighlight(r,&nav_highlight,(SDL_FRect){8,nav_target.y,sb_w-16,44},
+    drawHighlight(r,&nav_highlight,(SDL_FRect){
+                      sb_w <= SIDEBAR_COLLAPSED_W + 8 ? (float)(sb_w-44)/2 : 8,
+                      (float)nav_target.y,
+                      sb_w <= SIDEBAR_COLLAPSED_W + 8 ? 44 : (float)sb_w-16,44},
                   fabsf(app->sidebar_width-(float)sb_w)>.01f);
     SDL_Rect sb_clip={8,24,sb_w-16,ui_height(r)-48};
     SDL_RenderSetClipRect(r,&sb_clip);
@@ -2298,7 +2321,8 @@ static void render_sidebar(WolodriveApp *app) {
         Uint8 ib = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 253 : 162) : (selected ? 45 : 40);
         Uint8 ia = selected ? 255 : 235;
 
-        int x = 28, y = target.y + (target.h - 30) / 2;
+        int x = app->ui_theme == UI_THEME_UBIQUITY ? 18 : 28;
+        int y = target.y + (target.h - 30) / 2;
         if (selected) {
             /* The rounded highlight slides independently of the focused label. */
         }
@@ -2406,7 +2430,16 @@ static void render_language_control(WolodriveApp *app) {
     Uint8 ib = app->language_menu_open ? 45  : 40;
     Uint8 ia = 255;
 
-    int cx = 34, cy = LANGUAGE_BUTTON.y + LANGUAGE_BUTTON.h/2;
+    if (app->ui_theme == UI_THEME_UBIQUITY) {
+        SDL_Rect box = language_button_rect(app);
+        int radius = sb_w <= SIDEBAR_COLLAPSED_W + 8 ? 11 : 16;
+        fill_rounded_rect(r, box.x, box.y, box.w, box.h, radius,
+                          46, 51, 70, 100);
+        draw_rounded_border(r, box.x, box.y, box.w, box.h, radius, 1,
+                            226, 232, 255, 72);
+    }
+    int cx = app->ui_theme == UI_THEME_UBIQUITY ? 32 : 34;
+    int cy = LANGUAGE_BUTTON.y + LANGUAGE_BUTTON.h / 2;
     SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(r, ir, ig, ib, ia);
 
@@ -2675,44 +2708,52 @@ static void render_ubiquity_home(WolodriveApp *app) {
         return;
     }
     if (app->hero_prev_item && app->hero_prev_item != hero && app->hero_crossfade < 1.0f) {
-        render_cover_or_placeholder_alpha(app, app->hero_prev_item, RAIL_WIDTH, 0,
-                                          SCREEN_WIDTH - RAIL_WIDTH, 1019, true,
+        render_cover_or_placeholder_alpha(app, app->hero_prev_item, 0, 0,
+                                          SCREEN_WIDTH, SCREEN_HEIGHT, true,
                                           (Uint8)(255.0f * (1.0f - app->hero_crossfade)));
-        render_cover_or_placeholder_alpha(app, hero, RAIL_WIDTH, 0,
-                                          SCREEN_WIDTH - RAIL_WIDTH, 1019, true,
+        render_cover_or_placeholder_alpha(app, hero, 0, 0,
+                                          SCREEN_WIDTH, SCREEN_HEIGHT, true,
                                           (Uint8)(255.0f * app->hero_crossfade));
     } else {
-        render_cover_or_placeholder(app, hero, RAIL_WIDTH, 0,
-                                    SCREEN_WIDTH - RAIL_WIDTH, 1019, true);
+        render_cover_or_placeholder(app, hero, 0, 0,
+                                    SCREEN_WIDTH, SCREEN_HEIGHT, true);
     }
     render_ubiquity_fades(r);
-    if (!(is_library_view(app->active_row) && app->library_depth == LIBRARY_GAMES))
-        draw_text(app, app->font_small, "PolDrive", CONTENT_X + 24, 34, white, 0);
-    draw_text(app, app->font_micro, "PS5 LIBRARY", SCREEN_WIDTH - 186, 38, subdued, 0);
+    /* Upper-right translucent PolDrive capsule, matching the web Home header. */
+    {
+        const int cap_w = 144, cap_h = 42, cap_x = SCREEN_WIDTH - 30 - cap_w, cap_y = 18;
+        draw_rounded_glow(r, cap_x, cap_y, cap_w, cap_h, 21, 6, 8, 8, 14, 70);
+        fill_rounded_rect(r, cap_x, cap_y, cap_w, cap_h, 21, 35, 40, 62, 116);
+        draw_rounded_border(r, cap_x, cap_y, cap_w, cap_h, 21, 1, 255, 255, 255, 76);
+        draw_text(app, app->font_small, "PolDrive", cap_x + 18, cap_y + 10, white, 0);
+    }
     char upper[sizeof(hero->title)];
     SDL_strlcpy(upper, hero->title, sizeof(upper));
     for (char *p = upper; *p; p++)
         if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
-    SDL_Rect title = {CONTENT_X + 24, 163, 1060, 154};
+    SDL_Rect title = {CONTENT_X - 8, 52, 1120, 174};
     draw_fitted_text(app, app->font_ubiquity_title ?
                      app->font_ubiquity_title : app->font_hero_title,
                      upper, title, white, title, false);
 
-    /* Preserve the native metadata fields and wording; only split their surface. */
-    char metadata[4][256];
-    snprintf(metadata[0],sizeof(metadata[0]),"%s",hero->source_name);
-    snprintf(metadata[1],sizeof(metadata[1]),"%s",sys_format_short_badge(hero->format));
-    snprintf(metadata[2],sizeof(metadata[2]),"%.1f GB",hero->size_gb);
-    snprintf(metadata[3],sizeof(metadata[3]),"* %.1f/10",hero->rating_score);
-    int meta_x=CONTENT_X+24, meta_y=329;
-    for(int field=0;field<4;field++) {
-        int tw=0,th=0; TTF_SizeUTF8(app->font_small,metadata[field],&tw,&th);
-        if(meta_x+tw+28>CONTENT_X+24+850) {meta_x=CONTENT_X+24;meta_y+=40;}
-        meta_x=draw_hero_metadata_pill(app,metadata[field],meta_x,meta_y);
+    /* Keep the same six visible metadata fields as the browser Ubiquity view. */
+    char metadata[6][256];
+    snprintf(metadata[0], sizeof(metadata[0]), "%s", hero->source_name);
+    snprintf(metadata[1], sizeof(metadata[1]), "%s", hero->id_code);
+    snprintf(metadata[2], sizeof(metadata[2]), "v%s", hero->version);
+    snprintf(metadata[3], sizeof(metadata[3]), "%s", sys_format_short_badge(hero->format));
+    snprintf(metadata[4], sizeof(metadata[4]), "%.1f GB", hero->size_gb);
+    snprintf(metadata[5], sizeof(metadata[5]), "* %.1f/10", hero->rating_score);
+    int meta_x = CONTENT_X - 8, meta_y = 242;
+    for (int field = 0; field < 6; field++) {
+        int tw = 0, th = 0;
+        if (app->font_small) TTF_SizeUTF8(app->font_small, metadata[field], &tw, &th);
+        if (meta_x + tw + 34 > CONTENT_X + 1080) { meta_x = CONTENT_X - 8; meta_y += 40; }
+        meta_x = draw_hero_metadata_pill(app, metadata[field], meta_x, meta_y);
     }
 
     const char *description = hero->description[0] ? hero->description : "";
-    SDL_Rect desc_box = {CONTENT_X + 24, 380, 760, 65};
+    SDL_Rect desc_box = {CONTENT_X - 8, 296, 780, 75};
     draw_fitted_text(app, app->font_body, description,
                      desc_box, subdued, desc_box, false);
     const LibraryConsole *selected_console =
