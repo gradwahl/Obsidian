@@ -1,6 +1,6 @@
 <div align="center">
 
-![Obsidian banner](docs/obsidian-banner.svg)
+![Obsidian banner](docs/obsidian-banner.webp)
 
 **A console-first game catalogue, built for PlayStation 5, Linux and the web.**
 
