@@ -406,17 +406,17 @@
 /* Faithful structural (u)biquity home: unlike Netflix/Glass this is its own
    composition, adapted to PolDrive's data and controller controls. */
 .tv-theme-ubiquity .tv-main { margin-left: 64px; width: 1856px; }
-.tv-theme-ubiquity .tv-sidebar { width: 64px; background: rgba(7,8,11,.96); border-right: 0; transition: width 0.48s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.48s ease; }
+.tv-theme-ubiquity .tv-sidebar { width: 64px; background: rgba(7,8,11,.96); border-right: 0; transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s ease; }
 .tv-theme-ubiquity .tv-sidebar-collapsed { width: 64px; }
 .tv-theme-ubiquity .tv-sidebar-expanded { width: 252px; }
-.tv-theme-ubiquity .tv-sidebar-dim { left: 64px; transition: opacity 0.48s ease, left 0.48s cubic-bezier(0.25, 1, 0.5, 1); }
+.tv-theme-ubiquity .tv-sidebar-dim { left: 64px; transition: opacity 0.5s ease, left 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
 .tv-theme-ubiquity .tv-sidebar-dim-active { left: 252px; }
 .tv-theme-ubiquity .tv-brand-logo { display: none; }
 .tv-theme-ubiquity .tv-language { top: 6px; height: 48px; }
 .tv-theme-ubiquity .tv-language > button { height: 48px; padding: 0 14px; border-radius: 0; background: transparent; }
 .tv-theme-ubiquity .tv-language > button svg { width: 19px; height: 19px; }
 .tv-theme-ubiquity .tv-language > button > div:first-child { gap: 24px; }
-.tv-theme-ubiquity .tv-navigation { top: 112px; }
+.tv-theme-ubiquity .tv-navigation { top: 120px; }
 .tv-theme-ubiquity .tv-nav-item { height: 64px; width: calc(100% - 16px); margin: 0 8px; padding: 0 8px 0 15px; gap: 24px; color: #a1a3a7; border-radius: 14px; }
 .tv-theme-ubiquity .tv-nav-icon, .tv-theme-ubiquity .tv-nav-icon svg { width: 21px; height: 21px; flex-basis: 21px; stroke-width: 1.6px; }
 .tv-theme-ubiquity .tv-nav-active .tv-nav-icon { color: #f2f2f4; }
@@ -427,11 +427,12 @@
 /* Ubiquity Sidebar "PD" -> "PolDrive" Smoked Glass & Cosmic Crimson Ribbons Emblem */
 .ubq-pd-bubble {
   position: absolute;
-  top: 60px;
+  top: 58px;
   left: 13px;
   width: 38px;
   height: 38px;
   border-radius: 12px;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -439,88 +440,87 @@
   pointer-events: none;
   user-select: none;
   z-index: 3;
-  background: linear-gradient(135deg, #ff3366 0%, #c9184a 55%, #590d22 100%);
-  border: 1px solid rgba(255, 130, 150, 0.38);
-  box-shadow: 0 4px 16px rgba(201, 24, 74, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.35);
-  transition:
-    left 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    width 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    height 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    border-radius 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    background 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    border-color 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    box-shadow 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    padding 0.48s cubic-bezier(0.25, 1, 0.5, 1);
-}
-.ubq-pd-bubble-expanded {
-  left: 14px;
-  width: 224px;
-  height: 44px;
-  border-radius: 14px;
-  padding: 0 18px;
-  background: rgba(10, 10, 16, 0.86);
+  background: rgba(10, 10, 16, 0.88);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 51, 102, 0.38);
-  box-shadow: 0 6px 24px rgba(201, 24, 74, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 51, 102, 0.42);
+  box-shadow: 0 4px 18px rgba(201, 24, 74, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.22);
+  transition:
+    top 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    left 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    width 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    height 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    border-radius 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    background-color 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    padding 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ubq-pd-bubble-expanded {
+  top: 56px;
+  left: 14px;
+  width: 224px;
+  height: 54px;
+  border-radius: 16px;
+  padding: 0 16px;
+  background: rgba(10, 10, 16, 0.88);
+  border: 1px solid rgba(255, 51, 102, 0.48);
+  box-shadow: 0 6px 26px rgba(201, 24, 74, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.24);
 }
 .ubq-pd-ribbons {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.45s ease;
+  opacity: 1;
   overflow: hidden;
   border-radius: inherit;
-}
-.ubq-pd-bubble-expanded .ubq-pd-ribbons {
-  opacity: 1;
 }
 .ubq-pd-ribbon {
   position: absolute;
   border-radius: 999px;
-  filter: blur(8px);
+  filter: blur(6px);
   mix-blend-mode: screen;
 }
 .ubq-pd-ribbon-1 {
-  width: 108px;
-  height: 18px;
-  top: -2px;
-  left: -18px;
-  background: linear-gradient(90deg, transparent, #ff3366, #c9184a, transparent);
-  opacity: 0.72;
+  width: 140%;
+  height: 54%;
+  top: -6%;
+  left: -20%;
+  background: linear-gradient(90deg, transparent 0%, #ff3366 30%, #c9184a 70%, transparent 100%);
+  opacity: 0.78;
   animation: ubqCrimsonRibbon1 4.2s ease-in-out infinite alternate;
 }
 .ubq-pd-ribbon-2 {
-  width: 124px;
-  height: 20px;
-  bottom: -4px;
-  right: -20px;
-  background: linear-gradient(90deg, transparent, #c9184a, #ff3366, #590d22, transparent);
-  opacity: 0.68;
+  width: 145%;
+  height: 56%;
+  bottom: -8%;
+  right: -22%;
+  background: linear-gradient(90deg, transparent 0%, #c9184a 25%, #ff3366 60%, #590d22 85%, transparent 100%);
+  opacity: 0.74;
   animation: ubqCrimsonRibbon2 5.1s ease-in-out infinite alternate;
 }
 .ubq-pd-ribbon-3 {
-  width: 96px;
-  height: 16px;
-  top: 14px;
-  left: 42px;
-  background: radial-gradient(ellipse at center, rgba(255, 51, 102, 0.78) 0%, rgba(201, 24, 74, 0.42) 55%, transparent 100%);
+  width: 92%;
+  height: 64%;
+  top: 18%;
+  left: 4%;
+  background: radial-gradient(ellipse at center, rgba(255, 51, 102, 0.85) 0%, rgba(201, 24, 74, 0.48) 58%, transparent 100%);
+  filter: blur(5px);
   animation: ubqCrimsonRibbon3 3.6s ease-in-out infinite alternate;
 }
 @keyframes ubqCrimsonRibbon1 {
-  0% { transform: translate3d(-12px, 0px, 0) rotate(-6deg) scaleX(0.95); }
-  50% { transform: translate3d(68px, 6px, 0) rotate(4deg) scaleX(1.15); }
-  100% { transform: translate3d(118px, -2px, 0) rotate(-4deg) scaleX(1.0); }
+  0% { transform: translate3d(-16%, -4%, 0) rotate(-6deg) scaleX(0.95); }
+  50% { transform: translate3d(14%, 10%, 0) rotate(4deg) scaleX(1.12); }
+  100% { transform: translate3d(28%, -4%, 0) rotate(-4deg) scaleX(1.0); }
 }
 @keyframes ubqCrimsonRibbon2 {
-  0% { transform: translate3d(14px, 2px, 0) rotate(5deg) scaleX(1.05); }
-  50% { transform: translate3d(-58px, -5px, 0) rotate(-5deg) scaleX(1.18); }
-  100% { transform: translate3d(-108px, 1px, 0) rotate(3deg) scaleX(0.92); }
+  0% { transform: translate3d(16%, 4%, 0) rotate(5deg) scaleX(1.05); }
+  50% { transform: translate3d(-12%, -10%, 0) rotate(-5deg) scaleX(1.15); }
+  100% { transform: translate3d(-26%, 4%, 0) rotate(3deg) scaleX(0.94); }
 }
 @keyframes ubqCrimsonRibbon3 {
-  0% { transform: translate3d(-26px, -4px, 0) scale(0.9); opacity: 0.48; }
-  100% { transform: translate3d(42px, 4px, 0) scale(1.22); opacity: 0.82; }
+  0% { transform: translate3d(-14%, -8%, 0) scale(0.92); opacity: 0.56; }
+  100% { transform: translate3d(16%, 8%, 0) scale(1.22); opacity: 0.88; }
 }
 .ubq-pd-text {
   position: relative;
@@ -530,28 +530,32 @@
   justify-content: center;
   white-space: nowrap;
   line-height: 1;
-  transform: scale(0.98);
+  transform: scale(1);
   transform-origin: center center;
   transition:
-    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    letter-spacing 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    letter-spacing 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-bubble-expanded .ubq-pd-text {
-  transform: scale(1.12);
+  transform: scale(1.08);
 }
 .ubq-pd-char-p {
-  color: #ffffff;
-  font-size: 15px;
+  color: #ff3366;
+  background: linear-gradient(135deg, #ff3366 0%, #c9184a 60%, #a4133c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(201, 24, 74, 0.65));
+  font-size: 18px;
   font-weight: 900;
   letter-spacing: -0.5px;
-  line-height: 1;
+  line-height: 0.92;
   display: inline-block;
   transform-origin: right bottom;
   transition:
-    color 0.45s ease,
-    font-size 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    text-shadow 0.45s ease,
-    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+    font-size 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    filter 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-slide-ol {
   display: inline-block;
@@ -559,32 +563,37 @@
   opacity: 0;
   overflow: hidden;
   color: #f5f5f7;
-  font-size: 16px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1;
+  line-height: 0.92;
   white-space: nowrap;
-  transform: scaleX(0.2) translateX(-6px);
+  transform: translateX(-4px) scale(0.35);
   transform-origin: left bottom;
   transition:
-    max-width 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 0.42s cubic-bezier(0.25, 1, 0.5, 1),
-    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    margin 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+    max-width 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    font-size 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    margin 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-char-d {
-  color: #ffffff;
-  font-size: 15px;
+  color: #ff3366;
+  background: linear-gradient(135deg, #ff3366 0%, #c9184a 60%, #a4133c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(201, 24, 74, 0.65));
+  font-size: 18px;
   font-weight: 900;
   letter-spacing: -0.5px;
-  line-height: 1;
+  line-height: 0.92;
   display: inline-block;
   transform-origin: left bottom;
   transition:
-    color 0.45s ease,
-    font-size 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    text-shadow 0.45s ease,
-    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+    font-size 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    filter 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-slide-rive {
   display: inline-block;
@@ -592,48 +601,42 @@
   opacity: 0;
   overflow: hidden;
   color: #f5f5f7;
-  font-size: 16px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1;
+  line-height: 0.92;
   white-space: nowrap;
-  transform: scaleX(0.2) translateX(-6px);
+  transform: translateX(-4px) scale(0.35);
   transform-origin: left bottom;
   transition:
-    max-width 0.48s cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 0.42s cubic-bezier(0.25, 1, 0.5, 1),
-    transform 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+    max-width 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    font-size 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+    opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .ubq-pd-bubble-expanded .ubq-pd-char-p {
-  font-size: 26px;
-  line-height: 0.95;
-  color: #ff3366;
-  background: linear-gradient(135deg, #ff3366 0%, #c9184a 60%, #a4133c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 14px rgba(201, 24, 74, 0.6);
+  font-size: 46px;
+  line-height: 0.88;
+  filter: drop-shadow(0 2px 10px rgba(201, 24, 74, 0.72));
 }
 .ubq-pd-bubble-expanded .ubq-pd-slide-ol {
-  max-width: 32px;
+  max-width: 38px;
+  font-size: 31px;
   opacity: 1;
   margin-left: -1px;
-  transform: scaleX(1) translateX(0);
+  margin-right: 1px;
+  transform: translateX(0) scale(1);
 }
 .ubq-pd-bubble-expanded .ubq-pd-char-d {
-  font-size: 16px;
-  font-weight: 900;
-  color: #ff3366;
-  background: linear-gradient(135deg, #ff3366 0%, #c9184a 60%, #a4133c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 14px rgba(201, 24, 74, 0.6);
+  font-size: 32px;
+  line-height: 0.92;
+  filter: drop-shadow(0 2px 10px rgba(201, 24, 74, 0.72));
 }
 .ubq-pd-bubble-expanded .ubq-pd-slide-rive {
-  max-width: 52px;
+  max-width: 72px;
+  font-size: 31px;
   opacity: 1;
-  transform: scaleX(1) translateX(0);
+  transform: translateX(0) scale(1);
 }
 
 .tv-theme-ubiquity .ubq-home { position: relative; background: #070808; height: 1020px; overflow: hidden; }

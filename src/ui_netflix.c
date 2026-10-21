@@ -1805,7 +1805,7 @@ void ui_update_animations(WolodriveApp *app, float dt) {
 
         /* Płynne rozsuwanie paska bocznego w prawo po najechaniu / focusie */
         float target_sb = (app->active_row == VIEW_SETTINGS || app->sidebar_hovered || app->sidebar_focus) ? 1.0f : 0.0f;
-        float sb_speed = (app->ui_theme == UI_THEME_UBIQUITY) ? 8.2f : 14.0f;
+        float sb_speed = (app->ui_theme == UI_THEME_UBIQUITY) ? 6.8f : 14.0f;
         app->sidebar_expand += (target_sb - app->sidebar_expand) * (1.0f - expf(-sb_speed * dt));
         if (app->sidebar_expand < 0.001f) app->sidebar_expand = 0.0f;
         if (app->sidebar_expand > 0.999f) app->sidebar_expand = 1.0f;
@@ -2281,91 +2281,87 @@ static void render_sidebar(WolodriveApp *app) {
             }
         }
     } else {
-        /* Ubiquity Sidebar "PD" -> "PolDrive" Smoked Glass & Cosmic Crimson Ribbons */
+        /* Ubiquity Sidebar "PD" -> "PolDrive" Smoked Glass & Cosmic Crimson Ribbons (both collapsed & expanded) */
         float exp_t = app->sidebar_expand;
         if (exp_t < 0.0f) exp_t = 0.0f;
         if (exp_t > 1.0f) exp_t = 1.0f;
         int bx = (int)lroundf(13.0f + 1.0f * exp_t);
-        int by = 90;
+        int by = (int)lroundf(88.0f - 2.0f * exp_t);
         int bw = (int)lroundf(38.0f + 186.0f * exp_t);
-        int bh = (int)lroundf(38.0f + 6.0f * exp_t);
-        int br = (int)lroundf(12.0f + 2.0f * exp_t);
+        int bh = (int)lroundf(38.0f + 16.0f * exp_t);
+        int br = (int)lroundf(12.0f + 4.0f * exp_t);
 
         draw_rounded_glow(r, bx, by, bw, bh, br, 6, 201, 24, 74, 150);
 
-        /* Interpolate from silk crimson squircle (collapsed) to dark smoked glass (expanded) */
-        Uint8 bg_r = (Uint8)lroundf(201.0f * (1.0f - exp_t) + 10.0f * exp_t);
-        Uint8 bg_g = (Uint8)lroundf(24.0f * (1.0f - exp_t) + 10.0f * exp_t);
-        Uint8 bg_b = (Uint8)lroundf(74.0f * (1.0f - exp_t) + 16.0f * exp_t);
-        Uint8 bg_a = (Uint8)lroundf(245.0f * (1.0f - exp_t) + 220.0f * exp_t);
-        fill_rounded_rect(r, bx, by, bw, bh, br, bg_r, bg_g, bg_b, bg_a);
+        /* Dark smoked glass background in both collapsed (38x38) and expanded (224x54) states */
+        fill_rounded_rect(r, bx, by, bw, bh, br, 10, 10, 16, 225);
 
-        if (exp_t < 0.85f) {
-            Uint8 grad_a = (Uint8)lroundf(110.0f * (1.0f - exp_t));
-            fill_rounded_rect(r, bx + 2, by + 2, bw - 4, bh / 2, SDL_max(4, br - 2), 255, 51, 102, grad_a);
-        }
-
-        if (exp_t > 0.05f) {
-            /* Animated cosmic crimson ribbons circulating inside the smoked glass capsule */
+        /* Animated cosmic crimson ribbons circulating inside both collapsed square and expanded capsule */
+        {
             float phase = (float)SDL_GetTicks() * 0.0026f;
-            int r1_x = bx + 12 + (int)((bw - 68) * (0.5f + 0.5f * sinf(phase)));
-            int r1_y = by + 6 + (int)(6.0f * cosf(phase * 1.3f));
-            int r2_x = bx + 16 + (int)((bw - 76) * (0.5f + 0.5f * cosf(phase * 0.85f)));
-            int r2_y = by + bh - 18 + (int)(5.0f * sinf(phase * 1.1f));
-            Uint8 rib_a1 = (Uint8)lroundf(78.0f * exp_t);
-            Uint8 rib_a2 = (Uint8)lroundf(64.0f * exp_t);
-            fill_rounded_rect(r, r1_x, r1_y, SDL_min(54, bw - 16), 10, 5, 255, 51, 102, rib_a1);
-            fill_rounded_rect(r, r2_x, r2_y, SDL_min(62, bw - 20), 10, 5, 201, 24, 74, rib_a2);
-            fill_rounded_rect(r, (r1_x + r2_x) / 2, by + bh / 2 - 4, SDL_min(42, bw - 24), 8, 4, 89, 13, 34, rib_a1);
+            int rib1_w = SDL_max(18, (int)lroundf((float)bw * 0.42f));
+            int rib2_w = SDL_max(20, (int)lroundf((float)bw * 0.46f));
+            int rib3_w = SDL_max(14, (int)lroundf((float)bw * 0.34f));
+            int travel1 = SDL_max(4, bw - rib1_w - 8);
+            int travel2 = SDL_max(4, bw - rib2_w - 8);
+            int r1_x = bx + 4 + (int)((float)travel1 * (0.5f + 0.5f * sinf(phase)));
+            int r1_y = by + 5 + (int)(4.0f * cosf(phase * 1.3f));
+            int r2_x = bx + 4 + (int)((float)travel2 * (0.5f + 0.5f * cosf(phase * 0.85f)));
+            int r2_y = by + bh - 15 + (int)(4.0f * sinf(phase * 1.1f));
+            fill_rounded_rect(r, r1_x, r1_y, rib1_w, 10, 5, 255, 51, 102, 82);
+            fill_rounded_rect(r, r2_x, r2_y, rib2_w, 10, 5, 201, 24, 74, 72);
+            fill_rounded_rect(r, (r1_x + r2_x) / 2, by + bh / 2 - 4, rib3_w, 8, 4, 89, 13, 34, 84);
         }
 
-        Uint8 bdr_g = (Uint8)lroundf(130.0f * (1.0f - exp_t) + 51.0f * exp_t);
-        Uint8 bdr_b = (Uint8)lroundf(150.0f * (1.0f - exp_t) + 102.0f * exp_t);
-        draw_rounded_border(r, bx, by, bw, bh, br, 1, 255, bdr_g, bdr_b, 97);
+        draw_rounded_border(r, bx, by, bw, bh, br, 1, 255, 51, 102, 112);
 
-        /* P and D transition from pure white (collapsed) to silk crimson {255, 51, 102, 255} (expanded) */
-        SDL_Color pd_col = {
-            255,
-            (Uint8)lroundf(255.0f * (1.0f - exp_t) + 51.0f * exp_t),
-            (Uint8)lroundf(255.0f * (1.0f - exp_t) + 102.0f * exp_t),
-            255
-        };
-        SDL_Color glow_col = {201, 24, 74, (Uint8)lroundf(150.0f * exp_t)};
-        TTF_Font *pd_p_font = (exp_t > 0.35f && app->font_row_title) ? app->font_row_title : app->font_small;
-        TTF_Font *pd_tail_font = (exp_t > 0.35f && app->font_small) ? app->font_small : (app->font_micro ? app->font_micro : app->font_small);
+        /* Silk crimson P and D in both states, unfolding and scaling proportionally to fill the capsule */
+        SDL_Color pd_col = {255, 51, 102, 255};
+        SDL_Color glow_col = {201, 24, 74, 150};
+        TTF_Font *pd_p_font = (exp_t > 0.55f && app->font_logo)
+                                  ? app->font_logo
+                                  : ((exp_t > 0.22f && app->font_row_title) ? app->font_row_title : app->font_small);
+        TTF_Font *pd_tail_font = (exp_t > 0.55f && app->font_row_title)
+                                     ? app->font_row_title
+                                     : ((exp_t > 0.22f && app->font_body) ? app->font_body : app->font_small);
 
-        if (exp_t < 0.08f) {
-            SDL_Rect pd_box = {bx, by + 2, bw, bh - 4};
-            draw_fitted_text(app, app->font_micro ? app->font_micro : app->font_small,
-                             "PD", pd_box, (SDL_Color){255, 255, 255, 255}, pd_box, true);
-        } else {
-            Uint8 slide_a = (Uint8)lroundf(255.0f * exp_t);
-            SDL_Color satin_white = {245, 245, 247, slide_a};
+        Uint8 slide_a = (Uint8)lroundf(255.0f * exp_t);
+        SDL_Color satin_white = {245, 245, 247, slide_a};
 
-            int ol_w = 0, ol_h = 0;
-            if (pd_tail_font) TTF_SizeUTF8(pd_tail_font, "ol", &ol_w, &ol_h);
-            if (ol_w <= 0) ol_w = 18;
-            int rive_w = 0, rive_h = 0;
-            if (pd_tail_font) TTF_SizeUTF8(pd_tail_font, "rive", &rive_w, &rive_h);
-            if (rive_w <= 0) rive_w = 34;
-            int full_w = (int)(24.0f + 14.0f + ol_w + rive_w);
-            int cur_total_w = (int)lroundf(32.0f * (1.0f - exp_t) + (float)full_w * exp_t);
-            int tx = bx + (bw - cur_total_w) / 2;
-            int p_y = by + (exp_t > 0.35f ? 7 : 9);
-            int tail_y = by + (exp_t > 0.35f ? 14 : 13);
+        int p_w = 0, p_h = 0, d_w = 0, d_h = 0, ol_w = 0, ol_h = 0, rive_w = 0, rive_h = 0;
+        if (pd_p_font) TTF_SizeUTF8(pd_p_font, "P", &p_w, &p_h);
+        if (pd_tail_font) {
+            TTF_SizeUTF8(pd_tail_font, "ol", &ol_w, &ol_h);
+            TTF_SizeUTF8(pd_tail_font, "D", &d_w, &d_h);
+            TTF_SizeUTF8(pd_tail_font, "rive", &rive_w, &rive_h);
+        }
+        if (p_w <= 0) p_w = (exp_t > 0.55f) ? 28 : 13;
+        if (d_w <= 0) d_w = (exp_t > 0.55f) ? 22 : 12;
+        if (ol_w <= 0) ol_w = (exp_t > 0.55f) ? 28 : 16;
+        if (rive_w <= 0) rive_w = (exp_t > 0.55f) ? 56 : 32;
 
-            if (glow_col.a > 10) draw_text(app, pd_p_font, "P", tx + 1, p_y + 2, glow_col, 0);
-            int pw = draw_text(app, pd_p_font, "P", tx, p_y, pd_col, 0);
-            tx += (pw > 0 ? pw - 1 : 16);
+        int cur_ol_w = (int)lroundf((float)ol_w * exp_t);
+        int cur_rive_w = (int)lroundf((float)rive_w * exp_t);
+        int cur_total_w = p_w + cur_ol_w + d_w + cur_rive_w;
+        int tx = bx + (bw - cur_total_w) / 2;
+        int p_y = by + (bh - (p_h > 0 ? p_h : 26)) / 2;
+        int tail_y = p_y + SDL_max(0, (p_h - d_h) - 2);
 
-            if (slide_a > 15) draw_text(app, pd_tail_font, "ol", tx, tail_y, satin_white, 0);
-            tx += (int)lroundf((float)ol_w * exp_t);
+        draw_text(app, pd_p_font, "P", tx + 1, p_y + 2, glow_col, 0);
+        int pw = draw_text(app, pd_p_font, "P", tx, p_y, pd_col, 0);
+        tx += (pw > 0 ? pw - 1 : p_w);
 
-            if (glow_col.a > 10) draw_text(app, pd_tail_font, "D", tx + 1, tail_y + 1, glow_col, 0);
-            int dw = draw_text(app, pd_tail_font, "D", tx, tail_y, pd_col, 0);
-            tx += (dw > 0 ? dw : 14);
+        if (slide_a > 12 && cur_ol_w > 2) {
+            draw_text(app, pd_tail_font, "ol", tx, tail_y, satin_white, 0);
+        }
+        tx += cur_ol_w;
 
-            if (slide_a > 15) draw_text(app, pd_tail_font, "rive", tx, tail_y, satin_white, 0);
+        draw_text(app, pd_tail_font, "D", tx + 1, tail_y + 1, glow_col, 0);
+        int dw = draw_text(app, pd_tail_font, "D", tx, tail_y, pd_col, 0);
+        tx += (dw > 0 ? dw : d_w);
+
+        if (slide_a > 12 && cur_rive_w > 2) {
+            draw_text(app, pd_tail_font, "rive", tx, tail_y, satin_white, 0);
         }
     }
     SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,
