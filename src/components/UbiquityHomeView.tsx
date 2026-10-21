@@ -79,7 +79,7 @@ function UbiquityCover({ game, selected, onSelect, onOpen }: {
       onFocus={onSelect} onClick={() => { onSelect(); onOpen(); }}>
       <span className="ubq-square-art">
         {cover
-          ? <img src={cover} alt="" loading="lazy"
+          ? <img src={cover} alt="" loading="eager"
               onError={() => setFailed(values => [...values, cover])} />
           : <span className="ubq-cover-fallback">{game.title}</span>}
       </span>

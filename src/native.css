@@ -476,6 +476,7 @@
   width: 262px;
   height: 262px;
   border-radius: 24px;
+  overflow: hidden;
   pointer-events: none;
   z-index: 10;
   box-sizing: border-box;
@@ -483,7 +484,7 @@
   background-image: linear-gradient(rgba(15, 15, 20, 0.95), rgba(15, 15, 20, 0.95)), linear-gradient(135deg, #ff3366 0%, #c9184a 50%, #590d22 100%);
   background-origin: border-box;
   background-clip: padding-box, border-box;
-  box-shadow: 0 0 36px 8px rgba(201, 24, 74, 0.6), 0 16px 56px 12px rgba(89, 13, 34, 0.5), inset 0 0 14px rgba(255, 70, 110, 0.4);
+  box-shadow: 0 0 32px 8px rgba(201, 24, 74, 0.55), inset 0 0 14px rgba(255, 70, 110, 0.4);
   transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), width 0.38s cubic-bezier(0.22, 1, 0.36, 1), height 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
 }
 @keyframes ubqFocusStrobe {
