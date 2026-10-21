@@ -154,11 +154,13 @@ export function UbiquityHomeView({
       <div className="ubq-feature" key={game?.id_code || heading}>
         <h1 className="ubq-feature-title">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
         {game && <div className="ubq-feature-metadata">
-          <span>{game.source_name || 'PolDrive'}</span>
-          {showDate && year && <><i /> <span>{year}</span></>}
-          {(game.rating_score || 0) > 0 && <><i /> <span className="ubq-score">★ {(game.rating_score || 0).toFixed(1)}/10</span></>}
-          <i /><span>{game.format.toUpperCase()}</span>
-          <i /><span>{game.size_gb.toFixed(1)} GB</span>
+          <span className="tv-meta-pill">{game.source_name || 'PolDrive'}</span>
+          <span className="tv-meta-pill">{game.id_code}</span>
+          <span className="tv-meta-pill">v{game.version}</span>
+          <span className="tv-meta-pill">{game.format.toUpperCase()}</span>
+          <span className="tv-meta-pill">{game.size_gb.toFixed(1)} GB</span>
+          {(game.rating_score || 0) > 0 && <span className="tv-meta-pill ubq-score">★ {(game.rating_score || 0).toFixed(1)}/10</span>}
+          {showDate && year && <span className="tv-meta-pill">{year}</span>}
         </div>}
         <p className="ubq-feature-description">{summary}</p>
       </div>

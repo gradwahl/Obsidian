@@ -423,8 +423,8 @@ assert.ok(focusedSidebar.includes(t('pl', 'TXT_NAV_GAMES')));
 assert.ok(focusedSidebar.includes(t('pl', 'TXT_NAV_SETTINGS')));
 const settingsSidebar = render(React.createElement(Sidebar, { ...sidebarProps, currentView: 'settings' }));
 assert.match(settingsSidebar, /tv-sidebar-settings/);
-assert.match(settingsSidebar, /data-state="expanded"/);
-assert.ok(!settingsSidebar.includes('tv-sidebar-dim-active'), 'Settings stays expanded without dimming the content');
+assert.match(settingsSidebar, /data-state="collapsed"/);
+assert.ok(!settingsSidebar.includes('tv-sidebar-dim-active'), 'Settings keeps the navigation collapsed until focused, as in Backup-version-1');
 const languageSidebar = render(React.createElement(Sidebar, { ...sidebarProps, languageMenuOpen: true }));
 assert.match(languageSidebar, /tv-sidebar-expanded/);
 assert.match(languageSidebar, /aria-expanded="true"/);
@@ -479,6 +479,25 @@ const componentDefault = render(React.createElement(SettingsView, {
   onChangeFilters: noop, availableSources: [], language: 'en',
   uiTheme: 'netflix', onChangeTheme: noop
 }));
+assert.match(componentSettings, /PolDrive System/, 'Restored Settings dashboard must display the system summary');
+assert.match(componentSettings, /Network|Connection|Połączenie/i,
+  'Restored Settings dashboard must include network status');
+assert.match(t('en', 'TXT_DOWNLOADS_HELP'), /download/i);
+assert.match(t('en', 'TXT_SYS_VERSION'), /version/i);
+const { DownloadsView } = require('../src/components/DownloadsView.tsx');
+const restoredDownloads = render(React.createElement(DownloadsView,
+  { catalog: [], language: 'en', uiTheme: 'ubiquity' }));
+assert.match(restoredDownloads, /Active/i);
+assert.match(restoredDownloads, /Completed/i);
+assert.match(restoredDownloads, /Errors/i);
+assert.match(appSource, /<DownloadsView[\s\S]*?catalog=\{catalog\}/);
+assert.match(appSource, /<FileBrowser/, 'Restoring Downloads must not remove the File Manager');
+assert.match(appSource, /catalogCount=\{catalog\.length\}/);
+assert.match(css, /\.ubq-category-select button \{[^}]*border-radius:\s*16px/,
+  'Bottom category buttons must retain the rounded Backup-version-1 appearance');
+assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'),
+  /<span className="tv-meta-pill">\{game\.id_code\}<\/span>/,
+  'Ubiquity hero must show game metadata in oval pills');
 assert.match(componentSettings, /\(u\)biquity/);
 assert.match(componentSettings, /Netflix \/ Glass/);
 assert.match(componentSettings, /aria-pressed="true"/);

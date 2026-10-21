@@ -37,8 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-  // Native SDL2 keeps the rail expanded on Settings as well as on hover/focus.
-  const isExpanded = isHovered || isSidebarFocused || languageMenuOpen || currentView === 'settings';
+  // Expand on hover, sidebar focus or language selection only.
+  const isExpanded = isHovered || isSidebarFocused || languageMenuOpen;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

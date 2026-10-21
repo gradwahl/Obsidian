@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LanguageCode, CatalogFilters, PackageFormat } from '../types';
 import { t } from '../translations';
 import { SOURCE_WEBSITES } from '../catalog';
-import { Check, RotateCcw } from 'lucide-react';
+import { Check, RotateCcw, ShieldCheck, Cpu, HardDrive, Layers, Globe, Radio, Sparkles } from 'lucide-react';
 
 interface SettingsViewProps {
   filters: CatalogFilters;
@@ -12,6 +12,7 @@ interface SettingsViewProps {
   uiTheme: 'netflix' | 'ubiquity';
   gamepadThemeIndex: number;
   onChangeTheme: (theme: 'netflix' | 'ubiquity') => void;
+  catalogCount?: number;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -21,54 +22,50 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   language,
   uiTheme,
   gamepadThemeIndex,
-  onChangeTheme
+  onChangeTheme,
+  catalogCount = 1248
 }) => {
-  // Checkbox state for "All sources"
+  const [expandedSection, setExpandedSection] = useState<'sources' | 'formats' | null>(null);
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const allSourcesChecked = !filters.sources_limited;
-  const partialSources = filters.sources_limited && filters.sources.length > 0;
 
   const toggleAllSources = () => {
     if (filters.sources_limited) {
-      onChangeFilters({
-        ...filters,
-        sources_limited: false,
-        sources: []
-      });
+      onChangeFilters({ ...filters, sources_limited: false, sources: [] });
     } else {
-      onChangeFilters({
-        ...filters,
-        sources_limited: true,
-        sources: []
-      });
+      onChangeFilters({ ...filters, sources_limited: true, sources: [] });
     }
   };
 
   const toggleSource = (source: string) => {
     if (!filters.sources_limited) {
-      // Switch from all to all except this one
       const remaining = availableSources.filter((s) => s !== source);
-      onChangeFilters({
-        ...filters,
-        sources_limited: true,
-        sources: remaining
-      });
+      onChangeFilters({ ...filters, sources_limited: true, sources: remaining });
     } else {
       const exists = filters.sources.includes(source);
-      let updated: string[];
-      if (exists) {
-        updated = filters.sources.filter((s) => s !== source);
-      } else {
-        updated = [...filters.sources, source];
-      }
-      onChangeFilters({
-        ...filters,
-        sources_limited: true,
-        sources: updated
-      });
+      const updated = exists
+        ? filters.sources.filter((s) => s !== source)
+        : [...filters.sources, source];
+      onChangeFilters({ ...filters, sources_limited: true, sources: updated });
     }
   };
 
-  // Format toggles
   const formats: { id: PackageFormat; label: string }[] = [
     { id: 'exfat', label: '.exfat (ShadowMountPlus)' },
     { id: 'ffpkg', label: t(language, 'TXT_FORMAT_FOLDER') },
@@ -76,215 +73,346 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'catalog', label: 'Catalog metadata (website only)' }
   ];
 
-  const allFormatsChecked = filters.disabled_formats.length === 0;
-  const partialFormats =
-    filters.disabled_formats.length > 0 && filters.disabled_formats.length < formats.length;
-
-  const toggleAllFormats = () => {
-    if (allFormatsChecked) {
-      onChangeFilters({
-        ...filters,
-        disabled_formats: ['exfat', 'ffpkg', 'pkg', 'catalog']
-      });
-    } else {
-      onChangeFilters({
-        ...filters,
-        disabled_formats: []
-      });
-    }
-  };
-
   const toggleFormat = (fmt: PackageFormat) => {
     const isCurrentlyDisabled = filters.disabled_formats.includes(fmt);
-    let updated: PackageFormat[];
-    if (isCurrentlyDisabled) {
-      updated = filters.disabled_formats.filter((f) => f !== fmt);
-    } else {
-      updated = [...filters.disabled_formats, fmt];
-    }
-    onChangeFilters({
-      ...filters,
-      disabled_formats: updated
-    });
+    const updated = isCurrentlyDisabled
+      ? filters.disabled_formats.filter((f) => f !== fmt)
+      : [...filters.disabled_formats, fmt];
+    onChangeFilters({ ...filters, disabled_formats: updated });
   };
 
   const resetFilters = () => {
-    onChangeFilters({
-      sources_limited: false,
-      sources: [],
-      disabled_formats: []
-    });
+    onChangeFilters({ sources_limited: false, sources: [], disabled_formats: [] });
   };
 
+  const activeSourcesCount = allSourcesChecked
+    ? availableSources.length || 10
+    : filters.sources.length;
+
+  const activeFormatsCount = formats.length - filters.disabled_formats.length;
+
   return (
-    <div className="tv-settings tv-page">
+    <div className="tv-settings tv-page px-6 pt-4 pb-12 text-white">
+      {/* View Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-black text-white tracking-tight">
-          {t(language, 'TXT_NAV_SETTINGS')}
+        <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+          <ShieldCheck className="w-6 h-6 text-[#e50914]" />
+          <span>{t(language, 'TXT_NAV_SETTINGS')}</span>
         </h2>
-        <p className="text-xs text-[#8a8a94] mt-1.5 leading-relaxed">
+        <p className="text-xs text-[#8a8a94] mt-1 leading-relaxed">
           {t(language, 'TXT_SETTINGS_HELP')}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left Column: Download Sources */}
-        <div className="bg-[#121216] border border-[#202028] rounded-xl p-5">
-          <h3 className="text-sm font-extrabold text-white uppercase tracking-wider mb-4">
-            {t(language, 'TXT_SETTINGS_SOURCE')}
-          </h3>
-
-          <div className="space-y-2">
-            {/* All sources option */}
-            <div
-              onClick={toggleAllSources}
-              className="flex items-center gap-3 p-3 rounded-lg bg-[#18181f] hover:bg-[#22222a] border border-[#282834] cursor-pointer transition-colors"
-            >
-              <div
-                className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                  allSourcesChecked
-                    ? 'bg-[#e50914] border-[#e50914]'
-                    : partialSources
-                    ? 'bg-[#2a2a34] border-white/50'
-                    : 'border-[#444455] bg-transparent'
-                }`}
-              >
-                {allSourcesChecked ? (
-                  <Check className="w-3.5 h-3.5 text-white" />
-                ) : partialSources ? (
-                  <div className="w-2.5 h-0.5 bg-white" />
-                ) : null}
+      {/* Modern 2-Column PS5 Dashboard Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: Option Rows with Colored Status Capsules (7 Cols) */}
+        <div className="lg:col-span-7 space-y-3">
+          {/* Row 1: Network Status */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 flex items-center justify-between transition-all hover:border-white/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#1c1c28] border border-white/10 flex items-center justify-center text-[#e50914]">
+                <Globe className="w-4 h-4" />
               </div>
-              <span className="text-xs font-bold text-white">
-                {t(language, 'TXT_SETTINGS_ALL_SOURCES')}
+              <div>
+                <div className="text-sm font-bold text-white">{t(language, 'TXT_NET_CONNECTION')}</div>
+                <div className="text-[11px] text-[#8a8a9a]">{t(language, 'TXT_NET_STATUS_SUB')}</div>
+              </div>
+            </div>
+            <span
+              className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold border ${
+                isOnline
+                  ? 'bg-[#162e21] text-[#22c55e] border-[#22c55e]/40 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
+                  : 'bg-[#2a1a20] text-[#ef4444] border-[#ef4444]/40 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+              }`}
+            >
+              {isOnline ? t(language, 'TXT_CONNECTED') : t(language, 'TXT_DISCONNECTED')}
+            </span>
+          </div>
+
+          {/* Row 2: Target Storage Location */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 flex items-center justify-between transition-all hover:border-white/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#1c1c28] border border-white/10 flex items-center justify-center text-[#e50914]">
+                <HardDrive className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white">{t(language, 'TXT_STORAGE_LOCATION')}</div>
+                <div className="text-[11px] text-[#8a8a9a]">{t(language, 'TXT_STORAGE_LOCATION_SUB')}</div>
+              </div>
+            </div>
+            <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#20202e] text-[#a0a0b2] border border-white/15">
+              {t(language, 'TXT_CONSOLE_ONLY')}
+            </span>
+          </div>
+
+          {/* Row 3: ShadowMountPlus Driver */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 flex items-center justify-between transition-all hover:border-white/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#1c1c28] border border-white/10 flex items-center justify-center text-[#e50914]">
+                <Radio className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white">ShadowMountPlus</div>
+                <div className="text-[11px] text-[#8a8a9a]">{t(language, 'TXT_SHADOWMOUNT_SUB')}</div>
+              </div>
+            </div>
+            <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#20202e] text-[#a0a0b2] border border-white/15">
+              {t(language, 'TXT_UNAVAILABLE')}
+            </span>
+          </div>
+
+          {/* Row 4: App Version Status */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 flex items-center justify-between transition-all hover:border-white/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#1c1c28] border border-white/10 flex items-center justify-center text-[#e50914]">
+                <Cpu className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white">{t(language, 'TXT_POLDERIVE_VER')}</div>
+                <div className="text-[11px] text-[#8a8a9a]">{t(language, 'TXT_POLDERIVE_VER_SUB')}</div>
+              </div>
+            </div>
+            <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#1f1e2e] text-[#a0a0ff] border border-[#6366f1]/40">
+              {t(language, 'TXT_STATUS_CURRENT')}
+            </span>
+          </div>
+
+          {/* Row 5: Sources Selector Expandable Row */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 transition-all hover:border-white/20">
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'sources' ? null : 'sources')}
+              className="flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#1c1c28] border border-white/10 flex items-center justify-center text-[#e50914]">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{t(language, 'TXT_SETTINGS_SOURCE')}</div>
+                  <div className="text-[11px] text-[#8a8a9a]">{t(language, 'TXT_SELECT_SOURCES_SUB')}</div>
+                </div>
+              </div>
+              <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#2a1a20] text-[#ff3b45] border border-[#e50914]/40 shadow-[0_0_10px_rgba(229,9,20,0.2)]">
+                {allSourcesChecked
+                  ? t(language, 'TXT_ALL_COUNT', availableSources.length || 10)
+                  : t(language, 'TXT_SELECTED_COUNT', activeSourcesCount)}
               </span>
             </div>
 
-            {/* Source items */}
-            {availableSources.map((source) => {
-              const checked = !filters.sources_limited || filters.sources.includes(source);
-              return (
+            {/* Expandable Source Checkboxes */}
+            {expandedSection === 'sources' && (
+              <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
                 <div
-                  key={source}
-                  onClick={() => toggleSource(source)}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-[#16161b] hover:bg-[#202028] border border-[#22222c] cursor-pointer transition-colors"
+                  onClick={toggleAllSources}
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-[#1a1a24] border border-white/10 cursor-pointer hover:bg-[#222230]"
                 >
                   <div
-                    className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                      checked
-                        ? 'bg-[#e50914] border-[#e50914]'
-                        : 'border-[#444455] bg-transparent'
+                    className={`w-4 h-4 rounded border flex items-center justify-center ${
+                      allSourcesChecked ? 'bg-[#e50914] border-[#e50914]' : 'border-white/40'
                     }`}
                   >
-                    {checked && <Check className="w-3.5 h-3.5 text-white" />}
+                    {allSourcesChecked && <Check className="w-3 h-3 text-white" />}
                   </div>
-                  <span className="text-xs font-medium text-[#c8c8d2] truncate">
-                    {source}
+                  <span className="text-xs font-bold text-white">
+                    {t(language, 'TXT_SETTINGS_ALL_SOURCES')}
                   </span>
-                  {SOURCE_WEBSITES[source] && (
-                    <a href={SOURCE_WEBSITES[source]} onClick={e => e.stopPropagation()}
-                      target="_blank" rel="noopener noreferrer" aria-label={`Open ${source} website`}
-                      className="ml-auto text-[11px] text-[#9d9df0] hover:text-white shrink-0">
-                      Website ↗
-                    </a>
-                  )}
                 </div>
-              );
-            })}
+
+                {availableSources.map((source) => {
+                  const checked = !filters.sources_limited || filters.sources.includes(source);
+                  return (
+                    <div
+                      key={source}
+                      onClick={() => toggleSource(source)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-[#161620] border border-white/5 cursor-pointer hover:bg-[#1f1f2c]"
+                    >
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          checked ? 'bg-[#e50914] border-[#e50914]' : 'border-white/30'
+                        }`}
+                      >
+                        {checked && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-xs text-[#c8c8d8]">{source}</span>
+                      {SOURCE_WEBSITES[source] && (
+                        <a
+                          href={SOURCE_WEBSITES[source]}
+                          onClick={(e) => e.stopPropagation()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto text-[11px] text-[#818cf8] hover:text-white"
+                        >
+                          Website ↗
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+
+          {/* Row 6: Formats Selector Expandable Row */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 transition-all hover:border-white/20">
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'formats' ? null : 'formats')}
+              className="flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#1c1c28] border border-white/10 flex items-center justify-center text-[#e50914]">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{t(language, 'TXT_SETTINGS_FORMAT')}</div>
+                  <div className="text-[11px] text-[#8a8a9a]">{t(language, 'TXT_ACTIVE_FORMATS_SUB')}</div>
+                </div>
+              </div>
+              <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#1f1e2e] text-[#a0a0ff] border border-[#6366f1]/40">
+                {t(language, 'TXT_ACTIVE_COUNT_FORMATS', activeFormatsCount, formats.length)}
+              </span>
+            </div>
+
+            {/* Expandable Formats Checkboxes */}
+            {expandedSection === 'formats' && (
+              <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
+                {formats.map((fmt) => {
+                  const checked = !filters.disabled_formats.includes(fmt.id);
+                  return (
+                    <div
+                      key={fmt.id}
+                      onClick={() => toggleFormat(fmt.id)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-[#161620] border border-white/5 cursor-pointer hover:bg-[#1f1f2c]"
+                    >
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          checked ? 'bg-[#e50914] border-[#e50914]' : 'border-white/30'
+                        }`}
+                      >
+                        {checked && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-xs text-[#c8c8d8]">{fmt.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Row 7: Appearance / Wygląd Toggle Controls */}
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4">
+            <div className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#e50914]" />
+              <span>{t(language, 'TXT_APPEARANCE')}</span>
+            </div>
+
+            <div className="tv-theme-settings" role="group" aria-label="Appearance">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  className={`tv-theme-option flex items-center justify-between p-3 rounded-xl border text-xs font-bold transition-all ${
+                    uiTheme === 'netflix'
+                      ? 'tv-theme-option-active bg-[#2a1a20] border-[#e50914] text-white shadow-[0_0_12px_rgba(229,9,20,0.3)]'
+                      : 'bg-[#181824] border-white/10 text-[#9090a0] hover:border-white/20'
+                  } ${gamepadThemeIndex === 0 ? 'tv-theme-option-gamepad' : ''}`}
+                  aria-pressed={uiTheme === 'netflix'}
+                  onClick={() => onChangeTheme('netflix')}
+                >
+                  <span>Netflix / Glass</span>
+                  <span>{uiTheme === 'netflix' ? '●' : '○'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`tv-theme-option flex items-center justify-between p-3 rounded-xl border text-xs font-bold transition-all ${
+                    uiTheme === 'ubiquity'
+                      ? 'tv-theme-option-active bg-[#2a1a20] border-[#e50914] text-white shadow-[0_0_12px_rgba(229,9,20,0.3)]'
+                      : 'bg-[#181824] border-white/10 text-[#9090a0] hover:border-white/20'
+                  } ${gamepadThemeIndex === 1 ? 'tv-theme-option-gamepad' : ''}`}
+                  aria-pressed={uiTheme === 'ubiquity'}
+                  onClick={() => onChangeTheme('ubiquity')}
+                >
+                  <span>(u)biquity</span>
+                  <span>{uiTheme === 'ubiquity' ? '●' : '○'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Reset Action Button */}
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-[18px] bg-[#1c1c28] hover:bg-[#e50914] text-xs font-bold text-white border border-white/15 hover:border-[#e50914] transition-all shadow-md active:scale-98"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>{t(language, 'TXT_SETTINGS_RESET')}</span>
+          </button>
         </div>
 
-        {/* Right Column: Package Formats */}
-        <div className="bg-[#121216] border border-[#202028] rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider mb-4">
-              {t(language, 'TXT_SETTINGS_FORMAT')}
-            </h3>
+        {/* Right Column: Glass Info Card "PolDrive System" (5 Cols) */}
+        <div className="lg:col-span-5">
+          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/12 rounded-[18px] p-6 shadow-xl relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e50914]/15 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="space-y-2">
-              {/* All formats option */}
-              <div
-                onClick={toggleAllFormats}
-                className="flex items-center gap-3 p-3 rounded-lg bg-[#18181f] hover:bg-[#22222a] border border-[#282834] cursor-pointer transition-colors"
-              >
-                <div
-                  className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                    allFormatsChecked
-                      ? 'bg-[#e50914] border-[#e50914]'
-                      : partialFormats
-                      ? 'bg-[#2a2a34] border-white/50'
-                      : 'border-[#444455] bg-transparent'
-                  }`}
-                >
-                  {allFormatsChecked ? (
-                    <Check className="w-3.5 h-3.5 text-white" />
-                  ) : partialFormats ? (
-                    <div className="w-2.5 h-0.5 bg-white" />
-                  ) : null}
+            {/* Card Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff1e27] to-[#c80812] flex items-center justify-center text-white font-black text-lg shadow-[0_0_14px_rgba(229,9,20,0.5)]">
+                  P
                 </div>
-                <span className="text-xs font-bold text-white">
-                  {t(language, 'TXT_SETTINGS_ALL_FORMATS')}
+                <div>
+                  <h3 className="text-base font-black text-white tracking-tight">PolDrive System</h3>
+                  <div className="text-xs text-[#a0a0b2] font-mono">{t(language, 'TXT_SYSTEM_STATUS')}</div>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#162e21] text-[#22c55e] border border-[#22c55e]/40 shadow-[0_0_8px_rgba(34,197,94,0.3)]">
+                SYSTEM OK
+              </span>
+            </div>
+
+            {/* System Details List */}
+            <div className="space-y-4 font-mono text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[#a0a0b2]">{t(language, 'TXT_SYS_VERSION')}</span>
+                <span className="font-bold text-white">v2.0.0-PRO (Build 2026.10)</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[#a0a0b2]">Firmware PS5</span>
+                <span className="font-bold text-[#22c55e]">{t(language, 'TXT_SYS_COMPATIBLE')}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[#a0a0b2]">ShadowMountPlus</span>
+                <span className="font-bold text-[#9090a0]">{t(language, 'TXT_UNAVAILABLE')}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[#a0a0b2]">{t(language, 'TXT_SYS_ACTIVE_CATS')}</span>
+                <span className="font-bold text-[#ff3b45]">
+                  {t(language, 'TXT_SYS_SOURCES_GAMES', activeSourcesCount, catalogCount.toLocaleString())}
                 </span>
               </div>
 
-              {/* Individual format options */}
-              {formats.map((fmt) => {
-                const checked = !filters.disabled_formats.includes(fmt.id);
-                return (
-                  <div
-                    key={fmt.id}
-                    onClick={() => toggleFormat(fmt.id)}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-[#16161b] hover:bg-[#202028] border border-[#22222c] cursor-pointer transition-colors"
-                  >
-                    <div
-                      className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                        checked
-                          ? 'bg-[#e50914] border-[#e50914]'
-                          : 'border-[#444455] bg-transparent'
-                      }`}
-                    >
-                      {checked && <Check className="w-3.5 h-3.5 text-white" />}
-                    </div>
-                    <span className="text-xs font-medium text-[#c8c8d2]">
-                      {fmt.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[#a0a0b2]">{t(language, 'TXT_SYS_KERNEL')}</span>
+                <span className="font-bold text-white">Web React Engine</span>
+              </div>
 
-          <div className="tv-theme-settings" role="group" aria-label="Appearance">
-            <h3 className="tv-theme-title">Appearance / Wygląd</h3>
-            <div className="tv-theme-choices">
-              <button type="button"
-                className={'tv-theme-option ' + (uiTheme === 'netflix' ? 'tv-theme-option-active' : '') + (gamepadThemeIndex === 0 ? ' tv-theme-option-gamepad' : '')}
-                aria-pressed={uiTheme === 'netflix'} onClick={() => onChangeTheme('netflix')}>
-                <span>Netflix / Glass</span><span>{uiTheme === 'netflix' ? '●' : '○'}</span>
-              </button>
-              <button type="button"
-                className={'tv-theme-option ' + (uiTheme === 'ubiquity' ? 'tv-theme-option-active' : '') + (gamepadThemeIndex === 1 ? ' tv-theme-option-gamepad' : '')}
-                aria-pressed={uiTheme === 'ubiquity'} onClick={() => onChangeTheme('ubiquity')}>
-                <span>(u)biquity</span><span>{uiTheme === 'ubiquity' ? '●' : '○'}</span>
-              </button>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-[#a0a0b2]">{t(language, 'TXT_SYS_STORAGE')}</span>
+                <span className="font-bold text-[#9090a0]">{t(language, 'TXT_CONSOLE_ONLY')}</span>
+              </div>
             </div>
-          </div>
 
-          {/* Reset Filters Button */}
-          <div className="mt-8 pt-5 border-t border-[#202028]">
-            <button
-              onClick={resetFilters}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#24242e] hover:bg-white hover:text-black text-xs font-bold text-white transition-all active:scale-98 border border-[#343444]"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>{t(language, 'TXT_SETTINGS_RESET')}</span>
-            </button>
+            {/* Footer Summary Note */}
+            <div className="mt-6 pt-4 border-t border-white/10 text-[11px] text-[#8a8a9a] leading-relaxed">
+              {t(language, 'TXT_SYS_FOOTER')}
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="mt-6 text-[11px] text-[#71717a] font-mono">
-        {t(language, 'TXT_SETTINGS_HINT')}
       </div>
     </div>
   );

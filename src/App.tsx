@@ -9,6 +9,7 @@ import { SearchGrid } from './components/SearchGrid';
 import { LibraryBrowser } from './components/LibraryBrowser';
 import { FileBrowser } from './components/FileBrowser';
 import { SettingsView } from './components/SettingsView';
+import { DownloadsView } from './components/DownloadsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
 import { INITIAL_CATALOG, getLatestGames, getHomeCategoryGames, getDistinctSources, matchesFilters } from './catalog';
@@ -88,7 +89,6 @@ export function App() {
       return updated;
     });
   }, [activeHomeCategory]);
-  const [selectedDownloadCol, setSelectedDownloadCol] = useState(0);
 
   // 6. Modal details state
   const [detailGame, setDetailGame] = useState<GameItem | null>(null);
@@ -638,19 +638,33 @@ export function App() {
             />
           )}
 
-          {/* Empty categories and Downloads share the native hero/carousel layout. */}
+          {/* The File Manager remains mounted to preserve console folder state. */}
           <div hidden={currentView !== 'files'}><FileBrowser language={language}
             sidebarFocused={isSidebarFocused || languageMenuOpen || currentView !== 'files'}
             onSidebar={() => setIsSidebarFocused(true)} /></div>
-          {['payloads', 'downloads'].includes(currentView) &&
-            <HomeView games={currentView === 'downloads' ? downloadItems : []} uiTheme={uiTheme} language={language}
-              title={t(language, currentView === 'files' ? 'TXT_NAV_FILES' : currentView === 'payloads' ? 'TXT_NAV_PAYLOADS' : 'TXT_NAV_DOWNLOADS')}
-              emptyMessage={t(language, currentView === 'downloads' ? 'TXT_NO_DOWNLOADS' : 'TXT_SECTION_UNAVAILABLE')}
-              showDate={false} selected={currentView === 'downloads' ? selectedDownloadCol : 0}
-              sidebarFocused={isSidebarFocused} onSelect={setSelectedDownloadCol}
+          {/* Backup-version-1 did not include a Payloads manager; keep its original placeholder. */}
+          {currentView === 'payloads' &&
+            <HomeView games={[]} uiTheme={uiTheme} language={language}
+              title={t(language, 'TXT_NAV_PAYLOADS')}
+              emptyMessage={t(language, 'TXT_SECTION_UNAVAILABLE')}
+              showDate={false} selected={0}
+              sidebarFocused={isSidebarFocused} onSelect={() => {}}
               onOpen={(game) => { setDetailGame(game); setDetailParentGame(null); }}
               onPlay={(game) => handleTriggerAction(game)}
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress} />}
+
+          {/* VIEW: DOWNLOADS */}
+          {currentView === 'downloads' && (
+            <DownloadsView
+              catalog={catalog}
+              language={language}
+              uiTheme={uiTheme}
+              onOpenGame={(g) => {
+                setDetailGame(g);
+                setDetailParentGame(null);
+              }}
+            />
+          )}
 
           {/* VIEW: SEARCH */}
           {currentView === 'search' && (
@@ -675,6 +689,7 @@ export function App() {
               uiTheme={uiTheme}
               gamepadThemeIndex={themeChoiceIndex}
               onChangeTheme={changeUiTheme}
+              catalogCount={catalog.length}
             />
           )}
         </main>
