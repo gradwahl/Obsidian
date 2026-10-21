@@ -513,9 +513,22 @@ assert.match(nativeSettings, /Appearance \/ Wygląd/);
 assert.match(persistedTheme, /WOLODRIVE_THEME_1/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-hero-backdrop/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-nav-marker/);
-assert.match(ubiquity, /ubq-logo-main/);
+assert.doesNotMatch(ubiquity, /ubq-menu-glyph/, 'Top-left hamburger icon must be removed from Ubiquity home');
+assert.doesNotMatch(ubiquity, /ubq-logo-main/, 'Top-left PolDrive text must be removed from Ubiquity home');
 assert.match(ubiquity, /ubq-glass-capsule/);
 assert.doesNotMatch(ubiquity, /PS5 LIBRARY/);
+assert.match(css, /\.ubq-cinematic-background \{[\s\S]*?left:\s*-64px;[\s\S]*?width:\s*1920px;[\s\S]*?height:\s*1080px;/,
+  'Ubiquity background must span the full 1920x1080 screen behind the sidebar');
+assert.match(css, /\.tv-theme-ubiquity \.tv-nav-item::before \{[\s\S]*?backdrop-filter:\s*blur\(12px\)/,
+  'Ubiquity sidebar items must have a glass bubble effect');
+assert.match(css, /\.tv-theme-ubiquity \.tv-nav-marker \{[\s\S]*?linear-gradient\(135deg,\s*#ff3366 0%,\s*#c9184a 50%,\s*#7a0924 100%\)/,
+  'Ubiquity active sidebar tab must be a vibrant crimson tile/pill');
+assert.match(css, /\.ubq-feature \{[\s\S]*?left:\s*44px;[\s\S]*?top:\s*52px;/,
+  'Ubiquity hero section must be positioned closer to the top-left corner');
+assert.match(css, /\.ubq-feature-title \{[\s\S]*?font-size:\s*84px;/,
+  'Ubiquity hero title must be enlarged for a bold cinematic feel');
+assert.match(css, /\.ubq-feature-metadata \.tv-meta-pill \{[\s\S]*?background:\s*rgba\(24,\s*24,\s*34,\s*0\.65\)/,
+  'Ubiquity metadata pills must match the console-grade smoked glass buttons');
 const ubiquityCollapsedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, uiTheme: 'ubiquity', isSidebarFocused: false }));
 const ubiquityExpandedSidebar = render(React.createElement(Sidebar, { ...sidebarProps, uiTheme: 'ubiquity', isSidebarFocused: true }));
 assert.match(ubiquityCollapsedSidebar, /ubq-pd-bubble-collapsed/);

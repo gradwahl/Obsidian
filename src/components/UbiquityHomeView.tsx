@@ -27,8 +27,17 @@ interface Props {
 // Preserve the previous backdrop until the next artwork finishes loading.
 function CinematicBackground({ game }: { game: GameItem | null }) {
   const [failed, setFailed] = useState<string[]>([]);
-  const candidate = [game?.backdrop_url, game?.cover_local_path,
-    game?.cover_url].find(src => src && !failed.includes(src)) || '';
+  const nonLegacyLocal = game?.cover_local_path && !game.cover_local_path.startsWith('/assets/covers/')
+    ? game.cover_local_path
+    : '';
+  const candidate = [
+    game?.backdrop_url,
+    nonLegacyLocal,
+    game?.boxart_url,
+    game?.cover_url,
+    game?.cover_fallback_url,
+    game?.cover_local_path
+  ].find(src => src && !failed.includes(src)) || '';
   const [visible, setVisible] = useState(candidate);
   const [next, setNext] = useState('');
   const [ready, setReady] = useState(false);
@@ -56,9 +65,9 @@ function CinematicBackground({ game }: { game: GameItem | null }) {
 
   return (
     <div className="ubq-cinematic-background" aria-hidden="true">
-      {visible && <img className="ubq-backdrop-current" src={visible} alt=""
+      {visible && <img className="ubq-backdrop-current" src={visible} alt="" decoding="async"
         onError={() => setFailed(old => old.includes(visible) ? old : [...old, visible])} />}
-      {next && next !== visible && <img key={next} className={'ubq-backdrop-next' + (ready ? ' ubq-backdrop-next-ready' : '')} src={next} alt=""
+      {next && next !== visible && <img key={next} className={'ubq-backdrop-next' + (ready ? ' ubq-backdrop-next-ready' : '')} src={next} alt="" decoding="async"
         onLoad={() => setReady(true)}
         onError={() => { setFailed(old => old.includes(next) ? old : [...old, next]); setNext(''); }} />}
       <div className="ubq-cinematic-vignette" />
@@ -146,15 +155,6 @@ export function UbiquityHomeView({
     <div className="tv-home ubq-home" data-layout="ubiquity">
       <CinematicBackground game={game} />
       <div className="ubq-ambient-top">
-        <span className="ubq-menu-glyph" aria-hidden="true">☰</span>
-        <span className="ubq-product-name ubq-logo-lockup ubq-logo-main" aria-label="PolDrive">
-          <b className="ubq-logo-p">P</b>
-          <span className="ubq-logo-tail">
-            <span className="ubq-logo-white">ol</span>
-            <span className="ubq-logo-d">D</span>
-            <span className="ubq-logo-white">rive</span>
-          </span>
-        </span>
         <div className="ubq-system-label ubq-glass-capsule" aria-label="PolDrive">
           <span className="ubq-logo-lockup ubq-logo-capsule">
             <b className="ubq-logo-p">P</b>

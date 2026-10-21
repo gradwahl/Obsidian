@@ -1873,13 +1873,13 @@ static const char *view_content_title(WolodriveApp *app) {
 static void render_ubiquity_fades(SDL_Renderer *r) {
     for (int band = 0; band < 64; band++) {
         float t = (float)band / 64.0f;
-        Uint8 opacity = (Uint8)(221.0f * (1.0f-t) * (1.0f-t));
-        fill_rect(r, RAIL_WIDTH + band*16, 0, 16, 960, 4, 5, 9, opacity);
+        Uint8 opacity = (Uint8)(210.0f * (1.0f-t) * (1.0f-t));
+        fill_rect(r, band*18, 0, 18, SCREEN_HEIGHT, 4, 5, 9, opacity);
     }
     for (int band = 0; band < 54; band++) {
         float t = (float)(band+1) / 54.0f;
-        Uint8 opacity = (Uint8)(242.0f * t*t);
-        fill_rect(r, RAIL_WIDTH, 528 + band*10, SCREEN_WIDTH - RAIL_WIDTH,
+        Uint8 opacity = (Uint8)(238.0f * t*t);
+        fill_rect(r, 0, 540 + band*10, SCREEN_WIDTH,
                   10, 5, 6, 9, opacity);
     }
 }
@@ -2252,12 +2252,14 @@ static void render_sidebar(WolodriveApp *app) {
         fill_rect(r, sb_w, 0, SCREEN_WIDTH - sb_w, SCREEN_HEIGHT, 0, 0, 0, dim_alpha);
     }
 
-    fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT,
-              app->ui_theme == UI_THEME_UBIQUITY ? 7 : 12,
-              app->ui_theme == UI_THEME_UBIQUITY ? 8 : 12,
-              app->ui_theme == UI_THEME_UBIQUITY ? 11 : 12, 250);
-    if (app->ui_theme != UI_THEME_UBIQUITY)
+    if (app->ui_theme == UI_THEME_UBIQUITY) {
+        Uint8 sb_alpha = (Uint8)lroundf(118.0f + 86.0f * app->sidebar_expand);
+        fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 10, 11, 16, sb_alpha);
+        fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 255, 255, 255, 38);
+    } else {
+        fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT, 12, 12, 12, 250);
         fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
+    }
 
     SDL_Rect sb_clip = {0, 0, sb_w, SCREEN_HEIGHT};
     SDL_Rect prev_clip;
@@ -2383,25 +2385,39 @@ static void render_sidebar(WolodriveApp *app) {
     }
     SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,
                             sb_w - 16, sidebar_target(app->active_row).h - 16};
-    draw_rounded_glow(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                      14, 5, app->ui_theme == UI_THEME_UBIQUITY ? 225 : 229,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 225 : 9,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 230 : 20, 38);
-    fill_rounded_rect(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                      14, app->ui_theme == UI_THEME_UBIQUITY ? 35 : 45,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 35 : 16,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 40 : 24, 245);
-    draw_rounded_border(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                        14, 1, 255,
-                        app->ui_theme == UI_THEME_UBIQUITY ? 255 : 75,
-                        app->ui_theme == UI_THEME_UBIQUITY ? 255 : 88, 105);
+    if (app->ui_theme == UI_THEME_UBIQUITY) {
+        int pill_r = (int)lroundf(15.0f + 5.0f * app->sidebar_expand);
+        draw_rounded_glow(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
+                          pill_r, 8, 201, 24, 74, 145);
+        fill_rounded_rect(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
+                          pill_r, 201, 24, 74, 250);
+        fill_rounded_rect(r, active_pill.x + 2, active_pill.y + 2, active_pill.w - 4, active_pill.h / 2,
+                          pill_r - 2, 255, 51, 102, 135);
+        fill_rounded_rect(r, active_pill.x + 2, active_pill.y + active_pill.h / 2, active_pill.w - 4, active_pill.h / 2 - 2,
+                          pill_r - 2, 122, 9, 36, 120);
+        draw_rounded_border(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
+                            pill_r, 1, 255, 95, 115, 175);
+    } else {
+        draw_rounded_glow(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
+                          14, 5, 229, 9, 20, 38);
+        fill_rounded_rect(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
+                          14, 45, 16, 24, 245);
+        draw_rounded_border(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
+                            14, 1, 255, 75, 88, 105);
+    }
     for (int row = 0; row < TOTAL_ROWS; row++) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
 
-        Uint8 ir = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 250 : 154) : (selected ? 255 : 215);
-        Uint8 ig = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 250 : 154) : (selected ? 35 : 32);
-        Uint8 ib = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 253 : 162) : (selected ? 45 : 40);
+        if (app->ui_theme == UI_THEME_UBIQUITY && !selected) {
+            int item_r = (int)lroundf(15.0f + 5.0f * app->sidebar_expand);
+            fill_rounded_rect(r, 8, target.y + 8, sb_w - 16, target.h - 16, item_r, 24, 24, 34, 150);
+            draw_rounded_border(r, 8, target.y + 8, sb_w - 16, target.h - 16, item_r, 1, 255, 255, 255, 42);
+        }
+
+        Uint8 ir = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 235) : (selected ? 255 : 215);
+        Uint8 ig = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 236) : (selected ? 35 : 32);
+        Uint8 ib = app->ui_theme == UI_THEME_UBIQUITY ? (selected ? 255 : 244) : (selected ? 45 : 40);
         Uint8 ia = selected ? 255 : 235;
 
         int x = 28, y = target.y + (target.h - 30) / 2;
@@ -2819,22 +2835,17 @@ static void render_ubiquity_home(WolodriveApp *app) {
         return;
     }
     if (app->hero_prev_item && app->hero_prev_item != hero && app->hero_crossfade < 1.0f) {
-        render_cover_or_placeholder_alpha(app, app->hero_prev_item, RAIL_WIDTH, 0,
-                                          SCREEN_WIDTH - RAIL_WIDTH, 1019, true,
+        render_cover_or_placeholder_alpha(app, app->hero_prev_item, 0, 0,
+                                          SCREEN_WIDTH, SCREEN_HEIGHT, true,
                                           (Uint8)(255.0f * (1.0f - app->hero_crossfade)));
-        render_cover_or_placeholder_alpha(app, hero, RAIL_WIDTH, 0,
-                                          SCREEN_WIDTH - RAIL_WIDTH, 1019, true,
+        render_cover_or_placeholder_alpha(app, hero, 0, 0,
+                                          SCREEN_WIDTH, SCREEN_HEIGHT, true,
                                           (Uint8)(255.0f * app->hero_crossfade));
     } else {
-        render_cover_or_placeholder(app, hero, RAIL_WIDTH, 0,
-                                    SCREEN_WIDTH - RAIL_WIDTH, 1019, true);
+        render_cover_or_placeholder(app, hero, 0, 0,
+                                    SCREEN_WIDTH, SCREEN_HEIGHT, true);
     }
     render_ubiquity_fades(r);
-    if (!(is_library_view(app->active_row) && app->library_depth == LIBRARY_GAMES)) {
-        draw_poldrive_premium_logo(app, CONTENT_X + 24, 18,
-                                   app->font_logo ? app->font_logo : app->font_row_title,
-                                   app->font_row_title ? app->font_row_title : app->font_small);
-    }
     {
         /* Top-right iOS Glass Bubble capsule with scaled PolDrive logo */
         int cap_w = 136, cap_h = 42, cap_r = 21;
@@ -2850,20 +2861,44 @@ static void render_ubiquity_home(WolodriveApp *app) {
     SDL_strlcpy(upper, hero->title, sizeof(upper));
     for (char *p = upper; *p; p++)
         if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
-    SDL_Rect title = {CONTENT_X + 24, 163, 1060, 154};
+    SDL_Rect title = {CONTENT_X + 6, 52, 1120, 174};
     draw_fitted_text(app, app->font_ubiquity_title ?
                      app->font_ubiquity_title : app->font_hero_title,
                      upper, title, white, title, false);
 
-    char metadata[300];
-    snprintf(metadata, sizeof(metadata), "%s   %s   %.1f GB   * %.1f/10",
-             hero->source_name, sys_format_short_badge(hero->format),
-             hero->size_gb, hero->rating_score);
-    SDL_Rect meta_box = {CONTENT_X + 24, 329, 860, 34};
-    draw_fitted_text(app, app->font_small, metadata, meta_box, white, meta_box, false);
+    {
+        /* Console-grade smoked glass metadata capsules matching bottom buttons */
+        char v_tag[48], sz_tag[48], rt_tag[48];
+        snprintf(v_tag, sizeof(v_tag), "v%s", hero->version[0] ? hero->version : "01.00");
+        snprintf(sz_tag, sizeof(sz_tag), "%.1f GB", hero->size_gb);
+        snprintf(rt_tag, sizeof(rt_tag), "★ %.1f/10", hero->rating_score);
+        const char *pills[6] = {
+            hero->source_name[0] ? hero->source_name : "PolDrive",
+            hero->id_code,
+            v_tag,
+            sys_format_short_badge(hero->format),
+            sz_tag,
+            hero->rating_score > 0.0f ? rt_tag : NULL
+        };
+        int mx = CONTENT_X + 6;
+        int my = 242;
+        int mh = 36;
+        int mr = 18;
+        for (int pi = 0; pi < 6; pi++) {
+            if (!pills[pi] || !pills[pi][0]) continue;
+            int mw = 0, mth = 0;
+            if (app->font_micro) TTF_SizeUTF8(app->font_micro, pills[pi], &mw, &mth);
+            if (mw <= 0) mw = 72;
+            int pw = mw + 36;
+            fill_rounded_rect(r, mx, my, pw, mh, mr, 24, 24, 34, 166);
+            draw_rounded_border(r, mx, my, pw, mh, mr, 1, 255, 255, 255, 46);
+            draw_text(app, app->font_micro, pills[pi], mx + 18, my + 9, (SDL_Color){240, 240, 246, 235}, 0);
+            mx += pw + 10;
+        }
+    }
 
     const char *description = hero->description[0] ? hero->description : "";
-    SDL_Rect desc_box = {CONTENT_X + 24, 380, 760, 65};
+    SDL_Rect desc_box = {CONTENT_X + 6, 296, 780, 75};
     draw_fitted_text(app, app->font_body, description,
                      desc_box, subdued, desc_box, false);
     const LibraryConsole *selected_console =
