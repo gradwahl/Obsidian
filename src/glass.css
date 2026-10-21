@@ -1,0 +1,115 @@
+/* Palette extracted from native.css. Optical white/black layers change depth,
+   never the underlying neutral, brand or active hues. */
+:root {
+  --pill-bg-top: rgba(28,28,38,.72);
+  --pill-bg-bottom: rgba(22,22,30,.78);
+  --pill-active-1: rgba(229,9,20,.35);
+  --pill-active-2: rgba(229,9,20,.35);
+  --pill-active-3: rgba(229,9,20,.35);
+  --pill-border: rgba(255,255,255,.15);
+  --text: #f5f5f5;
+  --pill-glow: rgba(229,9,20,.45);
+  --glass-highlight: rgba(255,255,255,.30);
+  --glass-shadow: rgba(0,0,0,.35);
+}
+.glass-pill, .glass-surface {
+  position: relative;
+  border: 0;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, var(--pill-bg-top), var(--pill-bg-bottom));
+  color: var(--text);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--glass-shadow), inset 0 0 12px rgba(255,255,255,.04), 0 2px 4px var(--glass-shadow), 0 10px 24px var(--glass-shadow);
+  overflow: visible;
+  isolation: isolate;
+}
+.glass-pill { display: inline-flex; align-items: center; justify-content: center; height: 40px; transition: transform 160ms, background 160ms, box-shadow 160ms, color 200ms ease; }
+.glass-pill--sm { height: 30px; }
+.glass-pill--active { background: linear-gradient(180deg, var(--pill-active-1), var(--pill-active-2) 50%, var(--pill-active-3)); box-shadow: inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--glass-shadow), inset 0 0 12px rgba(255,255,255,.04), 0 2px 4px var(--glass-shadow), 0 10px 24px var(--glass-shadow), var(--glass-active-shadow, 0 8px 22px var(--pill-glow)); }
+.glass-pill::before, .glass-surface::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.08) 50%, rgba(255,255,255,.18));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.glass-pill::after, .glass-surface::after { content: ''; position: absolute; top: 1px; left: 6%; right: 6%; height: 45%; border-radius: 9999px 9999px 40% 40% / 9999px 9999px 100% 100%; background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0)); pointer-events: none; }
+button.glass-pill:hover { transform: translateY(-1px); }
+button.glass-pill:active { transform: translateY(0) scale(.98); }
+.tv-hero-btn-primary { --pill-active-1: #ff1e27; --pill-active-2: #e50914; --pill-active-3: #c80812; }
+.tv-meta-pill.glass-pill { height: 30px; }
+.tv-hero-metadata { overflow: visible; }
+.sliding-highlight { position: absolute; left: 0; top: 0; margin: 0; opacity: 0; pointer-events: none; z-index: 0; transform-origin: top left; transition: none; }
+.ubq-category-select > button, .tv-navigation > button, .tv-language-options > button { position: relative; z-index: 1; }
+.ubq-category-select > .ubq-category-current { background: transparent; box-shadow: none; color: var(--text); transition-delay: 80ms; }
+.ubq-category-current::before, .ubq-category-current::after { display: none; }
+.tv-sidebar.glass-surface { position: absolute; --pill-bg-top: rgba(12,12,12,.98); --pill-bg-bottom: rgba(12,12,12,.98); border-radius: 34px; padding: 8px 8px 12px; }
+.tv-theme-ubiquity .tv-sidebar.glass-surface { position: absolute; --pill-bg-top: rgba(7,8,11,.96); --pill-bg-bottom: rgba(7,8,11,.96); }
+.tv-sidebar.glass-surface > div { height: 100%; }
+.tv-sidebar .tv-navigation { top: 148px; bottom: 36px; left: 8px; width: calc(100% - 16px); display: flex; flex-direction: column; gap: 4px; }
+.tv-sidebar .tv-nav-item { height: 44px; flex: 0 0 44px; width: 100%; margin: 0; padding: 0 16px; gap: 16px; border-radius: 26px; box-shadow: none; background: transparent; font-size: 20px; }
+.tv-sidebar .tv-nav-item:last-child { margin-top: auto; }
+.tv-sidebar .tv-nav-icon, .tv-sidebar .tv-nav-icon svg { width: 20px; height: 20px; flex-basis: 20px; }
+.tv-sidebar .tv-nav-item:hover, .tv-language-option:hover { background: rgba(255,255,255,.07); }
+.tv-sidebar .tv-nav-marker { top: 0; left: 0; border: 0; border-radius: 9999px; }
+.tv-sidebar .tv-nav-label { overflow: hidden; white-space: nowrap; }
+.tv-sidebar .tv-nav-active { color: var(--text); transition: color 200ms ease 80ms; }
+.tv-sidebar .tv-language { top: 16px; left: 8px; right: 8px; }
+.tv-sidebar .tv-language-trigger { height: 44px; padding: 0 16px; background: transparent; border: 0; border-radius: 26px; box-shadow: none; backdrop-filter: none; }
+.tv-sidebar .tv-language-trigger > div:first-child { gap: 16px; }
+.tv-sidebar .tv-language-trigger svg { width: 20px; height: 20px; }
+.tv-sidebar .tv-language-options { position: absolute; top: 60px; left: 0; width: 244px; padding: 8px; border-radius: 34px; z-index: 50; animation: glassMenuOpen 200ms cubic-bezier(.22,1,.36,1) both; transform-origin: top; }
+.tv-sidebar .tv-language-option { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 44px; border: 0; border-radius: 26px; padding: 0 16px; background: transparent; color: inherit; text-align: left; transition: color 200ms; }
+.tv-language-option.is-highlighted { color: var(--text); }
+.tv-brand-logo { overflow: visible; border-bottom: 1px solid rgba(255,255,255,.08); }
+.tv-brand-title { transition: opacity 480ms cubic-bezier(.22,1,.36,1), filter 480ms cubic-bezier(.22,1,.36,1); }
+.tv-sidebar-collapsed .tv-brand-title { filter: blur(3px); transition-timing-function: cubic-bezier(.4,0,.2,1); }
+.tv-sidebar-expanded .tv-brand-title { filter: blur(0); }
+@keyframes glassMenuOpen { from { opacity: 0; transform: scaleY(.92); } to { opacity: 1; transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .glass-pill, .tv-sidebar, .tv-brand-title { transition: opacity 150ms; }
+  .tv-sidebar .tv-language-options { animation: none; }
+  .tv-sidebar-collapsed .tv-brand-title { filter: none; }
+  button.glass-pill:hover, button.glass-pill:active { transform: none; }
+}
+
+.glass-surface::after { height: 48px; left: 8px; right: 8px; border-radius: inherit; }
+
+.language-copy { transition: opacity 140ms ease; }
+.language-copy[data-language-fading="true"] { opacity: 0; transition-duration: 90ms; }
+.tv-language-trigger .language-copy { min-width: 140px; }
+.tv-language-options.is-closing { animation: glassMenuClose 140ms ease both; pointer-events: none; }
+@keyframes glassMenuClose { to { opacity: 0; transform: scaleY(.92); } }
+.tv-nav-item .tv-nav-tooltip { display: none; position: absolute; left: calc(100% + 16px); padding: 0 16px; height: 40px; overflow: visible; font-size: 18px; }
+.tv-sidebar-collapsed .tv-nav-item:hover { overflow: visible; }
+.tv-sidebar-collapsed .tv-nav-item:hover .tv-nav-tooltip { display: inline-flex; }
+.tv-language-option { animation: glassOptionEnter 200ms ease both; }
+.tv-language-option:nth-of-type(2) { animation-delay: 20ms; }
+.tv-language-option:nth-of-type(3) { animation-delay: 40ms; }
+.tv-language-option:nth-of-type(4) { animation-delay: 60ms; }
+.tv-language-option:nth-of-type(5) { animation-delay: 80ms; }
+.tv-language-option:nth-of-type(6) { animation-delay: 100ms; }
+.tv-language-option:nth-of-type(7) { animation-delay: 120ms; }
+.tv-language-option:nth-of-type(8) { animation-delay: 140ms; }
+.tv-language-option:nth-of-type(9) { animation-delay: 160ms; }
+@keyframes glassOptionEnter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .tv-language-option { animation: none; } .tv-language-options.is-closing { animation: none; } }
+
+.highlight-glow { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 8px 22px var(--pill-glow); pointer-events: none; }
+
+.sliding-highlight { --glass-active-shadow: 0 0 0 transparent; }
+
+.ubq-detail-tags .glass-pill--sm { height: 30px; }
+
+/* Retain the existing context-specific text colors as well as the fills. */
+.tv-hero-metadata .glass-pill { --text: #dadade; }
+.ubq-feature-metadata .glass-pill { --text: #e9e9ec; }
+.ubq-feature-metadata .ubq-score { --text: #f5eeee; }
+.ubq-category-select > button:not(.ubq-category-current) { color: rgba(235,235,240,.75); }
+.ubq-category-select > button:hover { color: #fff; }
+.ubq-category-select > .ubq-category-current { color: #fff; }
+@supports not ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+  .glass-pill::before, .glass-surface::before { background: none; border: 1px solid var(--pill-border); padding: 0; }
+}

@@ -3,7 +3,6 @@ import { SidebarView, LanguageCode, GameItem, CatalogFilters, SystemStats } from
 import { Sidebar } from './components/Sidebar';
 import { HomeView, HomeCategoryRow } from './components/HomeView';
 import { NativeViewport } from './components/NativeViewport';
-import { GameDetailModal } from './components/GameDetailModal';
 import { UbiquityGameDetails } from './components/UbiquityGameDetails';
 import { SearchGrid } from './components/SearchGrid';
 import { LibraryBrowser } from './components/LibraryBrowser';
@@ -12,11 +11,19 @@ import { SettingsView } from './components/SettingsView';
 import { DownloadsView } from './components/DownloadsView';
 import { SystemStatsBar } from './components/SystemStatsBar';
 import { Toast } from './components/Toast';
-import { INITIAL_CATALOG, getLatestGames, getHomeCategoryGames, getDistinctSources, matchesFilters } from './catalog';
+import { INITIAL_CATALOG, getLatestGames, getHomeCategoryLists, getDistinctSources, matchesFilters } from './catalog';
 import { loadSourceCatalogues } from './sourceCatalogues';
 import { t } from './translations';
 
-export function App() {
+export function focusSettingsControl(direction: number) {
+  const controls = Array.from(document.querySelectorAll<HTMLElement>(
+    '.tv-settings button, .tv-settings input, .tv-settings [tabindex="0"]'));
+  if (!controls.length) return;
+  const index = controls.indexOf(document.activeElement as HTMLElement);
+  controls[index < 0 ? 0 : Math.max(0, Math.min(controls.length - 1, index + direction))].focus();
+}
+
+function App() {
   // 1. Language state (saved to localStorage 'language')
   const [language, setLanguage] = useState<LanguageCode>(() => {
     const saved = localStorage.getItem('language');
@@ -31,16 +38,7 @@ export function App() {
   });
 
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
-  const [uiTheme, setUiTheme] = useState<'netflix' | 'ubiquity'>(() => {
-    try { return localStorage.getItem('poldrive-ui-theme') === 'ubiquity' ? 'ubiquity' : 'netflix'; }
-    catch { return 'netflix'; }
-  });
-  const [themeChoiceIndex, setThemeChoiceIndex] = useState(() => uiTheme === 'ubiquity' ? 1 : 0);
-  const changeUiTheme = (next: 'netflix' | 'ubiquity') => {
-    setThemeChoiceIndex(next === 'ubiquity' ? 1 : 0);
-    setUiTheme(next);
-    try { localStorage.setItem('poldrive-ui-theme', next); } catch { /* session-only */ }
-  };
+
 
   // 2. View state
   const [currentView, setCurrentView] = useState<SidebarView>('home');
@@ -50,6 +48,7 @@ export function App() {
   // 3. Catalog state
   const [catalog, setCatalog] = useState<GameItem[]>(INITIAL_CATALOG);
   const [syncInProgress, setSyncInProgress] = useState(false);
+  const catalogLoader = useRef<AbortController | null>(null);
   const [syncStatus, setSyncStatus] = useState<string>(() =>
     t(language, 'TXT_READY')
   );
@@ -158,16 +157,18 @@ export function App() {
 
   // Computed data
   const availableSources = useMemo(() => getDistinctSources(catalog), [catalog]);
-  const homeCategories = useMemo<HomeCategoryRow[]>(
-    () => [
-      { id: 'ps5', titleKey: 'TXT_CAT_PS5', games: getHomeCategoryGames(catalog, filters, 'ps5', 128) },
-      { id: 'ps4', titleKey: 'TXT_CAT_PS4', games: getHomeCategoryGames(catalog, filters, 'ps4', 128) },
-      { id: 'popular', titleKey: 'TXT_CAT_POPULAR', games: getHomeCategoryGames(catalog, filters, 'popular', 128) },
-      { id: 'newest', titleKey: 'TXT_CAT_NEWEST', games: getHomeCategoryGames(catalog, filters, 'newest', 128) },
-      { id: 'top_rated', titleKey: 'TXT_CAT_TOP_RATED', games: getHomeCategoryGames(catalog, filters, 'top_rated', 128) }
-    ],
-    [catalog, filters]
-  );
+  const homeCategories = useMemo<HomeCategoryRow[]>(() => {
+    // The former implementation re-normalized/deduplicated up to 80,000
+    // entries five times, every catalogue update. Share one deduped pass.
+    const groups = getHomeCategoryLists(catalog, filters, 128);
+    return [
+      { id: 'ps5', titleKey: 'TXT_CAT_PS5', games: groups.ps5 },
+      { id: 'ps4', titleKey: 'TXT_CAT_PS4', games: groups.ps4 },
+      { id: 'popular', titleKey: 'TXT_CAT_POPULAR', games: groups.popular },
+      { id: 'newest', titleKey: 'TXT_CAT_NEWEST', games: groups.newest },
+      { id: 'top_rated', titleKey: 'TXT_CAT_TOP_RATED', games: groups.top_rated }
+    ];
+  }, [catalog, filters]);
   const homeGames = useMemo(
     () => homeCategories[activeHomeCategory]?.games || getLatestGames(catalog, filters, 128),
     [homeCategories, activeHomeCategory, catalog, filters]
@@ -193,24 +194,86 @@ export function App() {
     showToast(t(language, 'TXT_ACTION_UNAVAILABLE'));
   };
 
-  // Load verified public metadata indexes. The initial snapshot remains available
-  // while the individual source chunks load in the browser.
+  // The verified seed catalogue is immediately interactive. Download and
+  // convert the big offline source indexes in small background JSON pages;
+  // never parse giant Vite JS modules on the browser's rendering thread.
+  const startCatalogLoad = async (notify: boolean) => {
+    catalogLoader.current?.abort();
+    const controller = new AbortController();
+    catalogLoader.current = controller;
+    let loaded: GameItem[] = [];
+    const completedSources: string[] = [];
+    let failedSources = 0;
+    let pendingCommit: number | null = null;
+    const commit = () => {
+      pendingCommit = null;
+      if (!controller.signal.aborted) setCatalog([...INITIAL_CATALOG, ...loaded]);
+    };
+    const scheduleCommit = () => {
+      if (pendingCommit === null) {
+        // One expensive 80k-item Home ranking update per second at most.
+        // Otherwise the loader would cause dozens of React re-renders.
+        pendingCommit = window.setTimeout(commit, 900);
+      }
+    };
+    setSyncInProgress(true);
+    setSyncStatus('Loading source catalogues in the background...');
+    try {
+      // Allow the initial hero, navigation and CSS spinner to paint.
+      await new Promise<void>(resolve => window.setTimeout(resolve, 120));
+      if (controller.signal.aborted) return;
+      const result = await loadSourceCatalogues(
+        status => {
+          if (controller.signal.aborted) return;
+          if (status.entries > 0) completedSources.push(status.name);
+          if (status.status === 'error') failedSources++;
+          setSyncStatus('Loaded ' + loaded.length.toLocaleString() +
+            ' entries from ' + completedSources.length + ' sources' +
+            (failedSources ? ' (' + failedSources + ' unavailable)' : '') +
+            ' • loading in background');
+        },
+        batch => {
+          if (controller.signal.aborted) return;
+          loaded = batch;
+          // Batch notifications do not each force a large React re-render.
+          scheduleCommit();
+        },
+        controller.signal
+      );
+      if (controller.signal.aborted) return;
+      if (pendingCommit !== null) {
+        window.clearTimeout(pendingCommit);
+        pendingCommit = null;
+      }
+      setCatalog([...INITIAL_CATALOG, ...result.entries]);
+      const successes = result.statuses.filter(status => status.entries > 0);
+      const errors = result.statuses.filter(status => status.status === 'error');
+      const message = 'Loaded ' + result.entries.length.toLocaleString() +
+        ' additional entries from ' + successes.length + ' sources' +
+        (errors.length ? ' (' + errors.length + ' unavailable)' : '');
+      setSyncStatus(message);
+      if (notify) showToast(message);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        const message = 'Catalogue loading failed: ' + String(error);
+        setSyncStatus(message);
+        if (notify) showToast(message);
+      }
+    } finally {
+      if (pendingCommit !== null) window.clearTimeout(pendingCommit);
+      if (catalogLoader.current === controller) {
+        catalogLoader.current = null;
+        setSyncInProgress(false);
+      }
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    loadSourceCatalogues()
-      .then(result => {
-        if (cancelled) return;
-        setCatalog([...INITIAL_CATALOG, ...result.entries]);
-        const loaded = result.statuses.filter(status => status.entries > 0);
-        const failures = result.statuses.filter(status => status.status === 'error');
-        setSyncStatus('Loaded ' + result.entries.length.toLocaleString() +
-          ' additional entries from ' + loaded.length + ' sources' +
-          (failures.length ? ' (' + failures.length + ' unavailable)' : ''));
-      })
-      .catch(error => {
-        if (!cancelled) setSyncStatus('Catalogue loading failed: ' + String(error));
-      });
-    return () => { cancelled = true; };
+    const timer = window.setTimeout(() => { void startCatalogLoad(false); }, 500);
+    return () => {
+      window.clearTimeout(timer);
+      catalogLoader.current?.abort();
+    };
   }, []);
 
   const handleSyncPegasus = async () => {
@@ -218,25 +281,7 @@ export function App() {
       showToast(t(language, 'TXT_SYNC_BUSY'));
       return;
     }
-    setSyncInProgress(true);
-    setSyncStatus('Loading verified source catalogues...');
-    try {
-      const result = await loadSourceCatalogues();
-      setCatalog([...INITIAL_CATALOG, ...result.entries]);
-      const successful = result.statuses.filter(source => source.entries > 0);
-      const errors = result.statuses.filter(source => source.status === 'error');
-      const message = 'Loaded ' + result.entries.length.toLocaleString() +
-        ' additional entries from ' + successful.length + ' sources' +
-        (errors.length ? ' (' + errors.length + ' unavailable)' : '');
-      setSyncStatus(message);
-      showToast(message);
-    } catch (error) {
-      const message = 'Catalogue refresh failed: ' + String(error);
-      setSyncStatus(message);
-      showToast(message);
-    } finally {
-      setSyncInProgress(false);
-    }
+    await startCatalogLoad(true);
   };
 
   // Keyboard navigation & Gamepad support
@@ -254,7 +299,7 @@ export function App() {
       if (currentView === 'files' && !isSidebarFocused && !['l', 'L'].includes(e.key)) return;
       // Escape or Backspace: close modal or focus sidebar
       if (e.key === 'Escape') {
-        if (detailGame && uiTheme === 'ubiquity') {
+        if (detailGame) {
           const subpanelClose = document.querySelector<HTMLButtonElement>(
             '.ubq-detail-lightbox button, .ubq-detail-options-header button'
           );
@@ -273,7 +318,7 @@ export function App() {
         return;
       }
 
-      if (detailGame && uiTheme === 'ubiquity') {
+      if (detailGame) {
         const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
           '.ubq-detail-option-list button'));
         if (options.length) {
@@ -339,10 +384,10 @@ export function App() {
           if (activeHeroGame) setDetailGame(activeHeroGame);
         }
       } else if (currentView === 'settings' && !detailGame && !isSidebarFocused) {
-        if (e.key === 'ArrowUp') { e.preventDefault(); setThemeChoiceIndex(0); }
-        else if (e.key === 'ArrowDown') { e.preventDefault(); setThemeChoiceIndex(1); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); focusSettingsControl(-1); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); focusSettingsControl(1); }
         else if (e.key === 'Enter') {
-          changeUiTheme(themeChoiceIndex === 0 ? 'netflix' : 'ubiquity');
+          if (!document.activeElement?.closest('.tv-settings')) focusSettingsControl(0);
         } else if (e.key === 'ArrowLeft') setIsSidebarFocused(true);
       } else if (isSidebarFocused) {
         const views: SidebarView[] = [
@@ -379,8 +424,6 @@ export function App() {
     homeCategories.length,
     selectedHomeCol,
     activeHeroGame,
-    themeChoiceIndex,
-    uiTheme,
     detailActionIndex,
     languageMenuOpen
   ]);
@@ -413,8 +456,9 @@ export function App() {
             if (isSidebarFocused && !detailGame) {
               setIsSidebarFocused(false);
             } else if (currentView === 'settings' && !detailGame) {
-              changeUiTheme(themeChoiceIndex === 0 ? 'netflix' : 'ubiquity');
-            } else if (detailGame && uiTheme === 'ubiquity') {
+              (document.activeElement as HTMLElement)?.closest('.tv-settings')
+                ? (document.activeElement as HTMLElement).click() : focusSettingsControl(0);
+            } else if (detailGame) {
               const screenshotClose = document.querySelector<HTMLButtonElement>('.ubq-detail-lightbox button');
               const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
                 '.ubq-detail-option-list button'));
@@ -424,8 +468,6 @@ export function App() {
               } else {
                 document.querySelectorAll<HTMLButtonElement>('.ubq-detail-actions button')[detailActionIndex]?.click();
               }
-            } else if (detailGame) {
-              handleTriggerAction(detailGame);
             } else if (currentView === 'home' && activeHeroGame) {
               setDetailGame(activeHeroGame);
             }
@@ -434,10 +476,8 @@ export function App() {
           else if (gp.buttons[1]?.pressed) {
             lastGamepadPress.current = now;
             if (detailGame) {
-              const subpanelClose = uiTheme === 'ubiquity'
-                ? document.querySelector<HTMLButtonElement>(
-                    '.ubq-detail-lightbox button, .ubq-detail-options-header button')
-                : null;
+              const subpanelClose = document.querySelector<HTMLButtonElement>(
+                '.ubq-detail-lightbox button, .ubq-detail-options-header button');
               if (subpanelClose) subpanelClose.click();
               else if (detailParentGame) {
                 setDetailGame(detailParentGame);
@@ -463,7 +503,7 @@ export function App() {
           // D-Pad Up
           else if (gp.buttons[12]?.pressed) {
             lastGamepadPress.current = now;
-            if (detailGame && uiTheme === 'ubiquity') {
+            if (detailGame) {
               const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
                 '.ubq-detail-option-list button'));
               if (options.length) {
@@ -474,7 +514,7 @@ export function App() {
               const views: SidebarView[] = ['search', 'home', 'games', 'emulators', 'files', 'payloads', 'downloads', 'settings'];
               setCurrentView((view) => views[Math.max(0, views.indexOf(view) - 1)]);
             } else if (currentView === 'settings' && !detailGame) {
-              setThemeChoiceIndex(0);
+              focusSettingsControl(-1);
             } else if (currentView === 'home' && !detailGame) {
               setActiveHomeCategory((cat) => Math.max(0, cat - 1));
             }
@@ -482,7 +522,7 @@ export function App() {
           // D-Pad Down
           else if (gp.buttons[13]?.pressed) {
             lastGamepadPress.current = now;
-            if (detailGame && uiTheme === 'ubiquity') {
+            if (detailGame) {
               const options = Array.from(document.querySelectorAll<HTMLButtonElement>(
                 '.ubq-detail-option-list button'));
               if (options.length) {
@@ -493,7 +533,7 @@ export function App() {
               const views: SidebarView[] = ['search', 'home', 'games', 'emulators', 'files', 'payloads', 'downloads', 'settings'];
               setCurrentView((view) => views[Math.min(views.length - 1, views.indexOf(view) + 1)]);
             } else if (currentView === 'settings' && !detailGame) {
-              setThemeChoiceIndex(1);
+              focusSettingsControl(1);
             } else if (currentView === 'home' && !detailGame) {
               setActiveHomeCategory((cat) => Math.min(homeCategories.length - 1, cat + 1));
             }
@@ -501,7 +541,7 @@ export function App() {
           // D-Pad Left
           else if (gp.buttons[14]?.pressed) {
             lastGamepadPress.current = now;
-            if (detailGame && uiTheme === 'ubiquity') {
+            if (detailGame) {
               if (!document.querySelector('.ubq-detail-options')) {
                 setDetailActionIndex(index => Math.max(0, index - 1));
               }
@@ -515,7 +555,7 @@ export function App() {
           // D-Pad Right
           else if (gp.buttons[15]?.pressed) {
             lastGamepadPress.current = now;
-            if (detailGame && uiTheme === 'ubiquity') {
+            if (detailGame) {
               if (!document.querySelector('.ubq-detail-options')) {
                 setDetailActionIndex(index => Math.min(2, index + 1));
               }
@@ -542,13 +582,11 @@ export function App() {
     activeHeroGame,
     isSidebarFocused,
     language,
-    themeChoiceIndex,
-    uiTheme,
     detailActionIndex
   ]);
 
   return (
-    <NativeViewport><div className={uiTheme === 'ubiquity' ? 'tv-app tv-theme-ubiquity' : 'tv-app'}>
+    <NativeViewport><div className="tv-app tv-theme-ubiquity">
       {/* Toast Notification */}
       <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
 
@@ -556,7 +594,7 @@ export function App() {
       <div className="tv-shell">
         {/* Left Navigation Rail */}
         <Sidebar
-          uiTheme={uiTheme}
+
           currentView={currentView}
           onSelectView={(v) => {
             setCurrentView(v);
@@ -575,7 +613,7 @@ export function App() {
           {currentView === 'home' && (
             <HomeView
               games={homeGames}
-              uiTheme={uiTheme}
+
               categories={homeCategories}
               activeCategoryIndex={activeHomeCategory}
               onSelectCategory={(catIdx, colIdx) => {
@@ -611,7 +649,7 @@ export function App() {
             <LibraryBrowser
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={false}
-              uiTheme={uiTheme}
+
               catalog={catalog}
               language={language}
               onOpenGame={(g) => {
@@ -627,7 +665,7 @@ export function App() {
             <LibraryBrowser
               onRefresh={handleSyncPegasus} syncInProgress={syncInProgress}
               isEmulatorsView={true}
-              uiTheme={uiTheme}
+
               catalog={catalog}
               language={language}
               onOpenGame={(g) => {
@@ -644,7 +682,7 @@ export function App() {
             onSidebar={() => setIsSidebarFocused(true)} /></div>
           {/* Backup-version-1 did not include a Payloads manager; keep its original placeholder. */}
           {currentView === 'payloads' &&
-            <HomeView games={[]} uiTheme={uiTheme} language={language}
+            <HomeView games={[]} language={language}
               title={t(language, 'TXT_NAV_PAYLOADS')}
               emptyMessage={t(language, 'TXT_SECTION_UNAVAILABLE')}
               showDate={false} selected={0}
@@ -658,7 +696,7 @@ export function App() {
             <DownloadsView
               catalog={catalog}
               language={language}
-              uiTheme={uiTheme}
+
               onOpenGame={(g) => {
                 setDetailGame(g);
                 setDetailParentGame(null);
@@ -686,9 +724,9 @@ export function App() {
               onChangeFilters={handleFiltersChange}
               availableSources={availableSources}
               language={language}
-              uiTheme={uiTheme}
-              gamepadThemeIndex={themeChoiceIndex}
-              onChangeTheme={changeUiTheme}
+
+
+
               catalogCount={catalog.length}
             />
           )}
@@ -696,7 +734,7 @@ export function App() {
       </div>
 
       {/* Expanded Game Details Modal */}
-      {detailGame && uiTheme === 'ubiquity' && (
+      {detailGame && (
         <UbiquityGameDetails
           game={detailGame}
           catalog={catalog}
@@ -724,31 +762,6 @@ export function App() {
           }}
         />
       )}
-      {detailGame && uiTheme !== 'ubiquity' && (
-        <GameDetailModal
-          game={detailGame}
-          catalog={catalog}
-          neighborGames={currentView === 'home' ? homeGames : currentView === 'downloads' ? downloadItems : undefined}
-          language={language}
-          onClose={() => {
-            setDetailGame(null);
-            setDetailParentGame(null);
-          }}
-          onSelectGame={(selected) => {
-            setDetailParentGame(detailGame);
-            setDetailGame(selected);
-          }}
-          onTriggerAction={handleTriggerAction}
-          parentGame={detailParentGame}
-          onBackToParent={() => {
-            if (detailParentGame) {
-              setDetailGame(detailParentGame);
-              setDetailParentGame(null);
-            }
-          }}
-        />
-      )}
-
       {/* Bottom Telemetry & Status Bar */}
       <SystemStatsBar
         stats={stats}

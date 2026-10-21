@@ -45,7 +45,7 @@ benchmark-ui: src/native_catalog_snapshot.h
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	SDL_VIDEODRIVER=dummy ./build/benchmark_ui
 
-test: src/native_catalog_snapshot.h test-files test-ps5-renderer
+test: src/native_catalog_snapshot.h test-files test-ps5-renderer test-settings
 	@mkdir -p build
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
 	    tests/test_i18n.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
@@ -91,6 +91,15 @@ test-files:
 	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
 	SDL_VIDEODRIVER=dummy ./build/test_file_ui
 
+.PHONY: test-settings
+test-settings:
+	@mkdir -p build
+	gcc -D_GNU_SOURCE -Wall -Wextra -O2 -Isrc \
+	    tests/test_settings_ui.c src/file_manager.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c \
+	    -o build/test_settings_ui \
+	    `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_image libcurl` -lz -lm -lpthread
+	SDL_VIDEODRIVER=dummy ./build/test_settings_ui
+
 build-windows:
 	@mkdir -p build assets/covers
 	gcc -D_GNU_SOURCE -Wall -Wextra -O2 	    src/main.c src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c 	    -o build/wolodrive.exe 	     	    -lz -lm -lpthread
@@ -100,7 +109,57 @@ windows: build-windows
 	@echo "[POLDRIVE] Uruchamianie Wolodrive 2.0 (Windows)..."
 	./build/wolodrive.exe
 
-ps5: src/native_catalog_snapshot.h ps5-web-assets
+# One distributable: quiet web service + direct Media registration + autoload.
+# Embedded ELF intermediates stay in build/.internal; copy only build/poldrive.elf.
+# Native PS5 rendering remains available through make ps5-native.
+.PHONY: ps5-native
+ps5: ps5-web-assets
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE \
+	    -DWOLO_SINGLE_SERVICE -DWOLO_WEB_NO_BROWSER -DWOLO_WEB_AUTOSTART \
+	    -DWOLO_WEB_FIXED_PORT -O2 -Wall -Wextra \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags zlib` -Ibuild \
+	    src/web_payload.c src/file_manager.c -lz -lpthread -o build/.internal/poldrive-bundled-service.elf
+	python3 scripts/embed_ps5_service.py build/.internal/poldrive-bundled-service.elf build/ps5_web_assets.h build/ps5_service_payload.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_SINGLE_SHORTCUT -O2 -Wall -Wextra -Ibuild \
+	    src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/poldrive-shortcut-helper.elf
+	python3 scripts/embed_shortcut_helper.py build/.internal/poldrive-shortcut-helper.elf build/ps5_shortcut_helper.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -Dmain=poldrive_install_shortcut -O2 -Wall -Wextra -Ibuild \
+	    -c src/ps5_unified_launcher.c -o build/poldrive-shortcut-launcher.o
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -O2 -Wall -Wextra -Ibuild \
+	    src/ps5_single_installer.c build/poldrive-shortcut-launcher.o -o build/poldrive.elf
+	@echo "[POLDRIVE] Copy only build/poldrive.elf; run once to install/start quietly, then open PolDrive under Media."
+
+# Experimental full web-app metadata. Separate artifacts preserve the working
+# poldrive.elf. The v2 system scaffold requires the dedicated restore target.
+.PHONY: ps5-fullscreen-test ps5-fullscreen-restore
+ps5-fullscreen-test: ps5-web-assets ps5-fullscreen-restore
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE \
+	    -DWOLO_SINGLE_SERVICE -DWOLO_WEB_NO_BROWSER -DWOLO_WEB_AUTOSTART \
+	    -DWOLO_WEB_FIXED_PORT -O2 -Wall -Wextra \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags zlib` -Ibuild \
+	    src/web_payload.c src/file_manager.c -lz -lpthread -o build/.internal/poldrive-fullscreen-service.elf
+	python3 scripts/embed_ps5_service.py build/.internal/poldrive-fullscreen-service.elf build/ps5_web_assets.h build/ps5_fullscreen_service_payload.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_SINGLE_SHORTCUT -DWOLO_FULLSCREEN_WEBAPP -O2 -Wall -Wextra -Ibuild \
+	    src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/poldrive-fullscreen-helper.elf
+	python3 scripts/embed_shortcut_helper.py build/.internal/poldrive-fullscreen-helper.elf build/ps5_fullscreen_shortcut_helper.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_FULLSCREEN_WEBAPP -Dmain=poldrive_install_shortcut -O2 -Wall -Wextra -Ibuild \
+	    -c src/ps5_unified_launcher.c -o build/poldrive-fullscreen-launcher.o
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FULLSCREEN_WEBAPP -O2 -Wall -Wextra -Ibuild \
+	    src/ps5_single_installer.c build/poldrive-fullscreen-launcher.o -o build/poldrive-fullscreen-v2.elf
+	@echo "[POLDRIVE] Experimental v2: copy only build/poldrive-fullscreen-v2.elf. Keep the restore ELF for rollback."
+
+# Restore helper removes only its owned system scaffold, then re-registers the
+# confirmed browser-card shortcut. It uses the already-installed quiet service.
+ps5-fullscreen-restore:
+	@mkdir -p build/.internal
+	python3 scripts/generate_ps5_shortcut_icon.py build/wolodrive-icon0.png build/ps5_shortcut_icon.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_SINGLE_SHORTCUT -DWOLO_FULLSCREEN_RESTORE -O2 -Wall -Wextra -Ibuild \
+	    src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/poldrive-fullscreen-restore-helper.elf
+	python3 scripts/embed_shortcut_helper.py build/.internal/poldrive-fullscreen-restore-helper.elf build/ps5_fullscreen_restore_helper.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_FULLSCREEN_RESTORE -O2 -Wall -Wextra -Ibuild \
+	    src/ps5_unified_launcher.c -o build/poldrive-fullscreen-restore.elf
+
+ps5-native: src/native_catalog_snapshot.h ps5-web-assets
 	@mkdir -p build
 	@if [ ! -d "${PS5_PAYLOAD_SDK}" ]; then \
 	    echo "[BŁĄD] Nie znaleziono PS5_PAYLOAD_SDK w ${PS5_PAYLOAD_SDK}."; \
@@ -111,40 +170,77 @@ ps5: src/native_catalog_snapshot.h ps5-web-assets
 	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags sdl2 SDL2_ttf SDL2_image libcurl` \
 	    -c src/main.c -o build/poldrive-native-main.o
 	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE -DWOLO_NATIVE_FALLBACK -Dmain=wolodrive_web_main -O2 -Wall -Wextra \
-	    -Ibuild -c src/web_payload.c -o build/poldrive-web-fallback.o
-	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -O2 -Wall -Wextra -Ibuild \
-	    src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/poldrive-shortcut-helper.elf
-	python3 scripts/embed_shortcut_helper.py build/poldrive-shortcut-helper.elf build/ps5_shortcut_helper.h
-	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -O2 -Wall -Wextra -D__PS5__ -Ibuild \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags zlib` -Ibuild -c src/web_payload.c -o build/poldrive-web-fallback.o
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -O2 -Wall -Wextra -D__PS5__ -DPOLDRIVE_APP_ENTRY -Ibuild \
 	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags sdl2 SDL2_ttf SDL2_image libcurl` \
 	    src/ps5_unified_launcher.c build/poldrive-native-main.o build/poldrive-web-fallback.o \
 	    src/i18n.c src/library.c src/text.c src/settings.c src/translation.c src/sys_bridge.c src/file_manager.c src/emulator_download.c src/screenshots.c src/artwork.c src/catalog_pegasus.c src/ui_netflix.c \
 	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --libs --static sdl2 SDL2_ttf SDL2_image libcurl` \
 	    -lz -lm -lpthread \
-	    -o build/poldrive.elf
-	@echo "[POLDRIVE] Unified PS5 payload: build/poldrive.elf (native UI, Media shortcut, web startup fallback)"
+	    -o build/.internal/poldrive-app.elf
+	python3 scripts/embed_shortcut_helper.py build/.internal/poldrive-app.elf build/ps5_app_payload.h app_payload_elf
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_EMBED_APP -O2 -Wall -Wextra -Ibuild \
+	    src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/poldrive-shortcut-helper.elf
+	python3 scripts/embed_shortcut_helper.py build/.internal/poldrive-shortcut-helper.elf build/ps5_shortcut_helper.h
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -O2 -Wall -Wextra -Ibuild \
+	    src/ps5_unified_launcher.c -o build/poldrive-native-installer.elf
+	@echo "[POLDRIVE] Native-first recovery installer: build/poldrive-native-installer.elf (installer only; embedded dashboard app with web startup fallback)"
 
 # This additive target preserves the native PS5 build and the AI Studio output.
 .PHONY: ps5-web ps5-web-assets ps5-shortcut test-web-payload
 ps5-web-assets:
+	@mkdir -p build/.internal
 	npm run build:static
 	python3 scripts/embed_web_preview.py static-preview build/ps5_web_assets.h
 	python3 scripts/generate_ps5_shortcut_icon.py build/wolodrive-icon0.png build/ps5_shortcut_icon.h
-	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -Dmain=wolodrive_install_shortcut -O2 -Wall -Wextra -Ibuild \
-	    -c src/web_shortcut_installer.c -o build/wolodrive-shortcut.o
-	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -DWOLO_BUNDLED_SHORTCUT -O2 -Wall -Wextra \
-	    src/web_browser_helper.c build/wolodrive-shortcut.o -lSceIpmi -lSceAppInstUtil \
-	    -lSceSystemService -lSceUserService -o build/wolodrive-browser-helper.elf
-	python3 scripts/embed_browser_helper.py build/wolodrive-browser-helper.elf build/ps5_browser_helper.h
+	# Browser opener must never silently re-register the old Payload Manager
+	# shortcut and undo a user's deliberately installed direct Web-first tile.
+	# Shortcut registration is handled by standalone/unified installers.
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -O2 -Wall -Wextra \
+	    src/web_browser_helper.c -lSceSystemService -lSceUserService \
+	    -o build/.internal/wolodrive-browser-helper.elf
+	python3 scripts/embed_browser_helper.py build/.internal/wolodrive-browser-helper.elf build/ps5_browser_helper.h
 
 # Browser-only diagnostic build cannot overwrite the unified distributable.
 ps5-web: ps5-web-assets
 	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE -O2 -Wall -Wextra \
-	    -Ibuild src/web_payload.c src/file_manager.c -lz -lpthread -o build/wolodrive-web.elf
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags zlib` -Ibuild src/web_payload.c src/file_manager.c -lz -lpthread -o build/wolodrive-web.elf
+
+# Web-first opt-in: launch the service from Payload Manager's autoload list,
+# then install the direct localhost Media tile separately. The existing native
+# ELF, original shortcut and diagnostic targets remain as recovery options.
+.PHONY: ps5-webfirst ps5-web-service ps5-webfirst-shortcut ps5-legacy-shortcut
+ps5-webfirst: ps5-web-service ps5-webfirst-shortcut ps5-legacy-shortcut
+	@echo "[POLDRIVE] Web-first: autoload build/poldrive-web-service.elf, then run build/poldrive-webfirst-shortcut.elf once."
+
+ps5-web-service: ps5-web-assets
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D_GNU_SOURCE -D__PS5__ -DWOLO_FILE_BRIDGE \
+	    -DWOLO_WEB_NO_BROWSER -DWOLO_WEB_AUTOSTART -DWOLO_WEB_FIXED_PORT \
+	    -O2 -Wall -Wextra \
+	    `"${PS5_PAYLOAD_SDK}/bin/prospero-pkg-config" --cflags zlib` -Ibuild \
+	    src/web_payload.c src/file_manager.c -lz -lpthread -o build/poldrive-web-service.elf
+
+ps5-webfirst-shortcut: ps5-web-assets
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ -DWOLO_SHORTCUT_WEBFIRST \
+	    -O2 -Wall -Wextra -Ibuild src/web_shortcut_installer.c \
+	    -lSceIpmi -lSceAppInstUtil -o build/poldrive-webfirst-shortcut.elf
+
+# Explicit rollback installer: restores Payload Manager /loadpayload: route.
+ps5-legacy-shortcut: ps5-web-assets
+	"${PS5_PAYLOAD_SDK}/bin/prospero-clang" -D__PS5__ \
+	    -O2 -Wall -Wextra -Ibuild src/web_shortcut_installer.c \
+	    -lSceIpmi -lSceAppInstUtil -o build/poldrive-legacy-shortcut.elf
 
 ps5-shortcut: ps5
 
+.PHONY: test-startup-splash
+test-startup-splash:
+	gcc -Wall -Wextra -Werror -O2 -Isrc tests/test_startup_splash.c -o build/test_startup_splash `pkg-config --cflags --libs sdl2`
+	SDL_VIDEODRIVER=dummy ./build/test_startup_splash
+
 test-web-payload:
+	python3 tests/test_ps5_webapp_mount.py
+	python3 tests/test_single_installer.py
 	python3 tests/test_file_bridge.py
 	python3 tests/test_web_payload.py
 	python3 tests/test_browser_helper.py
@@ -165,3 +261,11 @@ deploy-ftp:
 
 clean:
 	rm -rf build/*
+
+# Shared glass renderer proof; does not require a display, network or PS5 SDK.
+.PHONY: test-glass
+test: test-glass
+test-glass:
+	@mkdir -p build
+	gcc -Wall -Wextra -Werror -O2 -Isrc tests/test_glass_ui.c -o build/test_glass_ui `pkg-config --cflags --libs sdl2` -lm
+	SDL_VIDEODRIVER=dummy ./build/test_glass_ui

@@ -26,23 +26,27 @@ const LibraryTileLogo: React.FC<{ url: string }> = ({ url }) => {
 interface LibraryBrowserProps {
   isEmulatorsView: boolean; catalog: GameItem[]; language: LanguageCode;
   onOpenGame: (game: GameItem) => void; filters: CatalogFilters;
-  uiTheme?: 'netflix' | 'ubiquity';
   onRefresh: () => void; syncInProgress: boolean;
 }
 
 export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView, catalog, language,
-  onOpenGame, filters, uiTheme = 'netflix', onRefresh, syncInProgress }) => {
+  onOpenGame, filters, onRefresh, syncInProgress }) => {
   const [company, setCompany] = useState<LibraryCompany | null>(null);
   const [console, setConsole] = useState<LibraryConsole | null>(null);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState(0);
   const [focused, setFocused] = useState(0);
   const title = t(language, isEmulatorsView ? 'TXT_NAV_EMULATORS' : 'TXT_NAV_GAMES');
-  const gamesFor = (system: LibraryConsole) => isEmulatorsView || (!system.title_id_prefix && !system.platform_id) ? []
-    : catalog.filter(item => matchesFilters(item, filters) && (
+  const matchesSystem = (item: GameItem, system: LibraryConsole) => !isEmulatorsView &&
+    matchesFilters(item, filters) && Boolean(
       (system.title_id_prefix && item.id_code.toUpperCase().startsWith(system.title_id_prefix)) ||
-      (system.platform_id && item.platform === system.platform_id)
-    ));
+      (system.platform_id && item.platform === system.platform_id));
+  const gamesFor = (system: LibraryConsole) => catalog.filter(item => matchesSystem(item, system));
+  const countFor = (system: LibraryConsole) => {
+    let count = 0;
+    for (const item of catalog) if (matchesSystem(item, system)) count++;
+    return count;
+  };
   const back = () => { if (console) setConsole(null); else setCompany(null); setPage(0); setSelected(0); setFocused(0); };
   const items = company ? consolesForSection(company, isEmulatorsView) : COMPANIES;
   const pages = Math.ceil(items.length / 8);
@@ -53,8 +57,8 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
 
   if (console && isEmulatorsView) return <EmulatorReleaseView system={console} onBack={back} />;
 
-  if (console) return <div className={uiTheme === 'ubiquity' ? 'tv-library-games tv-library-ubiquity-games' : 'tv-library-games'}>
-    <HomeView games={gamesFor(console)} uiTheme={uiTheme} language={language} title={console.name} showDate={false}
+  if (console) return <div className="tv-library-games tv-library-ubiquity-games">
+    <HomeView games={gamesFor(console)} language={language} title={console.name} showDate={false}
       emptyMessage={t(language, isEmulatorsView ? 'TXT_EMULATOR_NOT_CONNECTED'
         : (console.title_id_prefix || console.platform_id) ? 'TXT_NO_PACKAGES' : 'TXT_CONSOLE_NOT_CONNECTED')}
       selected={selected} sidebarFocused={false} onSelect={setSelected} onOpen={onOpenGame}
@@ -81,7 +85,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({ isEmulatorsView,
           <strong>{item.name}</strong>
           <span>{brand ? t(language, 'TXT_CONSOLE_COUNT', consolesForSection(brand, isEmulatorsView).length)
             : isEmulatorsView ? (getEmulatorRelease(system!) ? 'Release available' : 'Browse releases')
-            : t(language, 'TXT_LIBRARY_GAME_COUNT', gamesFor(system!).length)}</span>
+            : t(language, 'TXT_LIBRARY_GAME_COUNT', countFor(system!))}</span>
         </button>;
       })}
     </div>

@@ -13,3 +13,4 @@ assets/artwork/*
 .cache/wolodrive-artwork/
 assets/screenshots/
 /static-preview
+/public/poldrive-pages/

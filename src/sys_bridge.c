@@ -330,7 +330,7 @@ void sys_init(WolodriveApp *app) {
 #endif
     SDL_AtomicSet(&app->language, i18n_load_language(app->language_path, i18n_detect_language()));
     settings_load(app);
-    theme_load(app);
+    app->ui_theme = UI_THEME_UBIQUITY; /* The sole supported interface; ignore old theme files. */
     app->sync_status_id = TXT_READY;
     if (app->window) SDL_SetWindowTitle(app->window, TR(app, TXT_WINDOW_TITLE));
 

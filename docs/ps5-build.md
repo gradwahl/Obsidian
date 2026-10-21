@@ -1,6 +1,13 @@
-# Unified PS5 build and browser fallback
+# PS5 single-file installer and native recovery
 
-The native SDL app remains the UI reference. `make ps5` requires the PS5 Payload
+For renderer, cataloguing and embedded-asset performance changes, see
+[PS5 performance and device verification](ps5-performance.md).
+
+`make ps5` now creates one installer with a bundled quiet service and direct
+Media tile. The earlier manual two-file mode is documented separately in
+[PS5 Web-first Media launch](ps5-webfirst.md).
+
+The native SDL app remains the UI reference. `make ps5-native` requires the PS5 Payload
 SDK and its SDL2/curl/image/font dependencies. The SDK is installed in WSL at
 `/opt/ps5-payload-sdk`; set PS5_PAYLOAD_SDK accordingly. A Linux build does not
 prove PS5 rendering works. On the tested console the original native startup
@@ -41,13 +48,12 @@ injected backend failure proving its message survives. This test does not
 exercise PS5 VideoOut. Rollback removes the PS5-specific helper call and restores
 the previous automatic selection; no SDK install or user files are modified.
 
-Replace `/data/pldmgr/payloads/poldrive/poldrive.elf` with the rebuilt
-`build/poldrive.elf` and launch through Payload Manager once. If native starts,
-verify Files opens `/data`, parent navigation and a disposable folder listing.
-If the browser opens again, retrieve fresh `/data/wolodrive-startup.log` and
-`/data/poldrive-launcher.log`; look for `PS5 software renderer backend` and its
-specific error. PS5 display, storage access and parity remain unverified until
-that device check. **AI Studio deployment not verified.**
+For native renderer investigation, use `make ps5-native` and run its
+`build/poldrive-native-installer.elf` through Payload Manager once, then use the
+restored native-first Media tile. This recovery route retains the intermediate
+loader response. Retrieve `/data/wolodrive-startup.log` and
+`/data/poldrive-launcher.log` for native startup errors. PS5 display, storage
+access and parity remain unverified until device testing.
 
 Local verification for this change: `make test-ps5-renderer`, `make build-linux`,
 `make test-native-snapshot`, PS5 SDK `make ps5`, `npm run lint`, `npm run test:web`,
@@ -62,102 +68,133 @@ verification was performed for this startup change.
 
 ## One distributable: poldrive.elf
 
-Run `make ps5` (or `make ps5-shortcut`) with the SDK available. Both now build
-the same unified `build/poldrive.elf`. Distribute only that file: it contains
-the native application, Media shortcut installer and embedded web fallback.
-The existing static build workflow is preserved. Helper objects/ELFs in build/
-are internal intermediates; an older `build/wolodrive.elf` is not updated by
-these targets and must not be mistaken for the new distributable.
+For the separate, opt-in fullscreen launch experiment, see
+[PS5 fullscreen web-app test](ps5-fullscreen-test.md). The normal installer and
+its confirmed browser-card launch remain the default.
 
-Startup checks the registered dashboard shortcut marker before dispatching the
-isolated installer to the console's loopback ELF loader on port 9021.
-When the marker is absent, this **first invocation is installer-only**: it waits
-up to 15 seconds for the installer to confirm registration, then exits without
-opening either native UI or browser. A failed transfer or unconfirmed registration
-also exits without opening the app; see /data/poldrive-launcher.log and
-/data/wolodrive-shortcut.log, then retry the saved payload through Payload Manager.
-If the marker was already present at invocation start, the launcher continues
-into the native application while the helper checks for shortcut updates.
-A normal native exit does not open the browser. A nonzero native startup return
-opens the bundled browser fallback with a translated native-startup-failure
-notice and an optional filesystem bridge. This handles startup errors, not
-process crashes or hangs. Files > Open folder browses `/data` through that bridge.
-It does not fix the previously observed SDL renderer problem or claim PS5 parity.
-Native success does not start an additional web server in the background.
+Run `make ps5` (or `make ps5-shortcut`) with the SDK available. Distribute only
+`build/poldrive.elf`. Embedded service/helper ELFs are generated in
+`build/.internal/`; users do not copy or run them separately. Other top-level
+payload variants are produced only by their explicitly requested targets.
 
-App-service dependencies remain isolated in the helper; they are not linked into
-the SDL/server executable. Helper transfer success does not prove registration
-success. An unavailable loader does not block native startup. Check the logs
-below for the actual registration and native outcomes.
+1. Copy it to `/data/pldmgr/payloads/poldrive/poldrive.elf` and run it through
+   Payload Manager with the ELF loader active.
+2. The installer saves its bundled quiet service at
+   `/data/pldmgr/payloads/poldrive/poldrive-web-service.elf`, starts it through
+   the loopback loader, and checks its exact health identity/build checksum.
+3. It preserves the existing autoload sequence and unrelated configuration,
+   appends the service path once, enables `AUTOLOAD_ENABLED`, and registers the
+   owned `WOLO00001` Media tile at `http://127.0.0.1:8098/`.
+4. The installer exits without opening native UI or a browser. Open PolDrive
+   from **Home / Media**. The tile goes directly to the existing React UI;
+   it never visits `/loadpayload:` and needs no second browser window.
 
-`make ps5-web` remains available for browser-only diagnostics and produces
-`build/wolodrive-web.elf`; it cannot overwrite `build/poldrive.elf`. Building the
-web diagnostic ELF still embeds its own shortcut helper, but the dashboard link
-always targets the unified file at the installation path below. To revert the
-combined launcher locally, restore the earlier Makefile and remove the new
-launcher/helper embed/test sources; the ordinary AI Studio preview is unchanged.
+The service listens on all IPv4 interfaces, fixed to port 8098 with no browser
+opener. On another device on the same LAN, open `http://<PS5-IP>:8098/`
+(for example, `http://192.168.0.137:8098/`). The Media tile continues to use
+`http://127.0.0.1:8098/` on the console. The
+older 8097 server is left untouched. An unrelated listener or different build
+on 8098 stops installation before configuration/dashboard changes; it is never
+terminated automatically. Stop that service or restart the jailbroken
+environment and rerun the installer. Matching services are reused quietly.
+The installer checks title ownership before saving services or startup changes,
+and explicit reinstallations retry Media registration even if a marker exists.
 
-Save this one ELF as
-/data/pldmgr/payloads/poldrive/poldrive.elf and launch it through
-Payload Manager. The embedded helper prepares the PolDrive red P icon under
-Home / Media automatically. No separate shortcut-installer ELF needs copying.
-Subsequent launches skip registration when the recorded shortcut metadata and
-icon match. Failed updates invalidate the registration marker and retry later.
-Folder and filename are case-sensitive. This build repairs the previous
-uppercase `Poldrive` shortcut when first activated from Payload Manager. Replace
-the saved ELF and activate it there once before using the Media icon again;
-closing the browser does not remove the icon. The initial activation installs the dashboard shortcut and exits without
-opening the UI. Subsequent launches from the Media tile or Payload Manager
-open the app (reusing a matching fallback server). If the shortcut was already
-registered before upgrading the ELF, the upgraded payload opens the app immediately.
-The installer refuses an existing title without its ownership marker and writes
-only this title's files. It does not uninstall existing apps. If TitleDir is
-unavailable it uses Payload Manager's registration-scan fallback. The fallback
-and browser API both returned 0 on firmware 13.20 with the bundled helper.
+After each jailbreak, **Payload Manager must start** so its enabled autoload
+sequence starts the service. No payload can run on an unjailbroken PS5 boot.
+The installer preserves Payload Manager's own browser preference, delay,
+favorites and other settings; its own UI never opens during installation or
+autoload. Enabling autoload also enables the existing entries. Startup-file
+backups are saved once as `/data/pldmgr/autoload.txt.poldrive-backup` and
+`/data/pldmgr/pldmgr_config.txt.poldrive-backup`. Text, entry order and `!N`
+millisecond delays are preserved; duplicate active service entries are not
+added. Oversized/binary configuration or malformed delay entries cause failure
+without changing the startup files or dashboard. Close configuration editors
+while installing; these file edits do not participate in Payload Manager's
+in-process configuration lock.
 
-Old PolDrive diagnostic builds were moved outside Payload Manager's scan tree
-into /data/wolodrive-debug-backup-20261020-1920. Reload Payload Manager to refresh
-its list. Other applications and payloads were not moved.
+The generated browser UI/assets are unchanged. The quiet service uses the same
+native file bridge with its existing same-origin/session checks. LAN clients
+can access Files as well as the catalogue; use this service on a trusted LAN.
+The v2 health identity prevents reusing the old loopback-only service even
+when its embedded preview is identical. Before installing this update, stop
+the old service or restart/re-jailbreak without autoloading the old service,
+then run the new installer. Merely closing the Media tile does not stop the
+background service. Keep the previous installer for rollback; stop the new
+service before reinstalling the previous build. The original native renderer and its data remain the reference;
+this packaging change does not claim renderer/controller parity or fix VideoOut.
 
-The shortcut calls Payload Manager's loopback /loadpayload: route to the saved
-ELF. Payload Manager on port 8084 and the ELF loader must be active after each
-jailbreak. The installer does not alter autoload or jailbreak settings. No user's
-LAN address is compiled into the app.
+### Logs and rollback
 
-When the browser fallback runs, its server listens on all IPv4 interfaces,
-preferring port 8097 and selecting a
-free port if occupied. /data/wolodrive-web.endpoint records its port and PID.
-Relaunch validates the loopback health endpoint against the server protocol and
-embedded asset SHA256, then reopens the matching running service. Different or
-stale services are not reused. LAN clients open http://<PS5-IP>:<logged-port>/.
-Different ports have separate browser localStorage preferences.
+- `/data/poldrive-install.log`: service persistence, loader, health and startup configuration.
+- `/data/poldrive-launcher.log`: fresh shortcut-helper dispatch/result.
+- `/data/wolodrive-shortcut.log`: Media metadata and AppInstUtil result.
+- `/data/wolodrive-web.log`: quiet service and filesystem-bridge startup.
+- `/data/poldrive-service.endpoint`: current direct service endpoint and PID.
 
-The listener serves embedded GET/HEAD assets and a health endpoint to console
-and LAN clients. PS5 builds additionally expose a session-protected
-filesystem API using the native file backend; see [file-manager.md](file-manager.md).
-Console-local Files displays the pairing code required for PC file editing.
-There are no package-download, installation, proxy or mounting routes.
-It embeds the ordinary browser preview, without runtime Node/Vite or PC assets.
-Optional remote artwork still depends on its existing sources/fallbacks.
-Native SDL/browser data, visual and controller parity remain unverified.
+To undo startup configuration, remove only the service path from autoload and
+restore the prior enabled value. The `.poldrive-backup` files record the original
+contents; restore whole backups only if later unrelated edits can be discarded.
+Use `make ps5-native` to build a separate native-first recovery installer; run it
+once to restore its owned Media link and installed native app. This keeps the
+historical `OK`/web-fallback handoff. Remove the quiet service's autoload entry
+and stop it through Payload Manager if no longer needed. Never autoload the
+installer itself; the installer adds only the quiet-service path.
 
-Browser launch uses a separate helper ELF sent to the console's local loader.
-The SDK browser ABI requires (url, NULL) and UserService initialization first.
-The earlier one-argument call stalled startup; the corrected helper returned 0
-and the user confirmed the catalogue visible. Read logs through FTP:
+`make ps5-web` remains browser-only diagnostics; the older manual
+`make ps5-webfirst` flow uses port 8097 and is not required by this installer.
+The AI Studio `npm run build:static` contract and HTTP-root output are preserved.
 
-- /data/wolodrive-web.log: server startup, port and helper dispatch.
-- /data/wolodrive-browser.log: UserService and browser API outcomes.
-- /data/wolodrive-shortcut.log: metadata and registration results.
-- /data/poldrive-launcher.log: helper transfer and native/fallback launch decisions.
-- /data/wolodrive-startup.log: native startup checkpoints and SDL errors.
+## Current single-file verification — 2026-10-21
 
-Link the installer with -lSceIpmi BEFORE -lSceAppInstUtil. Without that dependency
-it did not reach main on this console. References:
-[SDK dependency issue](https://github.com/ps5-payload-dev/sdk/issues/26) and
-[Payload Manager registration](https://github.com/itsPLK/ps5-payload-manager/blob/main/src/app_installer.c).
+The user confirmed the single-ELF setup and direct dashboard launch working on
+their PS5 on this date. This confirms the reported installation/launch flow on
+that console; fresh-jailbreak autoload, full controller/visual parity and other
+firmware/loader combinations have not been separately verified.
 
-## Unified-build verification on 2026-10-21
+The PS5 SDK built `build/poldrive.elf` (7,124,560 bytes). Its exact embedded
+quiet-service and shortcut-helper ELF bytes, direct 8098 URL, and absence of
+native/browser-opener payloads were checked. The output includes the current
+autoload validation. The service uses the same generated static preview; no
+React/CSS/rendering changes were made by this installation work.
+
+Local C integration tests exercise real loopback loader/health sockets and
+actual installer/shortcut/configuration code. They cover fresh installation,
+matching-service reuse, backups and entry/delay preservation, first-time
+configuration, write failures, invalid settings/delays, unrelated or stale
+service rejection, title ownership and failed registration. PS5 app-service
+registration and ELF execution are simulated in these tests. Separate HTTP
+tests execute the quiet C service itself, verifying UI delivery, no browser
+launch, singleton reuse and fixed-port validation. These do not prove PS5
+lifecycle behavior.
+
+`npm run lint`, `npm run test:web`, `npm run build:static` (through `make ps5`),
+and `python tests/check_static_preview.py` pass. The static checker now verifies
+the existing paged-catalog contract instead of obsolete per-source JS chunks:
+85,690 records, 236 content-hashed JSON pages, root JS/CSS and 16 versioned
+artwork files over plain HTTP without Vite/Node. Browser smoke checks of the
+regenerated HTTP preview covered startup/Home, details/back, Search filtering,
+company/console navigation, Settings, catalog images/fallbacks and keyboard/
+mouse interaction; no captured console errors. No new renderer changes were
+made; sliding-rail motion and full native/browser/controller visual parity
+were not compared on device. **AI Studio deployment not verified.**
+
+Manual PS5 validation: copy only the new installer and run it once with the
+loader active. Confirm no PolDrive UI opens, and inspect the installation,
+shortcut and service logs. Select Media/PolDrive and confirm a single direct
+open without `OK`, closing or reopening. Close/reopen the tile, rerun the
+installer, and verify both remain quiet until the tile is selected. After a
+fresh jailbreak, start Payload Manager and confirm its autoload starts only
+the quiet service for PolDrive; verify the tile works without reinstalling.
+Existing Payload Manager entries/preferences must still match their backups.
+For AI Studio, serve the refreshed `static-preview/` at the URL root and repeat
+startup, Home/sidebar, search, categories, dialogs, artwork/fallbacks, keyboard/
+mouse and Settings checks on the deployed host before claiming deployment.
+
+## Earlier unified-build verification on 2026-10-21
+
+These results describe the previous launcher lifecycle, before the installer/app
+entry points were separated. See the installation fix verification below.
 
 The combined `poldrive.elf` builds with the PS5 SDK. Local launcher tests cover
 installer-only first launch, failed registration, existing shortcut launch,
@@ -219,3 +256,91 @@ retain saved ELF files if it will be installed again.
 Branding uses PolDrive in the native/web UI, metadata and the Media tile. The
 existing WOLO00001 title identity and internal data/cache paths remain compatible
 so this update keeps preferences and does not create a second dashboard app.
+
+## Historical installer/app split verification — 2026-10-21
+
+The current PS5 SDK build succeeded. The generated installer contains the exact
+helper ELF, that helper contains the exact app ELF, and its dashboard deeplink
+targets `/data/pldmgr/payloads/poldrive/poldrive-app.elf`. Nine launcher tests cover installer-only
+invocations with existing/cached registration, stale-status cancellation,
+registration failure and the independent dashboard native/web entry point.
+Eleven shortcut tests cover runtime persistence, repeated registration repair,
+write/registration failures, ownership and metadata migration. File bridge
+(7), HTTP payload (11), and browser helper (2) tests pass. Lint and web tests
+pass. The first web-test run overlapped catalog generation and failed; a
+sequential repeat passed. No renderer or browser source was changed by this fix.
+
+`npm run build:static` completed and all 257 emitted files were fetched and
+byte-compared over a plain Python HTTP server. Browser checks confirmed Home,
+Search, Settings and loaded catalogs, with no captured console errors.
+`python tests/check_static_preview.py` still fails at
+`Missing/duplicated full index: axekin`: the pre-existing paged-JSON catalog
+changes no longer emit the JS chunks expected by that checker. The AI Studio
+gate therefore did not pass. **AI Studio deployment not verified.** Full browser
+interaction and native/browser visual comparison were not repeated for this
+installer-only fix; PS5 registration and controller behavior remain unverified.
+
+Manual console check: replace the saved installer ELF, run it in Payload Manager,
+confirm it returns without opening PolDrive, and check the Media tile. Run the
+installer again to verify repair also stays closed. Select the Media tile and
+confirm it opens the app. If the icon is absent, inspect
+`/data/wolodrive-shortcut.log` for the registration result and
+`/data/poldrive-launcher.log` for fresh helper confirmation. On AI Studio, host
+`static-preview/` at the URL root and check startup, Home, sidebar, Search,
+category navigation, dialogs, artwork/fallbacks, keyboard/mouse and Settings.
+
+## Historical follow-up: Invalid payload name — 2026-10-21
+
+The first installer/app separation used `/data/poldrive-app.elf`. Payload
+Manager's `slot_validate_payload_path` permits its `/data/pldmgr` root (and
+configured USB roots), so that location is rejected by `/loadpayload:` with
+`Invalid payload name`. The installer now saves the runtime at
+`/data/pldmgr/payloads/poldrive/poldrive-app.elf`, creates the parent directories
+if needed, and updates the dashboard deeplink to the same path. This keeps the
+installer and runtime separate without placing the app outside managed storage.
+The runtime may now also appear in Payload Manager's list; select `poldrive.elf`
+to install/repair, and use the dashboard tile to open the app.
+
+The PS5 SDK installer and legacy-shortcut builds succeeded; exact embedded
+app/helper bytes and the corrected deeplink were verified in the output.
+Twelve shortcut tests and nine launcher tests pass, including an explicit
+managed-storage target regression check. Browser/runtime/static sources are
+unchanged by this follow-up; the previous local static-preview results and
+checker blocker still apply. AI Studio deployment not verified. Real console
+validation is still required: replace the installer, run it once, confirm it
+stays closed, then open the Media tile and confirm the invalid-name error is gone.
+
+Upstream contract:
+https://github.com/itsPLK/ps5-payload-manager/blob/main/src/slot.c
+(`slot_resolve`, `slot_validate_payload_path`) and
+https://github.com/itsPLK/ps5-payload-manager/blob/main/include/pldmgr.h
+(`BASE_DATA_DIR`).
+
+
+### LAN service update verification (2026-10-21)
+
+The default installer, fullscreen test service, and recovery web-first service
+now listen on all IPv4 interfaces. The console's direct Media URL is unchanged.
+The service health identity advances to v2 so the installer rejects a running
+v1 loopback-only service even with identical preview assets.
+
+Validated: PS5 SDK `make ps5`; Linux `make build-linux` and
+`make test-native-snapshot`; HTTP service tests (13), installer tests (23 plus
+the new old-service rejection case), and filesystem bridge tests (7);
+`npm run lint`, `npm run test:web`, `npm run build:static`, and
+`python tests/check_static_preview.py`. The first web-test attempt overlapped
+catalogue regeneration; the subsequent run with stable generated files passed.
+The rebuilt preview loaded via Python's plain HTTP server: Home, search,
+details open/close, Settings and library navigation worked with no browser
+console errors observed. No UI geometry, catalog semantics, or native actions
+were changed by the LAN update; side-by-side visual parity was not reverified.
+
+The broader `make test` remains blocked by existing missing artwork/catalog
+helper declarations in `tests/test_regressions.c`, including
+`library_alpha_bounds` (invalid initializer). Actual updated PS5 runtime/LAN
+access is unverified until this ELF is installed. AI Studio deployment not
+verified. For manual validation, install with the old background service
+stopped, open the Media tile, then open `http://<PS5-IP>:8098/` from a second
+LAN device and compare Home, navigation, search, details and Files. In AI
+Studio, serve the regenerated `static-preview/` at the URL root and check
+startup, sidebar, search, categories, dialogs, artwork and Settings.

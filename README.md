@@ -9,14 +9,14 @@ Browse games and ROM listings in a TV-style interface with cover art, search, pl
 ![Version](https://img.shields.io/badge/version-2.0.0-e50914?style=flat-square)
 ![Web](https://img.shields.io/badge/Web-React%20%2B%20Vite-20232a?style=flat-square)
 ![Linux](https://img.shields.io/badge/Linux-SDL2-20232a?style=flat-square)
-![PS5](https://img.shields.io/badge/PS5-LAN%20browser%20payload-20232a?style=flat-square)
+![PS5](https://img.shields.io/badge/PS5-Single%20ELF%20installer-20232a?style=flat-square)
 
 [What is PolDrive?](#what-is-poldrive) · [Features](#features) · [Get started](#get-started) · [Supported systems](#supported-systems) · [Documentation](#documentation)
 
 </div>
 
 > [!IMPORTANT]
-> **PolDrive is currently a catalogue browser, not a working game installer.** It does **not** yet download packages, install PKGs, mount games or launch games. The PS5 LAN service serves the catalogue, not a remote download/install API.
+> **PolDrive browses catalogues and manages accessible files; game installation is still in development.** It does **not** yet download game packages, install PKGs, mount games or launch games. The single-ELF installer installs **PolDrive itself**, not the games listed in its catalogue.
 
 ## What is PolDrive?
 
@@ -24,8 +24,8 @@ Browse games and ROM listings in a TV-style interface with cover art, search, pl
 
 The project contains three related experiences:
 
-- **PS5 browser payload** — a self-contained ELF that serves the web catalogue from the console and can register a PolDrive shortcut under **Home / Media** on supported Payload Manager setups.
-- **Linux native app** — a C/SDL2 interface used as the visual and interaction reference.
+- **PS5 app** — one installer ELF that sets up PolDrive, configures its quiet background service and creates a dashboard icon under **Home / Media**. Installation stays closed; selecting the icon opens the app directly.
+- **Native app** — the C/SDL2 PS5 implementation is the UI reference, with a Linux build for development and comparison. Native PS5 rendering remains experimental; the default installer uses the working browser UI.
 - **Web app** — a React/TypeScript preview that runs in a desktop browser or from static hosting, including AI Studio.
 
 The native app and browser use related catalogue data, but **do not yet have identical catalogue coverage or fully verified UI/input parity**.
@@ -40,15 +40,17 @@ The native app and browser use related catalogue data, but **do not yet have ide
 | 🖼️ | **Artwork and screenshots** | Cover art with fallback handling, backdrops and screenshot panels where images are available. |
 | 📋 | **Game details** | Descriptions, IDs, versions, source/package formats, related DLC and available metadata. |
 | 🎛️ | **Filters and preferences** | Filter by catalogue source and package format; save language and filter preferences. |
+| 🎨 | **Appearance choices** | Switch between Netflix / Glass and (u)biquity themes. |
 | 🌐 | **Nine UI languages** | English, Polish, French, Dutch, German, Spanish, Italian, Simplified Chinese and Russian. |
 | 🕹️ | **Multiple input methods** | Keyboard and mouse in the web preview; controller-oriented navigation in the native interface. Input parity is still being checked. |
-| 📡 | **PS5 LAN access** | Browse the catalogue; pair with the code on the console to browse, edit and transfer PS5 files from a PC. |
+| 📁 | **PS5 file manager** | Browse accessible console/USB folders and use file operations through the native filesystem bridge. The default PS5 service supports console and LAN access. |
+| 📺 | **Direct dashboard launch** | Install PolDrive from one ELF, then open its Media icon without the interim `OK` page or a second browser window. |
 
-**Not implemented yet:** actual package downloads, queues, installations, mounting, game launching, and remote control of these actions. The browser preview also does not import live catalogue entries when it checks the remote source manifest. See [remote-install-workflow.md](docs/remote-install-workflow.md) for the outstanding work.
+Bundled source snapshots load progressively as small catalogue pages. They are not a live, complete mirror of every source website; artwork and source links may require internet access. **Not implemented yet:** game-package downloads, download queues, game installation, mounting, game launching, and remote control of those actions. See [remote-install-workflow.md](docs/remote-install-workflow.md) for the outstanding work.
 
 ## Get started
 
-Choose how you want to run Poldrive.
+Choose how you want to run PolDrive.
 
 ### 1. Web preview (Windows, Linux or macOS)
 
@@ -63,7 +65,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:3000**. The Vite development server uses port `3000` by default.
+Open [localhost:3000](http://localhost:3000). The Vite development server uses port `3000` by default.
 
 To create and serve the **standalone static preview** without keeping Vite or Node running:
 
@@ -72,7 +74,7 @@ npm run build:static
 python3 -m http.server 3000 --directory static-preview
 ```
 
-On Windows, use `python` instead of `python3`. Open **http://localhost:3000** again. The generated `static-preview/` folder can be hosted as ordinary static files at the URL root (including AI Studio). **Node is only needed to build it**; a *prebuilt* `static-preview/` can be served with any static HTTP server. Do not open the page using `file://`, because assets use root-relative paths.
+On Windows, use `python` instead of `python3`. Open [localhost:3000](http://localhost:3000) again. The generated `static-preview/` folder can be hosted as ordinary static files at the URL root (including AI Studio). **Node is only needed to build it**; a *prebuilt* `static-preview/` can be served with any static HTTP server. Do not open the page using `file://`, because assets use root-relative paths. Standalone static hosting does not provide the PS5 filesystem bridge. **AI Studio deployment not verified.**
 
 ### 2. Native Linux app
 
@@ -95,23 +97,36 @@ make linux
 
 The executable is generated at `build/wolodrive`. Windows users can run this Linux build using **WSL/WSLg** with a suitable graphical environment; that is *not* a native Windows build.
 
-### 3. PlayStation 5 (unified payload)
+### 3. PlayStation 5 (single-ELF installer)
 
 **Requirements:** a PS5 environment capable of loading homebrew ELFs, [PS5 Payload Manager](https://github.com/itsPLK/ps5-payload-manager), and a compatible loader. Building from source additionally requires the [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) with the required dependencies.
 
-With the SDK installed and `PS5_PAYLOAD_SDK` configured, build the unified payload:
+With the SDK installed and `PS5_PAYLOAD_SDK` configured, build the installer:
 
 ```bash
 make ps5
 ```
 
-1. Copy the generated `build/poldrive.elf` to `/data/pldmgr/payloads/poldrive/poldrive.elf` on the console (both folder and filename are lowercase).
-2. Launch **PolDrive** from Payload Manager. The payload attempts to register a **PolDrive** tile under **Home / Media**, then starts the native app with its file manager.
-3. If native startup returns an error, the same ELF opens the embedded web fallback. On the console, **Files → Open folder** browses `/data`; **Parent folder** reaches `/` and accessible USB/system directories. On the PC, visit `http://<PS5-IP>:<port>/`, open **Files**. PCs on your trusted local network can edit UTF-8 text (1 MiB), download/upload/replace files (8 MiB), and use the shared copy/move/delete/unzip actions, subject to console permissions. Find the port in `/data/wolodrive-web.log` or `/data/wolodrive-web.endpoint` (8097 preferred). See [Files manager](docs/file-manager.md) for limits and device verification requirements.
+The normal build produces one payload to copy: `build/poldrive.elf`. Embedded
+service/helper files are generated inside `build/.internal/`; leave them there.
 
-Payload Manager's loopback service (port 8084) and an ELF loader must be available for the Home / Media shortcut to relaunch the app after each jailbreak. A previously compiled ELF can be used without building it yourself; this repository does **not** guarantee that a ready-to-install release is published.
+The browser uses compact catalogue indexes, loads full metadata for visible
+items, resizes cached artwork and renders bounded card windows. All catalogue
+entries remain searchable. See [memory behavior and verification](docs/ps5-performance.md)
+for cache limits and image compatibility fallbacks. PS5 memory savings still
+require a device test.
 
-Native PS5 SDL rendering remains **experimental**: earlier on-device testing hit a renderer startup failure, and combining the launchers does not fix that underlying issue. `make ps5-shortcut` now aliases `make ps5`; both produce `build/poldrive.elf`. `make ps5-web` produces only `build/wolodrive-web.elf` for browser diagnostics and never overwrites the unified payload. See the [PS5 build and setup notes](docs/ps5-build.md) for logs, verification and limitations.
+1. Copy **only** `build/poldrive.elf` to `/data/pldmgr/payloads/poldrive/poldrive.elf` on the console.
+2. Run it once through Payload Manager. It installs PolDrive, configures background startup and creates/repairs the **PolDrive** icon under **Home / Media**, then exits without opening the app.
+3. Select **PolDrive** under Media to open it directly. No second ELF needs copying, no manual service setup is required, and the old `OK` → close → reopen sequence is removed.
+
+**Confirmed working on one PS5 setup on 21 October 2026:** the single-ELF setup and direct dashboard launch. Fresh-jailbreak autoload and full controller/native-browser parity have not been separately confirmed; firmware and loader compatibility may vary.
+
+The service listens on all IPv4 interfaces. From another device on the same LAN, open `http://<PS5-IP>:8098/` (for example, `http://192.168.0.137:8098/`). The Media tile still uses the console loopback URL. Files uses the same native bridge with existing same-origin/session checks; LAN clients can use it too, so use a trusted LAN. To upgrade from the loopback-only build, stop the old service before running the new installer; closing the app tile alone does not stop it. After each jailbreak, start Payload Manager so its autoload sequence starts the service. Autoload does not run on an unjailbroken PS5 boot. Existing entries, their ordering/delays and unrelated settings are preserved; enabling autoload also enables the existing sequence. Original startup files are backed up with `.poldrive-backup` suffixes before editing.
+
+An ELF loader is required during installation. The installer checks the exact service/build before changing the Media icon; failure details are in `/data/poldrive-install.log`, `/data/poldrive-launcher.log` and `/data/wolodrive-shortcut.log`. The service writes `/data/wolodrive-web.log`. [Setup, verification and rollback](docs/ps5-build.md).
+
+`make ps5-shortcut` builds the same single-file installer. Native PS5 SDL rendering remains **experimental** and available through `make ps5-native`, which produces `build/poldrive-native-installer.elf`. The existing renderer failure is not fixed by this packaging change. Browser-only diagnostics (`make ps5-web`) and the earlier manual two-file mode (`make ps5-webfirst`) remain available for recovery; neither is needed for normal installation.
 
 ## Supported systems
 
@@ -121,11 +136,11 @@ There is a difference between **devices that run PolDrive** and **consoles repre
 
 | Environment | Experience | Status |
 | :-- | :-- | :-- |
-| **PS5** (homebrew-capable) | Embedded LAN web catalogue via ELF, browser and Home / Media shortcut | Tested on a specific console/setup; firmware and loader compatibility vary |
+| **PS5** (homebrew-capable) | Single-ELF installation, console/LAN browser UI and direct Home / Media icon | Installation and dashboard launch confirmed on one console; broader compatibility and controller parity remain unverified |
 | **Linux** | Native SDL2 app | Build path available; graphical behaviour depends on drivers and environment |
 | **Windows** | Browser preview, or native Linux app via WSL/WSLg | Browser path available; native Windows executable not verified |
 | **macOS** | Browser preview | Expected with a compatible modern browser; not separately verified |
-| **Other devices on the PS5 LAN** | Web browser connecting to the PS5's HTTP service | Catalogue browsing; paired PC file editing/transfers require the console's access code |
+| **Other devices on the PS5 LAN** | Default HTTP service on port 8098 | LAN listener tested locally; updated PS5 deployment remains unverified |
 
 ### Consoles shown in the library
 
@@ -147,13 +162,14 @@ Controller input is part of the native UX; **the browser implements only a subse
 
 ## Development
 
-The frontend uses **React 19, TypeScript and Vite**. The native implementation uses **C, SDL2 and libcurl**. The PS5 web ELF embeds the statically built browser UI, serves the catalogue over HTTP, and provides a filesystem bridge with paired LAN access. Ordinary static hosting, including AI Studio, remains independent of that bridge.
+The frontend uses **React 19, TypeScript and Vite**. The native implementation uses **C, SDL2 and libcurl**. The PS5 installer bundles a quiet C HTTP service with the statically built browser UI and a same-origin filesystem bridge accessible from the console and LAN. It configures Payload Manager autoload and registers a direct Media tile. Ordinary static hosting, including AI Studio, remains independent of the console and its bridge.
 
 ```bash
 npm run lint              # TypeScript checks
 npm run test:web          # Web UI and layout checks
 npm run build:static      # Rebuild static-preview/
 python3 tests/check_static_preview.py
+make test-web-payload     # Installer, launch, HTTP and file-bridge tests (Linux/WSL + GCC)
 make test-native-snapshot # Linux native catalogue test (SDL2 toolchain required)
 ```
 
@@ -161,7 +177,8 @@ Use `python` rather than `python3` on Windows. The full native test suite is `ma
 
 ## Documentation
 
-- [PS5 build, ELF installation and LAN service](docs/ps5-build.md)
+- [PS5 single-ELF installation, troubleshooting and rollback](docs/ps5-build.md)
+- [PS5 performance notes and device verification](docs/ps5-performance.md)
 - [Planned download and remote installation workflow](docs/remote-install-workflow.md)
 - [Catalogue source coverage](docs/source_index_coverage.md)
 - [Artwork coverage](docs/artwork_coverage.md)

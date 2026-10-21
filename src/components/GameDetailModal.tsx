@@ -1,3 +1,5 @@
+import { MemoryImage } from './MemoryImage';
+import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
@@ -19,7 +21,7 @@ interface GameDetailModalProps {
 }
 
 export const GameDetailModal: React.FC<GameDetailModalProps> = ({
-  game,
+  game: summary,
   catalog,
   neighborGames,
   language,
@@ -29,15 +31,16 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   parentGame,
   onBackToParent
 }) => {
+  const game = useCatalogDetails(summary);
   const [activeTab, setActiveTab] = useState<'install' | 'dlc' | 'screenshots' | 'details'>('install');
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [showOriginalDesc, setShowOriginalDesc] = useState(false);
   const [entryPage, setEntryPage] = useState(0);
   const [failedSources, setFailedSources] = useState<string[]>([]);
-  useEffect(() => { setEntryPage(0); setActiveTab('install'); setSelectedScreenshot(null); }, [game]);
+  useEffect(() => { setEntryPage(0); setActiveTab('install'); setSelectedScreenshot(null); setFailedSources([]); }, [summary]);
 
   const neighborCatalog = neighborGames || catalog;
-  const selectedIndex = neighborCatalog.findIndex(item => item === game);
+  const selectedIndex = neighborCatalog.findIndex(item => item === summary);
   const neighbors = selectedIndex < 0 ? [game, ...neighborCatalog.slice(0, 3)]
     : neighborCatalog.slice(selectedIndex, selectedIndex + 4);
 
@@ -70,7 +73,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
         {/* Modal Header with Backdrop Artwork */}
         <div className="tv-detail-header">
           {coverSrc && (
-            <img
+            <MemoryImage artworkSize="hero"
               src={coverSrc}
               onError={() => setFailedSources(values => [...values, coverSrc])}
               alt=""
@@ -197,7 +200,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       onClick={() => setSelectedScreenshot(url)}
                       className="group relative aspect-video rounded-lg overflow-hidden bg-[#181820] border border-[#282834] hover:border-white cursor-pointer transition-all"
                     >
-                      <img
+                      <MemoryImage artworkSize="hero"
                         src={url}
                         alt={`Screenshot ${idx + 1}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -292,7 +295,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
           className="tv-screenshot-viewer"
           onClick={() => setSelectedScreenshot(null)}
         >
-          <img
+          <MemoryImage artworkSize="hero"
             src={selectedScreenshot}
             alt="Screenshot enlarged"
             className="tv-screenshot-full"

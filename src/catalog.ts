@@ -116,9 +116,9 @@ export function getFilteredCatalog(catalog: GameItem[], filters: CatalogFilters)
 }
 
 function getDistinctFilteredGames(catalog: GameItem[], filters: CatalogFilters): GameItem[] {
-  const filtered = catalog.filter((it) => it.is_game && matchesFilters(it, filters));
   const seen = new Map<string, GameItem>();
-  for (const it of filtered) {
+  for (const it of catalog) {
+    if (!it.is_game || !matchesFilters(it, filters)) continue;
     const key = `${sameConsoleKey(it)}_${normalizeTitleKey(it.title)}`;
     const current = seen.get(key);
     if (!current || (it.catalog_added_at || 0) > (current.catalog_added_at || 0)) {
@@ -165,6 +165,40 @@ export function getHomeCategoryGames(
       .slice(0, limit);
   }
   return distinct.slice(0, limit);
+}
+
+/** Build all five carousel categories from a single deduplicated catalogue.
+ * This runs on every progressive catalogue commit, so avoid five independent
+ * 80k-item passes and five large temporary Maps. */
+export function getHomeCategoryLists(
+  catalog: GameItem[], filters: CatalogFilters, limit = 128
+): Record<HomeCategoryId, GameItem[]> {
+  const groups: Record<HomeCategoryId, GameItem[]> = { ps5: [], ps4: [], popular: [], newest: [], top_rated: [] };
+  const insert = (items: GameItem[], item: GameItem, compare: (a: GameItem, b: GameItem) => number) => {
+    // Stable upper-bound insertion retains the old sort's equal-key order,
+    // while never allocating/sorting five catalogue-sized arrays.
+    let low = 0, high = items.length;
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      if (compare(item, items[mid]) < 0) high = mid; else low = mid + 1;
+    }
+    if (low >= limit) return;
+    items.splice(low, 0, item);
+    if (items.length > limit) items.pop();
+  };
+  const popular = (a: GameItem, b: GameItem) => (b.download_count || 0) - (a.download_count || 0);
+  const rated = (a: GameItem, b: GameItem) => (b.rating_score || 0) - (a.rating_score || 0);
+  const newest = (a: GameItem, b: GameItem) => (b.release_date || '').localeCompare(a.release_date || '') ||
+    (b.catalog_added_at || 0) - (a.catalog_added_at || 0);
+  for (const item of getDistinctFilteredGames(catalog, filters)) {
+    const platform = searchPlatform(item);
+    if (platform === 5 && groups.ps5.length < limit) groups.ps5.push(item);
+    if (platform === 4 && groups.ps4.length < limit) groups.ps4.push(item);
+    insert(groups.popular, item, popular);
+    insert(groups.top_rated, item, rated);
+    if (item.catalog_added_at || item.release_date) insert(groups.newest, item, newest);
+  }
+  return groups;
 }
 
 export function getDistinctSources(catalog: GameItem[]): string[] {

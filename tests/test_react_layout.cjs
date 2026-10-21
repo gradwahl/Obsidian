@@ -143,14 +143,55 @@ const games = Array.from({ length: 5 }, (_, index) => ({ ...game, id_code: `PPSA
 const homeProps = { games, language: 'en', selected: 1, sidebarFocused: false, onSelect: noop, onOpen: noop, onRefresh: noop, syncInProgress: false };
 const home = render(React.createElement(NativeViewport, null, React.createElement(HomeView, homeProps)));
 assert.match(home, /width:1920px;height:1080px/);
-assert.match(home, /<h1 class="tv-hero-info-appear">Game 1<\/h1>/);
-assert.match(home, /2026-10-19/);
-assert.equal((home.match(/class="tv-meta-pill"/g) || []).length, 5,
-  'Game id, version, format, size and date should render as separate pills');
+assert.match(home, /<h1 class="ubq-feature-title">Game 1<\/h1>/);
+assert.match(home, /2026/);
+assert.equal((home.match(/class="tv-meta-pill glass-pill glass-pill--sm"/g) || []).length, 6,
+  'Source, game id, version, format, size and year render as separate pills');
+const catalogueModule = require('../src/catalog.ts');
+const exampleFilters = { sources_limited: false, sources: [], disabled_formats: [] };
+const categoriesOnce = catalogueModule.getHomeCategoryLists(INITIAL_CATALOG, exampleFilters, 128);
+for (const id of ['ps5', 'ps4', 'popular', 'newest', 'top_rated']) {
+  assert.deepEqual(
+    categoriesOnce[id].map(item => item.id_code),
+    catalogueModule.getHomeCategoryGames(INITIAL_CATALOG, exampleFilters, id, 128)
+      .map(item => item.id_code),
+    'Fast shared category selection must preserve ' + id
+  );
+}
+// Home rows must not mount 128 covers times five categories when browsing on PS5.
+const largeRows = Array.from({ length: 128 }, (_, index) =>
+  ({ ...game, id_code: 'PPSA' + String(index).padStart(5, '0'), title: 'Row ' + index }));
+const multiRows = ['ps5','ps4','popular','newest','top_rated'].map(id =>
+  ({ id, titleKey: 'TXT_CAT_PS5', games: largeRows }));
+const reducedHome = render(React.createElement(HomeView, {
+  ...homeProps, categories: multiRows, activeCategoryIndex: 0, selected: 70
+}));
+const visibleCards = (reducedHome.match(/<button type="button" class="ubq-game-cover/g) || []).length;
+assert.ok(visibleCards > 0 && visibleCards < 120,
+  'PS5 category view should virtualize offscreen covers (got ' + visibleCards + ')');
+assert.match(reducedHome, /Row 70/, 'Focused cover must stay in the rendered slice');
+
+// The same expanded-grid geometry must remain bounded for very large libraries.
+const { VirtualGameGrid, gridWindow } = require('../src/components/VirtualGameGrid.tsx');
+const hugeLibrary = Array.from({ length: 20000 }, (_, i) => ({ ...game, title: 'Virtual ' + i, id_code: 'TEST' + i }));
+const virtualGrid = render(React.createElement(VirtualGameGrid, {
+  games: hugeLibrary, selected: 12000, language: 'en', sidebarFocused: false, onSelect: noop, onOpen: noop
+}));
+assert.ok((virtualGrid.match(/class="tv-card /g) || []).length <= 30);
+assert.match(virtualGrid, /Virtual 12000/);
+const range = gridWindow(20000, 392 * 500, 800);
+assert.equal(range.start, 499 * 6);
+assert.ok(range.end - range.start <= 30);
+assert.ok(range.before > 0 && range.after > 0);
+// Empty and final windows retain all valid records without phantom cards.
+assert.deepEqual(gridWindow(0, 0, 800), { start: 0, end: 0, before: 0, after: 0 });
+assert.equal(gridWindow(20000, Math.floor(19999 / 6) * 392, 800).end, 20000);
+assert.deepEqual(gridWindow(0, 999999, 800), { start: 0, end: 0, before: 0, after: 0 });
+
 const scoredHome = render(React.createElement(HomeView, {
   ...homeProps, games: games.map(g => ({ ...g, rating_score: 8.7, download_count: 140 }))
 }));
-assert.equal((scoredHome.match(/class="tv-meta-pill"/g) || []).length, 7);
+assert.equal((scoredHome.match(/class="tv-meta-pill glass-pill glass-pill--sm"/g) || []).length, 6);
 const ubiquity = render(React.createElement(HomeView, {
   ...homeProps, uiTheme: 'ubiquity'
 }));
@@ -214,11 +255,11 @@ const longUbq = render(React.createElement(HomeView,
 assert.ok((longUbq.match(/class="ubq-game-cover/g) || []).length <= 21,
   'Large imported catalogues must render only near-focus covers');
 assert.match(longUbq, /501 \/ 1000/);
-const longNetflix = render(React.createElement(HomeView,
-  { ...homeProps, games: largeCatalog, selected: 500, uiTheme: 'netflix' }));
-assert.ok((longNetflix.match(/class="tv-card /g) || []).length <= 21,
-  'Netflix must also window long single-console catalogues');
-assert.match(longNetflix, /501 \/ 1000/);
+const longDefault = render(React.createElement(HomeView,
+  { ...homeProps, games: largeCatalog, selected: 500, uiTheme: 'ubiquity' }));
+assert.ok((longDefault.match(/class="ubq-game-cover/g) || []).length <= 21,
+  'Default interface must window long single-console catalogues');
+assert.match(longDefault, /501 \/ 1000/);
 
 assert.doesNotMatch(ubiquity, /ubq-cover-line/,
   'The selected Ubiquity tile must not add a second solid white stripe at its bottom');
@@ -229,7 +270,7 @@ assert.match(css, /@keyframes ubqFocusStrobe/,
 assert.match(css, /\.ubq-game-cover-selected \{[^}]*animation: ubqFocusStrobe 2\.6s/);
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 assert.doesNotMatch(ubiquity, /tv-hero-btn-primary|tv-card-footer/);
-assert.equal((home.match(/class="tv-card /g) || []).length, games.length);
+assert.equal((home.match(/class="ubq-game-cover/g) || []).length, games.length);
 const nativeThemeSource = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 assert.match(nativeThemeSource, /static void render_ubiquity_home\(/);
 assert.match(nativeThemeSource, /render_ubiquity_home\(app\)/);
@@ -255,11 +296,11 @@ assert.match(css, /\.ubq-shelf-track \{[^}]*gap: 20px/);
 assert.match(css, /\.ubq-cover-download \{[^}]*position: absolute;[^}]*bottom: 8px/);
 assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'), /index \* 252/);
 assert.match(css, /\.ubq-game-cover \{[^}]*width: 232px; height: 232px/);
-assert.match(home, /tv-hero-btn-primary/);
-assert.match(home, /tv-description-toggle-inline|tv-hero-btn-secondary/);
-assert.equal((home.match(/class="tv-card tv-card-selected"/g) || []).length, 1);
-assert.ok(!render(React.createElement(HomeView, { ...homeProps, sidebarFocused: true })).includes('tv-card-selected'));
-assert.match(render(React.createElement(HomeView, { ...homeProps, selected: 99 })), /<h1 class="tv-hero-info-appear">Game 4<\/h1>/);
+assert.match(home, /DOWNLOAD \/ INSTALL/);
+assert.match(home, /More info/);
+assert.equal((home.match(/class="ubq-game-cover ubq-game-cover-selected"/g) || []).length, 1);
+assert.ok(!render(React.createElement(HomeView, { ...homeProps, sidebarFocused: true })).includes('ubq-game-cover-selected'));
+assert.match(render(React.createElement(HomeView, { ...homeProps, selected: 99 })), /<h1 class="ubq-feature-title">Game 4<\/h1>/);
 for (const language of ['en', 'pl', 'fr', 'nl', 'de', 'es', 'it', 'zh', 'ru']) {
   assert.ok(render(React.createElement(GameCard, { ...cardProps, language })).includes(t(language, 'TXT_GAME_DETAILS')));
 }
@@ -279,9 +320,9 @@ assert.match(ubiquityDetails, /Install size/);
 assert.doesNotMatch(ubiquityDetails, /tv-detail-tabs|tv-neighbors|Achievement Progress|Time Played/);
 assert.match(detail, /tv-detail-tabs/);
 const appDetailSource = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
-assert.match(appDetailSource, /uiTheme === 'ubiquity' && \(/);
+assert.match(appDetailSource, /\{detailGame && \(/);
 assert.match(appDetailSource, /<UbiquityGameDetails/);
-assert.match(appDetailSource, /uiTheme !== 'ubiquity' && \(/);
+assert.doesNotMatch(appDetailSource, /GameDetailModal|poldrive-ui-theme|changeUiTheme/);
 const nativeDetailSource = fs.readFileSync(path.join(root, 'src/ui_ubiquity_details.h'), 'utf8');
 assert.match(nativeDetailSource, /static void render_ubiquity_game_details/);
 assert.match(nativeDetailSource, /render_cover_or_placeholder\(app, item, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true\)/);
@@ -382,20 +423,26 @@ for (const path of Object.values(importedCoverMap)) {
   assert.match(path, /^assets\/covers\/[^?#]+\.art$/);
   assert.ok(!path.split('/').includes('..'), 'Archive cover paths must remain under assets/covers/');
 }
-assert.match(fs.readFileSync(path.join(root, 'src/sourceCatalogues.ts'), 'utf8'),
-  /import\('\.\/archiveSourceCovers\.json'\)/);
+const pagedBrowserSource = fs.readFileSync(path.join(root, 'src/sourceCatalogues.ts'), 'utf8');
+assert.match(pagedBrowserSource, /poldrive-pages\//);
+assert.match(pagedBrowserSource, /manifest\.json/);
+assert.doesNotMatch(pagedBrowserSource, /import\('\.\/archiveSourceCovers\.json'\)/,
+  'Browser startup should not execute a 6MB artwork JSON module');
+assert.match(fs.readFileSync(path.join(root, 'scripts/generate_browser_catalog_pages.cjs'), 'utf8'),
+  /archiveSourceCovers\.json/,
+  'Build-time artwork matching must preserve source cover associations');
 assert.match(fs.readFileSync(path.join(root, 'src/sys_bridge.c'), 'utf8'),
   /SDL_strlcpy\(game->boxart_url, entry->boxart/);
 assert.match(fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8'),
   /artwork_get_media\(app, url, 95/);
 
-// Console game routes must forward the current theme instead of falling back to Netflix.
+// All game routes use the sole Ubiquity interface, including existing saved preferences.
 const librarySource = fs.readFileSync(path.join(root, 'src/components/LibraryBrowser.tsx'), 'utf8');
-const appSourceForLibrary = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
-assert.match(librarySource, /<HomeView games=\{gamesFor\(console\)\} uiTheme=\{uiTheme\}/);
 assert.match(librarySource, /tv-library-ubiquity-games/);
-assert.equal((appSourceForLibrary.match(/uiTheme=\{uiTheme\}/g) || []).length >= 4, true,
-  'The selected theme must be supplied to Home, Games/Roms and Emulators routes');
+assert.match(librarySource, /<HomeView games=\{gamesFor\(console\)\}/);
+const appSourceForLibrary = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
+assert.match(appSourceForLibrary, /className="tv-app tv-theme-ubiquity"/);
+assert.doesNotMatch(appSourceForLibrary, /poldrive-ui-theme|themeChoiceIndex|changeUiTheme/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-library-ubiquity-games \.tv-breadcrumb/);
 const nativeLibraryPath = fs.readFileSync(path.join(root, 'src/ui_netflix.c'), 'utf8');
 assert.match(nativeLibraryPath, /static bool ubiquity_carousel_enabled\(WolodriveApp \*app\)/);
@@ -429,7 +476,7 @@ const languageSidebar = render(React.createElement(Sidebar, { ...sidebarProps, l
 assert.match(languageSidebar, /tv-sidebar-expanded/);
 assert.match(languageSidebar, /aria-expanded="true"/);
 assert.match(languageSidebar, /id="tv-language-options"/);
-assert.equal(declaration('.tv-nav-item', 'height'), 92, 'Web sidebar row height must match native');
+assert.equal(declaration('.tv-nav-item', 'height'), 44, 'Web sidebar row height must match native');
 assert.equal(declaration('.tv-navigation', 'top'), 148, 'Web navigation start must match native');
 assert.equal(declaration('.tv-sidebar-collapsed', 'width'), 92, 'Native collapsed rail is 92px');
 assert.equal(declaration('.tv-sidebar-expanded', 'width'), 272, 'Native expanded rail is 272px');
@@ -440,32 +487,32 @@ assert.match(css, /\.tv-sidebar-dim-active \{[^}]*opacity: 1/);
 const homeSource = fs.readFileSync(path.join(root, 'src/components/HomeView.tsx'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
 const heroSource = fs.readFileSync(path.join(root, 'src/components/HeroBanner.tsx'), 'utf8');
-assert.match(native, /int row_h = 92;/);
+assert.match(native, /int row_h = 48;/);
 assert.match(native, /sidebar_indicator_y \+=/);
 assert.match(native, /home_grid_anim < 1\.0f/);
 assert.match(css, /@keyframes tvGridEnter/);
-assert.match(homeSource, /Math\.exp\(-speed \* dt\)/);
-assert.match(homeSource, /prefers-reduced-motion: reduce/);
+assert.match(homeSource, /<UbiquityHomeView/);
+assert.match(ubiquitySource, /prefers-reduced-motion: reduce/);
 assert.match(appSource, /selectedHomeCols\[activeHomeCategory\]/);
 assert.match(appSource, /lastGamepadPress\.current/);
 assert.match(heroSource, /function ArtworkCrossfade/);
 assert.match(css, /\.tv-hero-incoming-loaded/);
 assert.match(css, /\.tv-nav-marker \{/);
-assert.match(collapsedSidebar, /class="tv-nav-marker"/);
-assert.match(collapsedSidebar, /translate3d\(0, 92px, 0\)/);
-assert.match(settingsSidebar, /translate3d\(0, 644px, 0\)/);
+assert.match(collapsedSidebar, /glass-pill glass-pill--active sliding-highlight tv-nav-marker/);
+assert.match(collapsedSidebar, /data-highlight-key="home"/);
+assert.match(settingsSidebar, /data-highlight-key="settings"/);
 // PS5 glass/pills: parallel native and web styles, no changes to focus semantics.
 for (const helper of ['fill_rounded_rect', 'draw_rounded_border', 'draw_rounded_glow']) {
   assert.match(native, new RegExp('static void ' + helper + '\\('));
 }
 assert.match(native, /draw_hero_metadata_pill\(app, hero->id_code/);
 assert.match(native, /int y = app->ui_theme == UI_THEME_UBIQUITY \? -500 : 470, h = 50;/);
-assert.match(css, /\.tv-hero-btn-primary \{[^}]*linear-gradient\(135deg, #ff1e27/);
+assert.match(fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8'), /--pill-active-1: #ff1e27/);
 assert.equal(declaration('.tv-hero-btn', 'border-radius'), 25);
-assert.equal(declaration('.tv-meta-pill', 'height'), 32);
+assert.equal(declaration('.tv-meta-pill', 'height'), 30);
 assert.equal(declaration('.tv-card', 'border-radius'), 18);
-assert.match(css, /\.tv-nav-marker \{[^}]*border-radius: 14px/);
-assert.match(home, /<span>olDrive<\/span>/);
+assert.match(fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8'), /border-radius: 9999px/);
+assert.match(home, /<b>P<\/b>olDrive/);
 assert.doesNotMatch(home, /Poldrive/);
 const nativeSettings = fs.readFileSync(path.join(root, 'src/ui_settings.h'), 'utf8');
 const persistedTheme = fs.readFileSync(path.join(root, 'src/settings.c'), 'utf8');
@@ -477,7 +524,7 @@ const componentSettings = render(React.createElement(SettingsView, {
 const componentDefault = render(React.createElement(SettingsView, {
   filters: { sources_limited: false, sources: [], disabled_formats: [] },
   onChangeFilters: noop, availableSources: [], language: 'en',
-  uiTheme: 'netflix', onChangeTheme: noop
+  uiTheme: 'ubiquity', onChangeTheme: noop
 }));
 assert.match(componentSettings, /PolDrive System/, 'Restored Settings dashboard must display the system summary');
 assert.match(componentSettings, /Network|Connection|Połączenie/i,
@@ -493,20 +540,31 @@ assert.match(restoredDownloads, /Errors/i);
 assert.match(appSource, /<DownloadsView[\s\S]*?catalog=\{catalog\}/);
 assert.match(appSource, /<FileBrowser/, 'Restoring Downloads must not remove the File Manager');
 assert.match(appSource, /catalogCount=\{catalog\.length\}/);
-assert.match(css, /\.ubq-category-select button \{[^}]*border-radius:\s*16px/,
-  'Bottom category buttons must retain the rounded Backup-version-1 appearance');
+const glassCSS = fs.readFileSync(path.join(root, 'src/glass.css'), 'utf8');
+const highlightSource = fs.readFileSync(path.join(root, 'src/components/SlidingHighlight.tsx'), 'utf8');
+assert.match(css, /\.ubq-category-select \{[^}]*margin-top: auto/);
+assert.match(css, /\.ubq-category-select \{[^}]*overflow: visible/);
+assert.match(glassCSS, /--pill-bg-top: rgba\(28,28,38,\.72\)/);
+assert.match(glassCSS, /--pill-active-1: rgba\(229,9,20,\.35\)/);
+assert.match(glassCSS, /mask-composite: exclude/);
+assert.match(highlightSource, /flight.current\?\.cancel\(\)/);
+assert.match(highlightSource, /ResizeObserver/);
+assert.match(highlightSource, /document.fonts\?\.ready/);
+assert.match(ubiquitySource, /<SlidingHighlight activeKey=\{String\(activeCategoryIndex\)\} axis="x"/);
+assert.match(fs.readFileSync(path.join(root, 'src/components/Sidebar.tsx'), 'utf8'), /<SlidingHighlight activeKey=\{language\}/);
 assert.match(fs.readFileSync(path.join(root, 'src/components/UbiquityHomeView.tsx'), 'utf8'),
-  /<span className="tv-meta-pill">\{game\.id_code\}<\/span>/,
-  'Ubiquity hero must show game metadata in oval pills');
-assert.match(componentSettings, /\(u\)biquity/);
-assert.match(componentSettings, /Netflix \/ Glass/);
-assert.match(componentSettings, /aria-pressed="true"/);
-assert.match(componentDefault, /tv-theme-option-active/);
+  /<span className="tv-meta-pill glass-pill glass-pill--sm">\{game.id_code\}<\/span>/);
+for (const markup of [componentSettings, componentDefault]) {
+  assert.doesNotMatch(markup, /Appearance|Wygląd|Netflix \/ Glass|tv-theme-option/);
+  assert.match(markup, /role="button" tabindex="0"/);
+}
 assert.match(native, /render_ubiquity_fades\(r\)/);
-assert.match(native, /app->ui_theme == UI_THEME_UBIQUITY/);
-assert.match(nativeSettings, /theme_save\(app\)/);
-assert.match(nativeSettings, /Appearance \/ Wygląd/);
-assert.match(persistedTheme, /WOLODRIVE_THEME_1/);
+assert.doesNotMatch(nativeSettings, /theme_save|Appearance|Netflix \/ Glass/);
+assert.match(nativeSettings, /settings_target\(1,5\)/);
+assert.match(nativeSettings, /settings_selection, 5/);
+assert.doesNotMatch(persistedTheme, /WOLODRIVE_THEME_1|theme_load|theme_save/);
+assert.match(fs.readFileSync(path.join(root, 'src/sys_bridge.c'), 'utf8'),
+  /app->ui_theme = UI_THEME_UBIQUITY/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-hero-backdrop/);
 assert.match(css, /\.tv-theme-ubiquity \.tv-nav-marker/);
-console.log('PASS: layout, Netflix motion, Ubiquity switch, web SSR and native appearance contracts');
+console.log('PASS: layout, Ubiquity default, web SSR and native Settings contracts');

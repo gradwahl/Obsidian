@@ -9,9 +9,6 @@ interface SettingsViewProps {
   onChangeFilters: (filters: CatalogFilters) => void;
   availableSources: string[];
   language: LanguageCode;
-  uiTheme: 'netflix' | 'ubiquity';
-  gamepadThemeIndex: number;
-  onChangeTheme: (theme: 'netflix' | 'ubiquity') => void;
   catalogCount?: number;
 }
 
@@ -20,9 +17,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onChangeFilters,
   availableSources,
   language,
-  uiTheme,
-  gamepadThemeIndex,
-  onChangeTheme,
   catalogCount = 1248
 }) => {
   const [expandedSection, setExpandedSection] = useState<'sources' | 'formats' | null>(null);
@@ -180,7 +174,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* Row 5: Sources Selector Expandable Row */}
           <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 transition-all hover:border-white/20">
-            <div
+            <div role="button" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
               onClick={() => setExpandedSection(expandedSection === 'sources' ? null : 'sources')}
               className="flex items-center justify-between cursor-pointer"
             >
@@ -204,6 +199,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {expandedSection === 'sources' && (
               <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
                 <div
+                  role="checkbox" tabIndex={0} aria-checked={allSourcesChecked}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                   onClick={toggleAllSources}
                   className="flex items-center gap-3 p-2.5 rounded-xl bg-[#1a1a24] border border-white/10 cursor-pointer hover:bg-[#222230]"
                 >
@@ -224,6 +221,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   return (
                     <div
                       key={source}
+                      role="checkbox" tabIndex={0} aria-checked={checked}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                       onClick={() => toggleSource(source)}
                       className="flex items-center gap-3 p-2.5 rounded-xl bg-[#161620] border border-white/5 cursor-pointer hover:bg-[#1f1f2c]"
                     >
@@ -255,7 +254,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* Row 6: Formats Selector Expandable Row */}
           <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 transition-all hover:border-white/20">
-            <div
+            <div role="button" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
               onClick={() => setExpandedSection(expandedSection === 'formats' ? null : 'formats')}
               className="flex items-center justify-between cursor-pointer"
             >
@@ -281,6 +281,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   return (
                     <div
                       key={fmt.id}
+                      role="checkbox" tabIndex={0} aria-checked={checked}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                       onClick={() => toggleFormat(fmt.id)}
                       className="flex items-center gap-3 p-2.5 rounded-xl bg-[#161620] border border-white/5 cursor-pointer hover:bg-[#1f1f2c]"
                     >
@@ -297,46 +299,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 })}
               </div>
             )}
-          </div>
-
-          {/* Row 7: Appearance / Wygląd Toggle Controls */}
-          <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4">
-            <div className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#e50914]" />
-              <span>{t(language, 'TXT_APPEARANCE')}</span>
-            </div>
-
-            <div className="tv-theme-settings" role="group" aria-label="Appearance">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className={`tv-theme-option flex items-center justify-between p-3 rounded-xl border text-xs font-bold transition-all ${
-                    uiTheme === 'netflix'
-                      ? 'tv-theme-option-active bg-[#2a1a20] border-[#e50914] text-white shadow-[0_0_12px_rgba(229,9,20,0.3)]'
-                      : 'bg-[#181824] border-white/10 text-[#9090a0] hover:border-white/20'
-                  } ${gamepadThemeIndex === 0 ? 'tv-theme-option-gamepad' : ''}`}
-                  aria-pressed={uiTheme === 'netflix'}
-                  onClick={() => onChangeTheme('netflix')}
-                >
-                  <span>Netflix / Glass</span>
-                  <span>{uiTheme === 'netflix' ? '●' : '○'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`tv-theme-option flex items-center justify-between p-3 rounded-xl border text-xs font-bold transition-all ${
-                    uiTheme === 'ubiquity'
-                      ? 'tv-theme-option-active bg-[#2a1a20] border-[#e50914] text-white shadow-[0_0_12px_rgba(229,9,20,0.3)]'
-                      : 'bg-[#181824] border-white/10 text-[#9090a0] hover:border-white/20'
-                  } ${gamepadThemeIndex === 1 ? 'tv-theme-option-gamepad' : ''}`}
-                  aria-pressed={uiTheme === 'ubiquity'}
-                  onClick={() => onChangeTheme('ubiquity')}
-                >
-                  <span>(u)biquity</span>
-                  <span>{uiTheme === 'ubiquity' ? '●' : '○'}</span>
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Reset Action Button */}

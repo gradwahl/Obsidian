@@ -145,7 +145,7 @@ class FileBridge(unittest.TestCase):
         self.assertIn(b'Reusing running server',result.stderr)
         conn = http.client.HTTPConnection('127.0.0.1',self.port)
         conn.request('GET','/api/wolodrive/health'); response = conn.getresponse()
-        self.assertIn(b'wolodrive-server-v10-files-lan-open ',response.read()); conn.close()
+        self.assertIn(b'wolodrive-server-v11-files-lan-open ',response.read()); conn.close()
 
     def lan_request(self,suffix='',body=None,headers=None,method='GET',host='127.0.0.2'):
         conn=http.client.HTTPConnection(host,self.port,timeout=5)

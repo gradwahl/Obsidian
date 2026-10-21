@@ -24,34 +24,37 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
   const [page, setPage] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState(0);
 
-  // Filter and group search results matching the C code logic
+  const pageSize = 9;
+  // Count all matching identities, retaining only the existing visible page.
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const filtered = catalog.filter((item) => {
+    const accepts = (item: GameItem) => {
       if (!matchesFilters(item, filters)) return false;
       if (!q) return true;
       return (
         item.title.toLowerCase().includes(q) ||
         item.id_code.toLowerCase().includes(q)
       );
-    });
+    };
 
     // Group same games across source formats
-    const unique: GameItem[] = [];
+    const items: GameItem[] = [];
+    let count = 0;
     const seen = new Set<string>();
-    for (const item of filtered) {
+    for (const item of catalog) {
+      if (!accepts(item)) continue;
       const titleKey = normalizeTitleKey(item.title);
       const key = titleKey ? `${searchPlatform(item)}:${item.is_game}:${item.is_dlc}:${titleKey}` : item.id_code;
       if (seen.has(key)) continue;
       seen.add(key);
-      unique.push(item);
+      if (count >= page * pageSize && items.length < pageSize) items.push(item);
+      count++;
     }
-    return unique;
-  }, [catalog, query, filters]);
+    return { items, count };
+  }, [catalog, query, filters, page]);
 
-  const pageSize = 9;
-  const totalPages = Math.max(1, Math.ceil(results.length / pageSize));
-  const currentItems = results.slice(page * pageSize, (page + 1) * pageSize);
+  const totalPages = Math.max(1, Math.ceil(results.count / pageSize));
+  const currentItems = results.items;
 
   const handleKeyClick = (ch: string) => {
     setQuery((prev) => prev + ch);
@@ -104,7 +107,7 @@ export const SearchGrid: React.FC<SearchGridProps> = ({
             </button>
           )}
           <span className="text-xs font-mono text-[#8a8a94] shrink-0">
-            {t(language, 'TXT_SEARCH_COUNT', results.length)}
+            {t(language, 'TXT_SEARCH_COUNT', results.count)}
           </span>
         </div>
       </div>

@@ -1,21 +1,18 @@
 /// <reference types="vite/client" />
 import type { GameItem } from './types';
 import { ARCHIVE_ASSET_BASE } from './archiveAssets';
+import { ResourceCache } from './resourceCache';
 
-interface SourceSnapshot {
-  schemaVersion: number;
-  sources: Array<{
-    id: string;
-    name: string;
-    website: string;
-    status: string;
-    note?: string;
-    packages: Array<{
-      id: string; title: string; platform?: string; category?: string;
-      version?: string; sizeBytes?: number; coverUrl?: string;
-      sourceUrl?: string; description?: string; createdAt?: string;
-    }>;
-  }>;
+interface SourceInfo {
+  id: string; name: string; website: string; status: string; note?: string;
+  pages: string[]; indexes: string[];
+}
+interface BrowserManifest { schemaVersion: number; sources: SourceInfo[]; }
+interface SourcePackage {
+  id: string; title: string; platform?: string; category?: string;
+  version?: string; sizeBytes?: number; coverUrl?: string;
+  sourceUrl?: string; description?: string; createdAt?: string;
+  archiveCoverPath?: string;
 }
 export interface SourceLoadStatus {
   id: string; name: string; entries: number; status: string; note?: string;
@@ -25,12 +22,25 @@ export interface SourceLoadResult {
   statuses: SourceLoadStatus[];
 }
 
-/* Each JSON becomes its own Vite JS chunk, requested only when the loader runs. */
-const indexedFiles = import.meta.glob<{ default: SourceSnapshot }>('../assets/catalogs/*.json');
+// Each source index is split at build time into 384-record JSON pages.
+// Do not import the original multi-megabyte indexes or the 6MB artwork
+// mapping in the PS5 browser: evaluating those JS modules can freeze the
+// browser thread and trigger "This page isn't responding".
+const PAGES = '/poldrive-pages/';
+const YIELD_RECORDS = 96;
+const NOTIFY_RECORDS = 1536;
 
-function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
-                  source: SourceSnapshot['sources'][number],
-                  archiveCovers: Record<string, string>): GameItem | null {
+function nextTask(): Promise<void> {
+  // A macrotask (not a resolved promise) lets input, CSS animations and
+  // React painting run even on browsers without requestIdleCallback.
+  return new Promise(resolve => window.setTimeout(resolve, 0));
+}
+async function readJSON(url: string, signal?: AbortSignal): Promise<unknown> {
+  const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store', signal });
+  if (!response.ok) throw new Error('HTTP ' + response.status + ' from ' + url);
+  return response.json();
+}
+function safeGame(entry: SourcePackage, source: SourceInfo): GameItem | null {
   if (!entry || typeof entry.title !== 'string' || typeof entry.id !== 'string' ||
       !entry.title.trim() || !entry.id.trim()) return null;
   const safeUrl = (value?: string) => value && /^https:\/\//i.test(value) ? value : undefined;
@@ -38,13 +48,13 @@ function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
     ? entry.createdAt.slice(0, 10) : '';
   const timestamp = entry.createdAt ? Date.parse(entry.createdAt) : NaN;
   const size = Number(entry.sizeBytes);
-  const artworkPath = archiveCovers[(entry.platform || '') + '|' + entry.title];
-  const streamCover = artworkPath && !artworkPath.split('/').includes('..') && /^assets\/covers\/[a-zA-Z0-9%_./-]+$/.test(artworkPath)
+  const artworkPath = entry.archiveCoverPath;
+  const streamCover = artworkPath && !artworkPath.split('/').includes('..') &&
+    /^assets\/covers\/[a-zA-Z0-9%_./-]+$/.test(artworkPath)
     ? ARCHIVE_ASSET_BASE + artworkPath : undefined;
   return {
     id_code: entry.id, title: entry.title, version: entry.version || '',
     source_name: source.name,
-    // Retro Game Champion publishes system collections, not verified game pages.
     is_game: source.id !== 'retrogamechampion' && entry.category !== 'dlc',
     is_dlc: entry.category === 'dlc', screenshot_urls: [],
     platform: entry.platform || '',
@@ -62,59 +72,124 @@ function safeGame(entry: SourceSnapshot['sources'][number]['packages'][number],
 }
 
 export async function loadSourceCatalogues(
-  onProgress?: (status: SourceLoadStatus) => void
+  onProgress?: (status: SourceLoadStatus) => void,
+  onBatch?: (entries: GameItem[]) => void,
+  signal?: AbortSignal
 ): Promise<SourceLoadResult> {
-  // Load path-only cover matches as a separate JS chunk. Fail open to source
-  // artwork if that optional metadata chunk is unavailable or outdated.
-  const archiveCovers: Record<string, string> = await import('./archiveSourceCovers.json')
-    .then(module => module.default as Record<string, string>)
-    .catch(() => ({}));
-  const snapshots = await Promise.all(
-    Object.entries(indexedFiles).map(async ([path, importer]) => {
-      try {
-        const loaded = await importer();
-        return { path, data: loaded.default, error: '' };
-      } catch (error) {
-        return { path, data: null, error: String(error) };
-      }
-    })
-  );
-  const full = new Map<string, SourceSnapshot['sources'][number]>();
-  const partial = new Map<string, SourceSnapshot['sources'][number]>();
-  const statuses: SourceLoadStatus[] = [];
-  for (const snapshot of snapshots) {
-    if (!snapshot.data || !Array.isArray(snapshot.data.sources)) {
-      statuses.push({ id: snapshot.path, name: snapshot.path, entries: 0,
-        status: 'error', note: snapshot.error || 'Invalid source file' });
-      continue;
-    }
-    for (const source of snapshot.data.sources) {
-      if (!source?.id || !Array.isArray(source.packages)) continue;
-      if (snapshot.path.endsWith('/additional.json')) partial.set(source.id, source);
-      else full.set(source.id, source);
-    }
-  }
+  const manifest = await readJSON(PAGES + 'manifest.json', signal) as BrowserManifest;
+  if (!manifest || manifest.schemaVersion !== 2 || !Array.isArray(manifest.sources))
+    throw new Error('Browser catalogue manifest is missing or invalid');
   const entries: GameItem[] = [];
-  const addSource = (id: string, source: SourceSnapshot['sources'][number]) => {
-    let added = 0;
-    const unique = new Set<string>();
-    for (const item of source.packages) {
-      const converted = safeGame(item, source, archiveCovers);
-      if (!converted) continue;
-      const key = converted.id_code + '|' + converted.title + '|' + converted.platform;
-      if (unique.has(key)) continue;
-      unique.add(key);
-      entries.push(converted);
-      added++;
+  const statuses: SourceLoadStatus[] = [];
+  let lastNotified = 0;
+
+  const flush = () => {
+    if (onBatch && entries.length !== lastNotified) {
+      lastNotified = entries.length;
+      onBatch(entries);
     }
-    const status = { id, name: source.name, entries: added,
-      status: source.status, note: source.note };
+  };
+
+  for (const source of manifest.sources) {
+    if (signal?.aborted) break;
+    if (!source || !Array.isArray(source.pages) || !Array.isArray(source.indexes) ||
+        source.pages.length !== source.indexes.length || typeof source.name !== 'string') continue;
+    let count = 0;
+    let errors = 0;
+    const seen = new Set<string>();
+    // Shared immutable defaults avoid allocating empty strings/arrays and
+    // source metadata as own properties on every browsing record.
+    const defaults = [false, true].map(dlc => safeGame({
+      id: '_', title: '_', category: dlc ? 'dlc' : ''
+    }, source)!);
+    for (let page = 0; page < source.indexes.length; page++) {
+      const file = source.indexes[page];
+      const detailsPage = source.pages[page];
+      if (signal?.aborted) break;
+      if (!/^[a-zA-Z0-9_-]+-[a-f0-9]{12}-index-\d{3}-[a-f0-9]{10}\.json$/.test(file) ||
+          !validDetailsPage(detailsPage)) {
+        errors++; continue;
+      }
+      try {
+        const part = await readJSON(PAGES + file, signal);
+        if (!Array.isArray(part)) throw new Error('Expected a package array');
+        for (let offset = 0; offset < part.length; offset += YIELD_RECORDS) {
+          if (signal?.aborted) break;
+          for (let row = offset; row < Math.min(part.length, offset + YIELD_RECORDS); row++) {
+            const raw = part[row];
+            if (!Array.isArray(raw) || typeof raw[0] !== 'string' || !raw[0].trim() ||
+                typeof raw[1] !== 'string' || !raw[1].trim()) continue;
+            const converted = Object.assign(Object.create(defaults[raw[3] === 'dlc' ? 1 : 0]), {
+              id_code: raw[0], title: raw[1], platform: raw[2], version: raw[4],
+              size_gb: Number(raw[5]) > 0 ? Number(raw[5]) / (1024 ** 3) : 0,
+              detailsPage, detailsOffset: row
+            }) as CatalogSummary;
+            const created = raw[6];
+            if (typeof created === 'string' && /^\d{4}-\d{2}-\d{2}/.test(created))
+              converted.release_date = created.slice(0, 10);
+            const timestamp = created ? Date.parse(created) : NaN;
+            if (Number.isFinite(timestamp)) converted.catalog_added_at = timestamp;
+            const key = converted.id_code + '|' + converted.title + '|' + converted.platform;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            entries.push(converted);
+            count++;
+          }
+          if (entries.length - lastNotified >= NOTIFY_RECORDS) flush();
+          await nextTask();
+        }
+      } catch (_error) {
+        if (signal?.aborted) break;
+        errors++;
+      }
+    }
+    flush();
+    if (signal?.aborted) break;
+    const status: SourceLoadStatus = {
+      id: source.id, name: source.name, entries: count,
+      status: errors ? 'error' : source.status,
+      note: errors ? (errors + ' catalogue pages failed to load') : source.note
+    };
     statuses.push(status);
     onProgress?.(status);
-  };
-  for (const [id, source] of partial) {
-    if (!full.has(id)) addSource(id, source);
+    await nextTask();
   }
-  for (const [id, source] of full) addSource(id, source);
+  flush();
   return { entries, statuses };
 }
+
+
+interface CatalogSummary extends GameItem { detailsPage: string; detailsOffset: number; }
+function validDetailsPage(file: string): boolean {
+  return /^[a-zA-Z0-9_-]+-[a-f0-9]{12}-\d{3}-[a-f0-9]{10}\.json$/.test(file);
+}
+const details = new ResourceCache<SourcePackage[]>(async (file, signal) => {
+  if (!validDetailsPage(file)) throw new Error('Invalid details page');
+  const page = await readJSON(PAGES + file, signal);
+  if (!Array.isArray(page) || page.length > 384) throw new Error('Invalid details page');
+  return page;
+}, 4, 2);
+
+/** Full metadata lives only in a four-page LRU and currently mounted consumers.
+ * Summary objects are never mutated or filled with retained full records. */
+export async function loadCatalogDetails(game: GameItem, signal?: AbortSignal): Promise<GameItem> {
+  const summary = game as CatalogSummary;
+  if (!summary.detailsPage) return game;
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const lease = details.acquire(summary.detailsPage);
+  const abort = () => lease.release();
+  signal?.addEventListener('abort', abort, { once: true });
+  try {
+    const page = await lease.promise;
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const raw = page[summary.detailsOffset];
+    if (!raw || raw.id !== game.id_code || raw.title !== game.title)
+      throw new Error('Catalogue details do not match the selected item');
+    const full = safeGame(raw, { id: '', name: game.source_name, website: game.source_url || '', status: '', pages: [], indexes: [] });
+    if (!full) throw new Error('Invalid catalogue record');
+    return { ...full, is_game: game.is_game, is_dlc: game.is_dlc };
+  } finally {
+    signal?.removeEventListener('abort', abort); lease.release();
+  }
+}
+export function catalogDetailsStats() { return details.stats; }

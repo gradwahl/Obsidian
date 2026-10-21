@@ -2,6 +2,7 @@
 import argparse
 import json
 import hashlib
+import gzip
 from pathlib import Path
 from urllib.parse import quote
 
@@ -30,10 +31,15 @@ def embed(root: Path, output: Path):
         stream.write("#include <stddef.h>\n")
         stream.write(f'static const char web_build_id[] = "{digest.hexdigest()}";\n')
         stream.write("typedef struct { const char *path; const unsigned char *data; "
-                     "size_t size; const char *mime; } WoloWebAsset;\n")
+                     "size_t size, raw_size; const char *mime; int is_gzip; } WoloWebAsset;\n")
         entries = []
         for index, path in enumerate(files):
-            data = path.read_bytes()
+            original = path.read_bytes()
+            # Prefer one compressed copy of substantial JS/CSS/JSON data instead
+            # of bloating the ELF with both the original and a gzip copy.
+            candidate = gzip.compress(original, compresslevel=6, mtime=0)
+            is_gzip = path.suffix.lower() in {".js", ".css", ".json"} and len(original) > 1024 and len(candidate) + 64 < len(original)
+            data = candidate if is_gzip else original
             stream.write(f"static const unsigned char web_asset_{index}[] = {{\n")
             for start in range(0, len(data), 24):
                 stream.write(",".join(str(b) for b in data[start:start + 24]) + ",\n")
@@ -41,7 +47,7 @@ def embed(root: Path, output: Path):
             url = "/" + quote(path.relative_to(root).as_posix(), safe="/-._~")
             mime = MIME.get(path.suffix.lower(), "application/octet-stream")
             entries.append(f"{{{json.dumps(url)},web_asset_{index},{len(data)},"
-                           f"{json.dumps(mime)}}}")
+                           f"{len(original)},{json.dumps(mime)},{int(is_gzip)}}}")
         stream.write("static const WoloWebAsset web_assets[] = {\n")
         stream.write(",\n".join(entries) + "\n};\n")
         stream.write("static const size_t web_asset_count = "

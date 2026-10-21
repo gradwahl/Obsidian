@@ -1,4 +1,4 @@
-/* PS5 browser launcher: embedded UI plus an optional console-local file bridge. */
+/* PS5 browser launcher: embedded UI plus an optional same-origin LAN file bridge. */
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -8,28 +8,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include "ps5_web_assets.h"
+#include <zlib.h>
+#ifdef WOLO_SINGLE_SERVICE
+#include "ps5_install_contract.h"
+#endif
 
 #ifndef WOLO_WEB_PORT
+#ifdef WOLO_SINGLE_SERVICE
+#define WOLO_WEB_PORT POLDRIVE_DIRECT_PORT
+#else
 #define WOLO_WEB_PORT 8097
+#endif
 #endif
 #ifdef WOLO_NATIVE_FALLBACK
 #define WOLO_WEB_SUFFIX "#native-unavailable"
+#elif defined(WOLO_WEB_AUTOSTART)
+/* Direct Media shortcut contains no hash; never show the native-failure toast. */
+#define WOLO_WEB_SUFFIX ""
 #elif defined(WOLO_FILE_BRIDGE)
 #define WOLO_WEB_SUFFIX "#ps5-files"
 #else
 #define WOLO_WEB_SUFFIX ""
 #endif
-#ifdef WOLO_FILE_BRIDGE
-#define WOLO_SERVER_ID "wolodrive-server-v10-files-lan-open"
+#ifdef WOLO_WEB_AUTOSTART
+#define WOLO_SERVER_ID "wolodrive-webfirst-v2-files-lan"
+#elif defined(WOLO_FILE_BRIDGE)
+#define WOLO_SERVER_ID "wolodrive-server-v11-files-lan-open"
 #else
 #define WOLO_SERVER_ID "wolodrive-server-v7"
 #endif
 static char web_url[64]; /* Set once from getsockname, before starting the worker. */
-#ifdef __PS5__
+#if defined(__PS5__) && defined(WOLO_SINGLE_SERVICE)
+#define ENDPOINT_RECORD "/data/poldrive-service.endpoint"
+#elif defined(__PS5__)
 #define ENDPOINT_RECORD "/data/wolodrive-web.endpoint"
 #else
 #define ENDPOINT_RECORD "wolodrive-web.endpoint"
@@ -82,6 +98,7 @@ static void *launch_browser(void *unused) {
 }
 #endif
 
+#ifndef WOLO_WEB_AUTOSTART
 static void request_browser(void) {
 #if (defined(__PS5__) || defined(WOLO_WEB_TEST_BROWSER)) && !defined(WOLO_WEB_NO_BROWSER)
     pthread_t browser_thread;
@@ -95,6 +112,7 @@ static void request_browser(void) {
     }
 #endif
 }
+#endif /* !WOLO_WEB_AUTOSTART */
 
 static volatile sig_atomic_t stopping;
 static void stop_server(int sig) { (void)sig; stopping = 1; }
@@ -118,6 +136,10 @@ static int reuse_running_server(void) {
     int parsed = fscanf(record, "%u", &port);
     fclose(record);
     if (parsed != 1 || !port || port > 65535) return 0;
+#ifdef WOLO_WEB_FIXED_PORT
+    /* A matching build on another port cannot satisfy this tile's URL. */
+    if (port != WOLO_WEB_PORT) return 0;
+#endif
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) return 0;
     struct timeval timeout = {2, 0};
@@ -151,27 +173,127 @@ static int reuse_running_server(void) {
     return found;
 }
 
-static void respond(int fd, int status, const char *reason, const char *mime,
-                    const void *body, size_t length, int head) {
+static void respond_policy(int fd, int status, const char *reason, const char *mime,
+                           const void *body, size_t length, int head,
+                           const char *cache_policy) {
     char header[512];
     int size = snprintf(header, sizeof(header),
         "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
-        "Connection: close\r\nCache-Control: no-store\r\n"
+        "Connection: close\r\nCache-Control: %s\r\n"
         "X-Content-Type-Options: nosniff\r\n"
 #ifdef WOLO_FILE_BRIDGE
         "X-PolDrive-Files: 3\r\n"
 #endif
         "%s\r\n",
-        status, reason, mime, length,
+        status, reason, mime, length, cache_policy,
         status == 405 ? "Allow: GET, HEAD\r\n" : "");
     if (size < 0 || (size_t)size >= sizeof(header)) return;
     if (send_all(fd, header, (size_t)size) == 0 && !head)
         send_all(fd, body, length);
 }
 
+static void respond(int fd, int status, const char *reason, const char *mime,
+                    const void *body, size_t length, int head) {
+    respond_policy(fd, status, reason, mime, body, length, head, "no-store");
+}
+
+/* Store only compressed multi-megabyte text bundles in the ELF. Modern clients
+   get gzip directly; clients without Accept-Encoding receive streaming inflate.
+   Neither route creates another multi-megabyte buffer in the payload. */
+static void respond_asset(int fd, const WoloWebAsset *asset, int head, int accepts_gzip,
+                          const char *policy) {
+    if (!asset->is_gzip) {
+        respond_policy(fd, 200, "OK", asset->mime, asset->data, asset->size, head, policy);
+        return;
+    }
+    char header[512];
+    int length = snprintf(header, sizeof(header),
+        "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
+        "Connection: close\r\nCache-Control: %s\r\n"
+        "X-Content-Type-Options: nosniff\r\nVary: Accept-Encoding\r\n"
+#ifdef WOLO_FILE_BRIDGE
+        "X-PolDrive-Files: 3\r\n"
+#endif
+        "%s\r\n", asset->mime, accepts_gzip ? asset->size : asset->raw_size,
+        policy, accepts_gzip ? "Content-Encoding: gzip\r\n" : "");
+    if (length < 0 || (size_t)length >= sizeof(header) ||
+        send_all(fd, header, (size_t)length) != 0 || head) return;
+    if (accepts_gzip) {
+        send_all(fd, asset->data, asset->size);
+        return;
+    }
+    z_stream stream = {0};
+    if (inflateInit2(&stream, MAX_WBITS + 16) != Z_OK) return;
+    stream.next_in = (Bytef *)asset->data;
+    stream.avail_in = (uInt)asset->size;
+    unsigned char output[16384];
+    int rc;
+    do {
+        stream.next_out = output;
+        stream.avail_out = sizeof(output);
+        rc = inflate(&stream, Z_NO_FLUSH);
+        if (rc != Z_OK && rc != Z_STREAM_END) break;
+        size_t written = sizeof(output) - stream.avail_out;
+        if (written && send_all(fd, output, written) != 0) break;
+    } while (rc != Z_STREAM_END);
+    inflateEnd(&stream);
+}
+
 #ifdef WOLO_FILE_BRIDGE
 #include "file_bridge.h"
 #endif
+
+/* Inspect only the Accept-Encoding field. Looking for "gzip" anywhere in
+   the request (e.g. inside User-Agent or an unrelated header) can select
+   compressed JavaScript for a browser that never agreed to decompress it. */
+static int accepts_gzip_encoding(const char *headers) {
+    const char *line = headers;
+    const char key[] = "Accept-Encoding:";
+    const size_t key_length = sizeof(key) - 1;
+    while (line && *line) {
+        const char *end = strstr(line, "\r\n");
+        if (!end || end == line) break;
+        if ((size_t)(end - line) >= key_length &&
+            strncasecmp(line, key, key_length) == 0) {
+            const char *p = line + key_length;
+            while (p < end) {
+                while (p < end && (*p == ' ' || *p == '\t' || *p == ',')) ++p;
+                const char *token = p;
+                while (p < end && *p != ',' && *p != ';') ++p;
+                const char *token_end = p;
+                while (token_end > token && (token_end[-1] == ' ' || token_end[-1] == '\t'))
+                    --token_end;
+                int gzip = token_end - token == 4 && strncasecmp(token, "gzip", 4) == 0;
+                int allowed = 1;
+                if (p < end && *p == ';') {
+                    const char *options_end = memchr(p, ',', (size_t)(end - p));
+                    if (!options_end) options_end = end;
+                    const char *q = p + 1;
+                    while (q < options_end && (*q == ' ' || *q == '\t')) ++q;
+                    if (options_end - q >= 3 && (q[0] == 'q' || q[0] == 'Q') && q[1] == '=') {
+                        /* q=0, q=0.0 etc are explicitly disallowed. */
+                        if (q[2] == '0') {
+                            const char *value_end = q + 3;
+                            while (value_end < options_end && *value_end == '0') ++value_end;
+                            if (value_end < options_end && *value_end == '.') {
+                                ++value_end;
+                                while (value_end < options_end && *value_end == '0') ++value_end;
+                            }
+                            if (value_end == options_end) allowed = 0;
+                        }
+                    }
+                    p = options_end;
+                }
+                if (gzip && allowed) return 1;
+                while (p < end && *p != ',') ++p;
+                if (p < end) ++p;
+            }
+            return 0;
+        }
+        line = end + 2;
+    }
+    return 0;
+}
 
 static void handle_client(int fd) {
     struct timeval timeout = {2, 0};
@@ -191,6 +313,7 @@ static void handle_client(int fd) {
     char method[16], path[16384], version[16], extra;
     char *body = complete ? strstr(request, "\r\n\r\n") + 4 : NULL;
     char *line_end = complete ? strstr(request, "\r\n") : NULL;
+    int accepts_gzip = line_end && accepts_gzip_encoding(line_end + 2);
     if (line_end) *line_end = 0;
     if (!line_end || sscanf(request, "%15s %16383s %15s %c", method, path, version, &extra) != 3 ||
         (strcmp(version, "HTTP/1.0") && strcmp(version, "HTTP/1.1")) || path[0] != '/') {
@@ -254,12 +377,28 @@ static void handle_client(int fd) {
         respond(fd, 200, "OK", "text/plain", identity, (size_t)size, head);
         return;
     }
+    /* Trace a bounded number of static requests to distinguish an HTML-only
+       boot from a JavaScript/CSS load failure on the actual PS5 browser.
+       Never log file bridge paths, headers, or session tokens. */
+    static unsigned static_request_log_count;
     for (size_t i = 0; i < web_asset_count; i++) {
         const WoloWebAsset *asset = &web_assets[i];
         if (!strcmp(lookup, asset->path)) {
-            if (!strcmp(lookup, "/index.html"))
-                fprintf(stderr, "[POLDRIVE WEB] Serving index.html\n");
-            respond(fd, 200, "OK", asset->mime, asset->data, asset->size, head);
+            if (static_request_log_count < 96) {
+                fprintf(stderr, "[POLDRIVE WEB] Static %s %s | type=%s | bytes=%zu | gzip=%d\n",
+                        head ? "HEAD" : "GET", lookup, asset->mime, asset->size,
+                        asset->is_gzip && accepts_gzip);
+                if (++static_request_log_count == 96)
+                    fprintf(stderr, "[POLDRIVE WEB] Static request tracing limit reached\n");
+            }
+            /* Cache immutable-in-this-build static files, not API responses. */
+            /* Content-addressed generated pages can be cached; always
+               revalidate manifest.json to discover a new build's page hashes. */
+            const int cached_pages = strncmp(lookup, "/poldrive-pages/", 16) == 0 &&
+                strcmp(lookup, "/poldrive-pages/manifest.json") != 0;
+            const char *policy = strncmp(lookup, "/assets/", 8) == 0 || cached_pages ?
+                "public, max-age=86400" : "no-store";
+            respond_asset(fd, asset, head, accepts_gzip, policy);
             return;
         }
     }
@@ -302,13 +441,25 @@ int main(void) {
 #endif
     address.sin_family = AF_INET;
     address.sin_port = htons(WOLO_WEB_PORT);
-    /* Serve the same catalogue to the console browser and other LAN devices. */
+#ifdef WOLO_WEB_LOCAL_ONLY
+    /* Autoloaded file bridge must not expose itself to the whole LAN. */
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+#else
+    /* Serve both the console's Media tile and same-origin LAN clients. */
     address.sin_addr.s_addr = htonl(INADDR_ANY);
+#endif
     int bound = bind(listener, (struct sockaddr *)&address, sizeof(address));
     if (bound < 0 && errno == EADDRINUSE) {
+#ifdef WOLO_WEB_FIXED_PORT
+        /* The Media tile points to exactly this port. A random fallback port
+           would silently send it to an old/wrong server. Fail clearly. */
+        fprintf(stderr, "[POLDRIVE WEB] Web-first port %d is busy. Stop the old server and retry; no random port fallback.\n",
+                WOLO_WEB_PORT);
+#else
         fprintf(stderr, "[POLDRIVE WEB] Port %d occupied; requesting a free port\n", WOLO_WEB_PORT);
         address.sin_port = 0;
         bound = bind(listener, (struct sockaddr *)&address, sizeof(address));
+#endif
     }
     if (bound < 0 || listen(listener, 16)) {
         perror("[POLDRIVE WEB] bind/listen");
@@ -334,10 +485,20 @@ int main(void) {
     } else perror("[POLDRIVE WEB] Save endpoint record");
     fprintf(stderr, "[POLDRIVE WEB] Listening at %s\n", web_url);
     fprintf(stderr, "[POLDRIVE WEB] Listener descriptor: %d\n", listener);
+#ifdef WOLO_WEB_LOCAL_ONLY
+    fprintf(stderr, "[POLDRIVE WEB] Loopback-only: http://127.0.0.1:%u/ (no LAN file access)\n",
+            (unsigned)ntohs(address.sin_port));
+#else
     fprintf(stderr, "[POLDRIVE WEB] LAN catalogue: http://<PS5-IP>:%u/ (Files accessible to trusted LAN clients; package installation unavailable)\n",
             (unsigned)ntohs(address.sin_port));
+#endif
+#ifdef WOLO_WEB_AUTOSTART
+    fprintf(stderr, "[POLDRIVE WEB] Web-first background service ready; browser launch disabled.\n");
+#else
     request_browser();
+#endif
     fprintf(stderr, "[POLDRIVE WEB] HTTP request loop active\n");
+    unsigned consecutive_accept_errors = 0;
     while (!stopping) {
         struct pollfd readable = {listener, POLLIN, 0};
         int ready = poll(&readable, 1, 1000);
@@ -353,12 +514,40 @@ int main(void) {
             close(listener);
             return 1;
         }
+#ifdef WOLO_WEB_TEST_ACCEPT_FAILURE
+        /* Deterministic regression hook; not present in shipping builds. */
+        static int test_accepted_once;
+        int client;
+        if (test_accepted_once) {
+            errno = EINVAL;
+            client = -1;
+        } else {
+            client = accept(listener, NULL, NULL);
+            if (client >= 0) test_accepted_once = 1;
+        }
+#else
         int client = accept(listener, NULL, NULL);
+#endif
         if (client < 0) {
             if (errno == EINTR) continue;
-            perror("accept");
+            int error = errno;
+            /* On PS5 a repeatedly failing listener previously busy-spun,
+               filling /data/wolodrive-web.log with millions of identical
+               lines. A persistent error cannot be repaired by retrying
+               accept() on the same descriptor forever. */
+            if (++consecutive_accept_errors == 1 || consecutive_accept_errors == 4)
+                fprintf(stderr, "[POLDRIVE WEB] accept failed: errno=0x%x (%d), attempt=%u\n",
+                        (unsigned)error, error, consecutive_accept_errors);
+            if (consecutive_accept_errors >= 8) {
+                fprintf(stderr, "[POLDRIVE WEB] Fatal: listener repeatedly failed; stopping instead of spinning. Restart the payload.\n");
+                close(listener);
+                return 1;
+            }
+            /* Delay outside the I/O loop; do not burn CPU or disk bandwidth. */
+            poll(NULL, 0, 200);
             continue;
         }
+        consecutive_accept_errors = 0;
         handle_client(client);
         close(client);
     }

@@ -5,8 +5,12 @@
 #ifdef __PS5__
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/time.h>
+
+static struct timeval startup_boot_clock;
 
 static void startup_log_init(void) {
+    gettimeofday(&startup_boot_clock, NULL);
     FILE *log = fopen("/data/wolodrive-startup.log", "w");
     if (log) {
         fflush(stdout);
@@ -24,7 +28,11 @@ static void startup_log_init(void) {
 }
 
 static void startup_log_stage(const char *stage) {
-    fprintf(stderr, "[POLDRIVE STARTUP] %s\n", stage);
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    long long ms = (long long)(now.tv_sec - startup_boot_clock.tv_sec) * 1000 +
+                   (now.tv_usec - startup_boot_clock.tv_usec) / 1000;
+    fprintf(stderr, "[POLDRIVE STARTUP] %s | +%lld ms since native entry\n", stage, ms);
     fflush(stderr);
 }
 #else

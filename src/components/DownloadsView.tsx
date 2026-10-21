@@ -7,7 +7,6 @@ interface DownloadsViewProps {
   catalog: GameItem[];
   language: LanguageCode;
   onOpenGame?: (game: GameItem) => void;
-  uiTheme?: 'netflix' | 'ubiquity';
 }
 
 type DownloadFilter = 'active' | 'completed' | 'errors';

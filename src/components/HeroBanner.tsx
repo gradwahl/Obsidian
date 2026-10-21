@@ -1,3 +1,5 @@
+import { MemoryImage } from './MemoryImage';
+import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
@@ -30,9 +32,9 @@ function ArtworkCrossfade({ src, onError }: { src: string; onError: (source: str
 
   const incoming = src && src !== visible ? src : '';
   return <div className="tv-hero-backdrop">
-    {visible && <img className="tv-hero-art" src={visible} alt=""
+    {visible && <MemoryImage artworkSize="hero" className="tv-hero-art" src={visible} alt=""
       onError={() => onError(visible)} />}
-    {incoming && <img key={incoming}
+    {incoming && <MemoryImage artworkSize="hero" key={incoming}
       className={`tv-hero-art tv-hero-incoming ${loadedSource === incoming ? 'tv-hero-incoming-loaded' : ''}`}
       src={incoming} alt=""
       onLoad={() => requestAnimationFrame(() => setLoadedSource(incoming))}
@@ -41,7 +43,7 @@ function ArtworkCrossfade({ src, onError }: { src: string; onError: (source: str
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
-  game,
+  game: summary,
   language,
   heading,
   emptyMessage,
@@ -49,12 +51,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onPlay,
   onMoreInfo
 }) => {
+  const game = useCatalogDetails(summary);
   const [showOriginal, setShowOriginal] = useState(false);
   const [failedSources, setFailedSources] = useState<string[]>([]);
 
   useEffect(() => {
     setShowOriginal(false);
-  }, [game?.id_code]);
+    setFailedSources([]);
+  }, [summary]);
 
   useEffect(() => {
     const toggle = (event: KeyboardEvent) => {
@@ -89,13 +93,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       <h1 key={game?.id_code || heading} className="tv-hero-info-appear">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
       {game && (
         <div key={game.id_code} className="tv-hero-metadata tv-hero-info-appear">
-          <span className="tv-meta-pill">{game.id_code}</span>
-          <span className="tv-meta-pill">v{game.version}</span>
-          <span className="tv-meta-pill">{game.format.toUpperCase()}</span>
-          <span className="tv-meta-pill">{game.size_gb.toFixed(1)} GB</span>
-          {game.rating_score ? <span className="tv-meta-pill">★ {game.rating_score.toFixed(1)}/10</span> : null}
-          {game.download_count ? <span className="tv-meta-pill">↓ {game.download_count.toLocaleString()}</span> : null}
-          {showDate && added ? <span className="tv-meta-pill">{added}</span> : null}
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.id_code}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">v{game.version}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.format.toUpperCase()}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.size_gb.toFixed(1)} GB</span>
+          {game.rating_score ? <span className="tv-meta-pill glass-pill glass-pill--sm">★ {game.rating_score.toFixed(1)}/10</span> : null}
+          {game.download_count ? <span className="tv-meta-pill glass-pill glass-pill--sm">↓ {game.download_count.toLocaleString()}</span> : null}
+          {showDate && added ? <span className="tv-meta-pill glass-pill glass-pill--sm">{added}</span> : null}
         </div>
       )}
       <div className="tv-hero-description tv-hero-info-appear" key={game?.id_code}>
@@ -109,14 +113,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         <div className="tv-hero-actions">
           <button
             type="button"
-            className="tv-hero-btn tv-hero-btn-primary"
+            className="tv-hero-btn tv-hero-btn-primary glass-pill glass-pill--active"
             onClick={() => onPlay?.(game)}
           >
             ▶ {t(language, 'TXT_DOWNLOAD')}
           </button>
           <button
             type="button"
-            className="tv-hero-btn tv-hero-btn-secondary"
+            className="tv-hero-btn tv-hero-btn-secondary glass-pill"
             onClick={() => onMoreInfo?.(game)}
           >
             ℹ {t(language, 'TXT_MORE_INFO')}
@@ -124,7 +128,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           {game.description_id && (
             <button
               type="button"
-              className="tv-description-toggle-inline"
+              className="tv-description-toggle-inline glass-pill"
               onClick={() => setShowOriginal((value) => !value)}
             >
               {t(language, showOriginal ? 'TXT_TRANSLATED_DESCRIPTION' : 'TXT_ORIGINAL_DESCRIPTION')} [I]

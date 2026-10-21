@@ -27,7 +27,6 @@
 #define COVERS_CACHE_DIR        "assets/covers"
 #endif
 
-#define UI_THEME_NETFLIX 0
 #define UI_THEME_UBIQUITY 1
 
 #define SCREEN_WIDTH            1920
@@ -175,7 +174,7 @@ typedef struct {
     SDL_atomic_t language;
     char language_path[512];
     char settings_path[512];
-    int ui_theme;  /* 0 = original Netflix/Glass, 1 = (u)biquity */
+    int ui_theme;  /* Fixed to (u)biquity at startup. */
     CatalogFilters filters;
     int settings_selection;
     int settings_column;
@@ -205,12 +204,15 @@ typedef struct {
     TTF_Font *font_micro;
 
     SDL_mutex *catalog_mutex;
+    /* Incremental index for updates from remote catalogue sources. */
+    struct CatalogLookup *catalog_lookup;
     GameItem catalog[MAX_CATALOG_ITEMS];
     int catalog_count;
     char catalog_source_names[40][64]; /* Include sources with empty/offline indexes. */
     int catalog_source_count;
     bool additional_catalog_loaded; /* Avoid re-reading immutable local snapshots. */
     bool axekin_catalog_loaded; /* Prevent duplicate bulk imports on refresh. */
+    Uint32 last_catalog_rebuild_tick;
     bool catalog_dirty;         /* Sygnał od wątku tła do przebudowania karuzel */
     bool sync_in_progress;      /* Czy trwa synchronizacja z Pegasus-DL */
     TextId sync_status_id;
@@ -276,8 +278,6 @@ bool settings_accepts_item(const WolodriveApp *app, const GameItem *item);
 bool settings_source_enabled(const WolodriveApp *app, const char *source);
 bool settings_filters_active(const WolodriveApp *app);
 bool settings_load(WolodriveApp *app);
-bool theme_load(WolodriveApp *app);
-bool theme_save(const WolodriveApp *app);
 bool settings_save(const WolodriveApp *app);
 const char *sys_format_to_string(WolodriveApp *app, PackageFormat fmt);
 const char *sys_format_short_badge(PackageFormat fmt);

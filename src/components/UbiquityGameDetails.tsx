@@ -1,3 +1,5 @@
+import { MemoryImage } from './MemoryImage';
+import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
@@ -19,10 +21,12 @@ interface Props {
 // Transparent game-logo artwork is not available in PolDrive's metadata.
 // Text stays legible until a verified per-game logo can be supplied.
 export function UbiquityGameDetails({
-  game, catalog, language, onClose, onTriggerAction, onSelectGame,
+  game: summary, catalog, language, onClose, onTriggerAction, onSelectGame,
   parentGame, onBackToParent, actionIndex, onActionIndexChange
 }: Props) {
+  const game = useCatalogDetails(summary);
   const [failedArt, setFailedArt] = useState<string[]>([]);
+  useEffect(() => setFailedArt([]), [summary]);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
@@ -86,7 +90,7 @@ export function UbiquityGameDetails({
     <div className="ubq-detail-screen" role="dialog" aria-modal="true"
       aria-labelledby="ubq-detail-title" data-layout="ubiquity-detail">
       <div className="ubq-detail-art" aria-hidden="true">
-        {backdrop && <img src={backdrop} alt=""
+        {backdrop && <MemoryImage artworkSize="hero" src={backdrop} alt=""
           onError={() => setFailedArt(prev => prev.includes(backdrop) ? prev : [...prev, backdrop])} />}
       </div>
       <div className="ubq-detail-vignette" aria-hidden="true" />
@@ -105,9 +109,9 @@ export function UbiquityGameDetails({
             {(game.rating_score || 0) > 0 && <><span aria-hidden="true">•</span><span>★ {(game.rating_score || 0).toFixed(1)}/10</span></>}
           </div>
           <div className="ubq-detail-tags">
-            <span>{game.format.toUpperCase()}</span>
-            <span>{game.id_code}</span>
-            {game.version && <span>v{game.version}</span>}
+            <span className="glass-pill glass-pill--sm">{game.format.toUpperCase()}</span>
+            <span className="glass-pill glass-pill--sm">{game.id_code}</span>
+            {game.version && <span className="glass-pill glass-pill--sm">v{game.version}</span>}
           </div>
           <div className="ubq-detail-description" ref={descriptionRef}>
             {description || game.title}
@@ -161,7 +165,7 @@ export function UbiquityGameDetails({
       </section>}
       {selectedScreenshot && <div className="ubq-detail-lightbox" role="dialog"
         aria-label="Screenshot preview" onClick={() => setSelectedScreenshot(null)}>
-        <img src={selectedScreenshot} alt="Screenshot enlarged" />
+        <MemoryImage artworkSize="hero" src={selectedScreenshot} alt="Screenshot enlarged" />
         <button type="button" onClick={() => setSelectedScreenshot(null)}>✕</button>
       </div>}
       {parentGame && onBackToParent && <button type="button" className="ubq-detail-parent"

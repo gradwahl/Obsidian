@@ -73,34 +73,3 @@ bool settings_save(const WolodriveApp *app) {
     if (fclose(file) != 0) written = false;
     return written;
 }
-
-/* Theme preference is separate from filter serialization, preserving old files. */
-static bool theme_path(const WolodriveApp *app, char *dst, size_t cap) {
-    if (!app->settings_path[0]) return false;
-    int n = snprintf(dst, cap, "%s.theme", app->settings_path);
-    return n > 0 && (size_t)n < cap;
-}
-bool theme_load(WolodriveApp *app) {
-    app->ui_theme = UI_THEME_NETFLIX;
-    char path[sizeof(app->settings_path) + 16];
-    if (!theme_path(app, path, sizeof(path))) return false;
-    FILE *f = fopen(path, "rb");
-    if (!f) return false;
-    char header[64];
-    int choice = -1;
-    bool valid = fgets(header, sizeof(header), f) &&
-                 strcmp(header, "WOLODRIVE_THEME_1\n") == 0 &&
-                 read_integer(f, &choice) && (choice == UI_THEME_NETFLIX || choice == UI_THEME_UBIQUITY);
-    fclose(f);
-    if (valid) app->ui_theme = choice;
-    return valid;
-}
-bool theme_save(const WolodriveApp *app) {
-    char path[sizeof(app->settings_path) + 16];
-    if (!theme_path(app, path, sizeof(path))) return false;
-    FILE *f = fopen(path, "wb");
-    if (!f) return false;
-    bool valid = fprintf(f, "WOLODRIVE_THEME_1\n%d\n", app->ui_theme) > 0;
-    if (fclose(f) != 0) valid = false;
-    return valid;
-}

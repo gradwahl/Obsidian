@@ -4,12 +4,15 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/generate_browser_catalog_pages.cjs",
+    "prebuild": "node scripts/generate_browser_catalog_pages.cjs",
+    "prebuild:static": "node scripts/generate_browser_catalog_pages.cjs",
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc && vite build",
     "build:static": "tsc && vite build --outDir static-preview",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "lint": "tsc --noEmit",
-    "test:web": "node tests/test_react_layout.cjs && node tests/test_file_manager.cjs && node tests/test_file_bridge.cjs"
+    "test:web": "node tests/test_memory.cjs && node tests/test_browser_catalog_pages.cjs && node tests/test_react_layout.cjs && node tests/test_file_manager.cjs && node tests/test_file_bridge.cjs"
   },
   "dependencies": {
     "fflate": "^0.8.2",

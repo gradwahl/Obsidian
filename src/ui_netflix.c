@@ -7,6 +7,16 @@
 #include <math.h>
 #include <stdlib.h>
 #include "ui_text.h"
+#include "ui_glass.h"
+static HighlightAnim nav_highlight, category_highlight, language_highlight;
+static Uint32 language_close_at, sidebar_started;
+static float sidebar_from, sidebar_to;
+static int ui_height(SDL_Renderer *r) {
+    int w=0,h=0; SDL_RenderGetLogicalSize(r,&w,&h);
+    if(!h) SDL_GetRendererOutputSize(r,&w,&h);
+    return h>0?h:SCREEN_HEIGHT;
+}
+static int category_y(SDL_Renderer *r) { return ui_height(r)-48-40; }
 #ifdef __PS5__
 #include "ps5_renderer.h"
 #endif
@@ -151,14 +161,14 @@ enum { SIDEBAR_COLLAPSED_W = 92, RAIL_WIDTH = 92, SIDEBAR_EXPANDED_W = 272,
        CONTENT_X = RAIL_WIDTH + 38, CARDS_Y = 576,
        CARD_WIDTH = 216, CARD_HEIGHT = 300, CARD_GAP = 16, CARD_TITLE = 28, CARD_FOOTER = 40,
        HOME_ROW_STRIDE = 442, HOME_GRID_COLS = 6 };
-static const SDL_Rect LANGUAGE_BUTTON = {0, 16, SIDEBAR_EXPANDED_W, 64};
+static const SDL_Rect LANGUAGE_BUTTON = {8, 32, SIDEBAR_EXPANDED_W - 16, 44};
 static SDL_Rect language_button_rect(const WolodriveApp *app) {
     int w = (int)lroundf(app->sidebar_width);
     if (w < SIDEBAR_COLLAPSED_W) w = SIDEBAR_COLLAPSED_W;
     if (w > SIDEBAR_EXPANDED_W) w = SIDEBAR_EXPANDED_W;
-    return (SDL_Rect){0, 16, w, 64};
+    return (SDL_Rect){8, 32, w-16, 44};
 }
-static const SDL_Rect LANGUAGE_MENU = {14, 122, SIDEBAR_EXPANDED_W - 28, LANG_COUNT * 44 + 16};
+static const SDL_Rect LANGUAGE_MENU = {8, 92, 244, LANG_COUNT * 44 + 16};
 static const char *action_label(WolodriveApp *app, GameItem *item);
 static const SDL_Rect DESCRIPTION_AREA = {CONTENT_X, 320, 690, 142};
 static void get_hero_button_rects(WolodriveApp *app, GameItem *hero,
@@ -267,12 +277,12 @@ static void select_sidebar_view(WolodriveApp *app, int view) {
 
 static SDL_Rect sidebar_target(int row) {
     int y_offset = 148;
-    int row_h = 92;
+    int row_h = 48;
     int pos;
     if (row == VIEW_SEARCH) pos = 0;
     else if (row == VIEW_SETTINGS) pos = VIEW_DOWNLOADS + 2;
     else pos = row + 1;
-    return (SDL_Rect){0, y_offset + pos * row_h, SIDEBAR_EXPANDED_W, row_h};
+    return (SDL_Rect){8, row == VIEW_SETTINGS ? SCREEN_HEIGHT - 96 : 16 + y_offset + pos * row_h, SIDEBAR_EXPANDED_W - 16, 44};
 }
 
 static CarouselRow *active_home_row(WolodriveApp *app) {
@@ -340,6 +350,7 @@ static bool contains_point(SDL_Rect rect, int x, int y) {
 
 static void toggle_language_menu(WolodriveApp *app) {
     app->language_menu_open = !app->language_menu_open;
+    language_close_at = 0;
     if (app->language_menu_open) {
         app->description_hovered = false;
         for (int i = 0; i < LANG_COUNT; i++) {
@@ -353,7 +364,8 @@ static void toggle_language_menu(WolodriveApp *app) {
 
 static void select_menu_language(WolodriveApp *app) {
     Language language = LANGUAGE_ORDER[app->language_menu_index];
-    app->language_menu_open = false;
+    updateHighlight(&language_highlight,(SDL_FRect){LANGUAGE_MENU.x+8,LANGUAGE_MENU.y+8+app->language_menu_index*44,LANGUAGE_MENU.w-16,44},false);
+    language_close_at = SDL_GetTicks() + (Uint32)language_highlight.duration + 120;
     sys_set_language(app, language);
 }
 
@@ -452,11 +464,15 @@ static void fill_rounded_rect(SDL_Renderer *r, int x, int y, int w, int h, int r
     if (w <= 0 || h <= 0 || !ca) return;
     SDL_SetRenderDrawBlendMode(r, ca == 255 ? SDL_BLENDMODE_NONE : SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(r, cr, cg, cb, ca);
+    SDL_Rect batch[128];
+    int count = 0;
     for (int row = 0; row < h; ++row) {
         int inset = rounded_inset(row, w, h, radius);
         SDL_Rect line = {x + inset, y + row, w - 2 * inset, 1};
-        if (line.w > 0) SDL_RenderFillRect(r, &line);
+        if (line.w > 0) batch[count++] = line;
+        if (count >= 126) { SDL_RenderFillRects(r, batch, count); count = 0; }
     }
+    if (count) SDL_RenderFillRects(r, batch, count);
 }
 
 static void draw_rounded_border(SDL_Renderer *r, int x, int y, int w, int h, int radius,
@@ -465,24 +481,28 @@ static void draw_rounded_border(SDL_Renderer *r, int x, int y, int w, int h, int
     thickness = SDL_min(thickness, SDL_min(w, h) / 2);
     SDL_SetRenderDrawBlendMode(r, ca == 255 ? SDL_BLENDMODE_NONE : SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(r, cr, cg, cb, ca);
+    SDL_Rect batch[128];
+    int count = 0;
     for (int row = 0; row < h; ++row) {
         int outer = rounded_inset(row, w, h, radius);
         int ox = x + outer, ow = w - 2 * outer;
         if (ow <= 0) continue;
         if (row < thickness || row >= h - thickness || w <= 2 * thickness) {
-            SDL_Rect span = {ox, y + row, ow, 1};
-            SDL_RenderFillRect(r, &span);
-            continue;
+            batch[count++] = (SDL_Rect){ox, y + row, ow, 1};
+        } else {
+            int inner = rounded_inset(row - thickness, w - 2 * thickness,
+                                      h - 2 * thickness, SDL_max(0, radius - thickness));
+            int left_limit = x + thickness + inner;
+            int right_limit = x + w - thickness - inner;
+            SDL_Rect left = {ox, y + row, SDL_max(0, left_limit - ox), 1};
+            SDL_Rect right = {right_limit, y + row, SDL_max(0, ox + ow - right_limit), 1};
+            if (left.w > 0) batch[count++] = left;
+            if (right.w > 0) batch[count++] = right;
         }
-        int inner = rounded_inset(row - thickness, w - 2 * thickness,
-                                  h - 2 * thickness, SDL_max(0, radius - thickness));
-        int left_limit = x + thickness + inner;
-        int right_limit = x + w - thickness - inner;
-        SDL_Rect left = {ox, y + row, SDL_max(0, left_limit - ox), 1};
-        SDL_Rect right = {right_limit, y + row, SDL_max(0, ox + ow - right_limit), 1};
-        if (left.w > 0) SDL_RenderFillRect(r, &left);
-        if (right.w > 0) SDL_RenderFillRect(r, &right);
+        /* Leave room for both spans on the next row. */
+        if (count >= 126) { SDL_RenderFillRects(r, batch, count); count = 0; }
     }
+    if (count) SDL_RenderFillRects(r, batch, count);
 }
 
 static void draw_rounded_glow(SDL_Renderer *r, int x, int y, int w, int h, int radius,
@@ -497,23 +517,8 @@ static void draw_rounded_glow(SDL_Renderer *r, int x, int y, int w, int h, int r
     }
 }
 
-/* A scanline-clipped red gradient, equivalent to the React primary pill. */
 static void fill_primary_pill(SDL_Renderer *r, SDL_Rect rect) {
-    if (rect.w <= 0 || rect.h <= 0) return;
-    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_NONE);
-    for (int row = 0; row < rect.h; ++row) {
-        int inset = rounded_inset(row, rect.w, rect.h, rect.h / 2);
-        int from = inset, to = rect.w - inset;
-        for (int col = from; col < to; col += 12) {
-            int width = SDL_min(12, to - col);
-            float t = (0.7f * (float)col / (float)rect.w) +
-                      (0.3f * (float)row / (float)rect.h);
-            SDL_SetRenderDrawColor(r, (Uint8)(255 - 55 * t),
-                                    (Uint8)(30 - 22 * t), (Uint8)(39 - 21 * t), 255);
-            SDL_Rect span = {rect.x + col, rect.y + row, width, 1};
-            SDL_RenderFillRect(r, &span);
-        }
-    }
+    drawGlassPill(r,(SDL_FRect){rect.x,rect.y,rect.w,rect.h},GLASS_PRIMARY);
 }
 
 static void draw_border(SDL_Renderer *r, int x, int y, int w, int h, int thickness,
@@ -624,10 +629,9 @@ static int draw_hero_metadata_pill(WolodriveApp *app, const char *label, int x, 
     int tw = 0, th = 0;
     TTF_Font *font = app->font_small ? app->font_small : app->font_body;
     if (font) TTF_SizeUTF8(font, label, &tw, &th);
-    int width = SDL_max(65, SDL_min(190, tw + 28));
+    int width = SDL_max(65, tw + 28);
     if (x + width > SCREEN_WIDTH - 48) return x;
-    fill_rounded_rect(app->renderer, x, y, width, 32, 16, 22, 22, 30, 199);
-    draw_rounded_border(app->renderer, x, y, width, 32, 16, 1, 255, 255, 255, 38);
+    drawGlassPill(app->renderer,(SDL_FRect){x,y,width,30},GLASS_NEUTRAL);
     SDL_Rect inside = {x + 14, y + 3, width - 28, 26};
     draw_fitted_text(app, font, label, inside, (SDL_Color){218, 218, 226, 255}, inside, true);
     return x + width + 8;
@@ -863,6 +867,11 @@ bool ui_init(WolodriveApp *app) {
 
 void ui_cleanup(WolodriveApp *app) {
     files_shutdown();
+    glass_cleanup(app->renderer);
+    sidebar_from=sidebar_to=0;language_close_at=0;
+    memset(&nav_highlight,0,sizeof(nav_highlight));
+    memset(&category_highlight,0,sizeof(category_highlight));
+    memset(&language_highlight,0,sizeof(language_highlight));
     text_cache_destroy(app);
     screenshots_destroy(app->screenshots); app->screenshots = NULL;
     artwork_destroy(app);
@@ -1405,13 +1414,13 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
         }
 
         if (app->ui_theme == UI_THEME_UBIQUITY && !app->home_grid_expanded &&
-            my >= 996 && my <= 1020) {
+            my >= category_y(app->renderer) && my <= category_y(app->renderer) + 40) {
             int pos = CONTENT_X + 24;
             for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
                 const char *name = home_category_title(app, cat);
                 int width = 0, height = 0;
                 if (app->font_micro) TTF_SizeUTF8(app->font_micro, name, &width, &height);
-                int slot = SDL_max(125, width + 26);
+                int slot = SDL_max(80, width + 32);
                 if (mx >= pos && mx < pos + slot) {
                     app->sidebar_focus = false;
                     app->home_cat_index = cat;
@@ -1419,7 +1428,7 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
                     track_description_focus(app, get_focused_item(app));
                     return;
                 }
-                pos += slot;
+                pos += slot + 12;
             }
         }
         for (int cat = 0; cat < HOME_CAT_COUNT && app->ui_theme != UI_THEME_UBIQUITY; cat++) {
@@ -1716,9 +1725,20 @@ void ui_handle_input(WolodriveApp *app, const SDL_Event *ev) {
 }
 
 void ui_update_animations(WolodriveApp *app, float dt) {
+    if(language_close_at && SDL_GetTicks()>=language_close_at) {
+        app->language_menu_open=false; language_close_at=0;
+    }
+
     files_poll(app);
+    /* The sync worker marks every entry dirty. Coalesce expensive ranking
+       rebuilds while it runs, but publish the final update immediately. */
     if (app->catalog_dirty) {
-        ui_rebuild_carousels(app);
+        Uint32 now = SDL_GetTicks();
+        if (!app->sync_in_progress ||
+            (Uint32)(now - app->last_catalog_rebuild_tick) >= 400) {
+            ui_rebuild_carousels(app);
+            app->last_catalog_rebuild_tick = now;
+        }
     }
 
     app->focus_pulse += dt;
@@ -1804,8 +1824,10 @@ void ui_update_animations(WolodriveApp *app, float dt) {
         if (app->home_grid_anim > 0.999f) app->home_grid_anim = 1.0f;
 
         /* Płynne rozsuwanie paska bocznego w prawo po najechaniu / focusie */
-        float target_sb = (app->active_row == VIEW_SETTINGS || app->sidebar_hovered || app->sidebar_focus) ? 1.0f : 0.0f;
-        app->sidebar_expand += (target_sb - app->sidebar_expand) * (1.0f - expf(-14.0f * dt));
+        float target_sb = (app->active_row == VIEW_SETTINGS || app->sidebar_hovered || app->sidebar_focus || app->language_menu_open) ? 1.0f : 0.0f;
+        if(target_sb!=sidebar_to) { sidebar_from=app->sidebar_expand;sidebar_to=target_sb;sidebar_started=SDL_GetTicks(); }
+        float sb_t=SDL_min(1.0f,(SDL_GetTicks()-sidebar_started)/240.0f);
+        app->sidebar_expand=sidebar_from+(sidebar_to-sidebar_from)*glass_sidebar_ease(sb_t);
         if (app->sidebar_expand < 0.001f) app->sidebar_expand = 0.0f;
         if (app->sidebar_expand > 0.999f) app->sidebar_expand = 1.0f;
         app->sidebar_width = (float)SIDEBAR_COLLAPSED_W +
@@ -1989,11 +2011,7 @@ static void render_hero_banner(WolodriveApp *app) {
     get_hero_button_rects(app, hero, &play_rect, &info_rect, &toggle_rect);
 
     /* Primary: 50px red-gradient capsule with a soft crimson halo. */
-    draw_rounded_glow(r, play_rect.x, play_rect.y, play_rect.w, play_rect.h,
-                      25, 12, 229, 9, 20, 105);
     fill_primary_pill(r, play_rect);
-    draw_rounded_border(r, play_rect.x, play_rect.y, play_rect.w, play_rect.h,
-                        25, 1, 255, 255, 255, 85);
     char play_label[128];
     snprintf(play_label, sizeof(play_label), "▶  %s", action_label(app, hero));
     draw_fitted_text(app, app->font_small, play_label,
@@ -2001,10 +2019,7 @@ static void render_hero_banner(WolodriveApp *app) {
                      white, play_rect, true);
 
     /* Przycisk 2: Więcej informacji */
-    fill_rounded_rect(r, info_rect.x, info_rect.y, info_rect.w, info_rect.h,
-                      25, 28, 28, 38, 184);
-    draw_rounded_border(r, info_rect.x, info_rect.y, info_rect.w, info_rect.h,
-                        25, 1, 255, 255, 255, 46);
+    drawGlassPill(r,(SDL_FRect){info_rect.x,info_rect.y,info_rect.w,info_rect.h},GLASS_NEUTRAL);
     char info_label[128];
     snprintf(info_label, sizeof(info_label), "ℹ  %s", TR(app, TXT_MORE_INFO));
     draw_fitted_text(app, app->font_small, info_label,
@@ -2013,10 +2028,7 @@ static void render_hero_banner(WolodriveApp *app) {
 
     /* Przycisk 3: Przełącznik opisu */
     if (toggle_rect.w > 0) {
-        fill_rounded_rect(r, toggle_rect.x, toggle_rect.y, toggle_rect.w, toggle_rect.h,
-                          25, 28, 28, 38, 184);
-        draw_rounded_border(r, toggle_rect.x, toggle_rect.y, toggle_rect.w, toggle_rect.h,
-                            25, 1, 255, 255, 255, 46);
+        drawGlassPill(r,(SDL_FRect){toggle_rect.x,toggle_rect.y,toggle_rect.w,toggle_rect.h},GLASS_NEUTRAL);
         TextId label = app->show_original_description ? TXT_TRANSLATED_DESCRIPTION : TXT_ORIGINAL_DESCRIPTION;
         char toggle_text[160];
         snprintf(toggle_text, sizeof(toggle_text), "%s [I]", TR(app, label));
@@ -2251,19 +2263,10 @@ static void render_sidebar(WolodriveApp *app) {
         fill_rect(r, sb_w, 0, SCREEN_WIDTH - sb_w, SCREEN_HEIGHT, 0, 0, 0, dim_alpha);
     }
 
-    fill_rect(r, 0, 0, sb_w, SCREEN_HEIGHT,
-              app->ui_theme == UI_THEME_UBIQUITY ? 7 : 12,
-              app->ui_theme == UI_THEME_UBIQUITY ? 8 : 12,
-              app->ui_theme == UI_THEME_UBIQUITY ? 11 : 12, 250);
-    if (app->ui_theme != UI_THEME_UBIQUITY)
-        fill_rect(r, sb_w - 1, 0, 1, SCREEN_HEIGHT, 48, 48, 48, 255);
-
-    SDL_Rect sb_clip = {0, 0, sb_w, SCREEN_HEIGHT};
-    SDL_Rect prev_clip;
-    bool was_clipped = SDL_RenderIsClipEnabled(r);
-    SDL_RenderGetClipRect(r, &prev_clip);
-    SDL_RenderSetClipRect(r, &sb_clip);
-
+    drawGlassPill(r,(SDL_FRect){0,16,sb_w,ui_height(r)-32},
+                  app->ui_theme==UI_THEME_UBIQUITY?GLASS_PANEL_UBQ:GLASS_PANEL);
+    SDL_Rect prev_clip; bool was_clipped=SDL_RenderIsClipEnabled(r);
+    SDL_RenderGetClipRect(r,&prev_clip);
     int brand_y = 82;
     TTF_Font *p_font = app->font_logo ? app->font_logo : app->font_row_title;
     if (app->ui_theme != UI_THEME_UBIQUITY) {
@@ -2281,20 +2284,11 @@ static void render_sidebar(WolodriveApp *app) {
     }
 
     }
-    SDL_Rect active_pill = {8, (int)lroundf(app->sidebar_indicator_y) + 8,
-                            sb_w - 16, sidebar_target(app->active_row).h - 16};
-    draw_rounded_glow(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                      14, 5, app->ui_theme == UI_THEME_UBIQUITY ? 225 : 229,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 225 : 9,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 230 : 20, 38);
-    fill_rounded_rect(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                      14, app->ui_theme == UI_THEME_UBIQUITY ? 35 : 45,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 35 : 16,
-                      app->ui_theme == UI_THEME_UBIQUITY ? 40 : 24, 245);
-    draw_rounded_border(r, active_pill.x, active_pill.y, active_pill.w, active_pill.h,
-                        14, 1, 255,
-                        app->ui_theme == UI_THEME_UBIQUITY ? 255 : 75,
-                        app->ui_theme == UI_THEME_UBIQUITY ? 255 : 88, 105);
+    SDL_Rect nav_target=sidebar_target(app->active_row);
+    drawHighlight(r,&nav_highlight,(SDL_FRect){8,nav_target.y,sb_w-16,44},
+                  fabsf(app->sidebar_width-(float)sb_w)>.01f);
+    SDL_Rect sb_clip={8,24,sb_w-16,ui_height(r)-48};
+    SDL_RenderSetClipRect(r,&sb_clip);
     for (int row = 0; row < TOTAL_ROWS; row++) {
         SDL_Rect target = sidebar_target(row);
         bool selected = row == app->active_row;
@@ -2387,7 +2381,7 @@ static void render_sidebar(WolodriveApp *app) {
                     SDL_Color text_color = selected ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){225, 140, 145, 255};
                     UiTextEntry *entry = cached_text(app, font, label_text, text_color, 0);
                     if (entry && entry->texture) {
-                        int text_x = 84;
+                        int text_x = 60;
                         int text_y = target.y + (target.h - entry->h) / 2;
                         SDL_Rect dst = {text_x, text_y, entry->w, entry->h};
                         SDL_SetTextureBlendMode(entry->texture, SDL_BLENDMODE_BLEND);
@@ -2412,13 +2406,7 @@ static void render_language_control(WolodriveApp *app) {
     Uint8 ib = app->language_menu_open ? 45  : 40;
     Uint8 ia = 255;
 
-    if (app->language_menu_open) {
-        fill_rect(r, LANGUAGE_BUTTON.x, LANGUAGE_BUTTON.y, sb_w - 1,
-                  LANGUAGE_BUTTON.h, 38, 12, 16, 255);
-        fill_rect(r, 0, LANGUAGE_BUTTON.y, 5, LANGUAGE_BUTTON.h, 255, 30, 40, 255);
-    }
-
-    int cx = 42, cy = LANGUAGE_BUTTON.y + 42;
+    int cx = 34, cy = LANGUAGE_BUTTON.y + LANGUAGE_BUTTON.h/2;
     SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(r, ir, ig, ib, ia);
 
@@ -2437,7 +2425,7 @@ static void render_language_control(WolodriveApp *app) {
 
     Uint8 c = app->language_menu_open ? 255 : 220;
     if (sb_w > SIDEBAR_COLLAPSED_W + 28) {
-        SDL_Rect label = {84, LANGUAGE_BUTTON.y + 24, sb_w - 128, 42};
+        SDL_Rect label = {60, LANGUAGE_BUTTON.y, sb_w - 100, 44};
         if (label.w > 24) {
             draw_fitted_text(app, app->font_small,
                              i18n_language_name((Language)SDL_AtomicGet(&app->language)),
@@ -2459,9 +2447,9 @@ static void render_top_bar(WolodriveApp *app) {
     SDL_Color muted = {165, 165, 175, 255};
 
     if (ubiquity_carousel_enabled(app)) {
-        fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 5, 6, 9, 220);
+
         draw_text(app, app->font_micro, "[X] Details    [Triangle] Download / Install    [O] Back",
-                  CONTENT_X + 24, 1040, muted, 900);
+                  SCREEN_WIDTH - 600, category_y(r)+12, muted, 580);
         return;
     }
     fill_rect(r, 0, 1020, SCREEN_WIDTH, 60, 10, 10, 14, 248);
@@ -2522,20 +2510,15 @@ static void render_top_bar(WolodriveApp *app) {
 }
 
 static void render_language_menu(WolodriveApp *app) {
-    if (!app->language_menu_open) return;
+    if (!app->language_menu_open) { language_highlight.initialized=false; return; }
     SDL_Renderer *r = app->renderer;
     SDL_Color white = {245, 245, 250, 255};
     SDL_Color muted = {170, 170, 180, 255};
-    draw_drop_shadow(r, LANGUAGE_MENU.x, LANGUAGE_MENU.y, LANGUAGE_MENU.w, LANGUAGE_MENU.h, 8, 8, 220);
-    fill_rect(r, LANGUAGE_MENU.x, LANGUAGE_MENU.y, LANGUAGE_MENU.w, LANGUAGE_MENU.h, 24, 24, 30, 255);
-    draw_border(r, LANGUAGE_MENU.x, LANGUAGE_MENU.y, LANGUAGE_MENU.w, LANGUAGE_MENU.h, 1, 90, 90, 100, 255);
+    drawGlassPill(r,(SDL_FRect){LANGUAGE_MENU.x,LANGUAGE_MENU.y,LANGUAGE_MENU.w,LANGUAGE_MENU.h},GLASS_PANEL);
+    drawHighlight(r,&language_highlight,(SDL_FRect){LANGUAGE_MENU.x+8,LANGUAGE_MENU.y+8+app->language_menu_index*44,LANGUAGE_MENU.w-16,44},false);
     for (int i = 0; i < LANG_COUNT; i++) {
         int y = LANGUAGE_MENU.y + 8 + i * 44;
         bool selected = SDL_AtomicGet(&app->language) == (int)LANGUAGE_ORDER[i];
-        if (i == app->language_menu_index) {
-            fill_rect(r, LANGUAGE_MENU.x + 4, y, LANGUAGE_MENU.w - 8, 44, 58, 58, 70, 255);
-            draw_border(r, LANGUAGE_MENU.x + 4, y, LANGUAGE_MENU.w - 8, 44, 1, 229, 9, 20, 255);
-        }
         if (selected) fill_rect(r, LANGUAGE_MENU.x + 14, y + 16, 10, 10, 229, 9, 20, 255);
         draw_text(app, app->font_body, i18n_language_name(LANGUAGE_ORDER[i]),
                   LANGUAGE_MENU.x + 38, y + 10, selected ? white : muted, 0);
@@ -2715,12 +2698,18 @@ static void render_ubiquity_home(WolodriveApp *app) {
                      app->font_ubiquity_title : app->font_hero_title,
                      upper, title, white, title, false);
 
-    char metadata[300];
-    snprintf(metadata, sizeof(metadata), "%s   %s   %.1f GB   * %.1f/10",
-             hero->source_name, sys_format_short_badge(hero->format),
-             hero->size_gb, hero->rating_score);
-    SDL_Rect meta_box = {CONTENT_X + 24, 329, 860, 34};
-    draw_fitted_text(app, app->font_small, metadata, meta_box, white, meta_box, false);
+    /* Preserve the native metadata fields and wording; only split their surface. */
+    char metadata[4][256];
+    snprintf(metadata[0],sizeof(metadata[0]),"%s",hero->source_name);
+    snprintf(metadata[1],sizeof(metadata[1]),"%s",sys_format_short_badge(hero->format));
+    snprintf(metadata[2],sizeof(metadata[2]),"%.1f GB",hero->size_gb);
+    snprintf(metadata[3],sizeof(metadata[3]),"* %.1f/10",hero->rating_score);
+    int meta_x=CONTENT_X+24, meta_y=329;
+    for(int field=0;field<4;field++) {
+        int tw=0,th=0; TTF_SizeUTF8(app->font_small,metadata[field],&tw,&th);
+        if(meta_x+tw+28>CONTENT_X+24+850) {meta_x=CONTENT_X+24;meta_y+=40;}
+        meta_x=draw_hero_metadata_pill(app,metadata[field],meta_x,meta_y);
+    }
 
     const char *description = hero->description[0] ? hero->description : "";
     SDL_Rect desc_box = {CONTENT_X + 24, 380, 760, 65};
@@ -2852,11 +2841,20 @@ static void render_ubiquity_home(WolodriveApp *app) {
     draw_text(app, app->font_micro, count, SCREEN_WIDTH - 175, 719, subdued, 0);
     if (app->active_row == VIEW_HOME) {
         int pos = CONTENT_X + 24;
-        for (int cat = 0; cat < HOME_CAT_COUNT; cat++) {
-            const char *name = home_category_title(app, cat);
-            SDL_Color label_color = cat == app->home_cat_index ? white : subdued;
-            int width = draw_text(app, app->font_micro, name, pos, 1002, label_color, 0);
-            pos += SDL_max(125, width + 26);
+        SDL_Rect targets[HOME_CAT_COUNT];
+        for (int cat=0;cat<HOME_CAT_COUNT;cat++) {
+            int width=0,height=0;
+            TTF_SizeUTF8(app->font_micro,home_category_title(app,cat),&width,&height);
+            targets[cat]=(SDL_Rect){pos,category_y(r),SDL_max(80,width+32),40};
+            if(cat!=app->home_cat_index) drawGlassPill(r,(SDL_FRect){pos,category_y(r),targets[cat].w,40},GLASS_NEUTRAL);
+            pos+=targets[cat].w+12;
+        }
+        SDL_Rect chosen=targets[app->home_cat_index];
+        drawHighlight(r,&category_highlight,(SDL_FRect){chosen.x,chosen.y,chosen.w,chosen.h},false);
+        for(int cat=0;cat<HOME_CAT_COUNT;cat++) {
+            SDL_Rect box=targets[cat]; box.x+=16;box.w-=32;
+            draw_fitted_text(app,app->font_micro,home_category_title(app,cat),box,
+                             cat==app->home_cat_index?white:subdued,box,true);
         }
     }
 }

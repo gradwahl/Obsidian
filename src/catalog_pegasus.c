@@ -312,6 +312,84 @@ static void json_extract_screenshots(const char *start, const char *end, GameIte
     }
 }
 
+/* Open-addressed index: avoid O(n) duplicate scans for every remote record.
+   Rebuild when the catalogue changes outside the sync worker (e.g. seeds).
+   The UI and this worker both access the catalog under catalog_mutex. */
+#define CATALOG_LOOKUP_SLOTS 65536u
+struct CatalogLookup {
+    uint32_t slots[CATALOG_LOOKUP_SLOTS]; /* catalog position + 1 */
+    int indexed_count;
+};
+
+static uint32_t catalog_lookup_hash(const char *title, const char *source,
+                                    const char *id, PackageFormat format) {
+    uint32_t hash = 2166136261u;
+    const char *parts[] = {title, source, id};
+    for (int i = 0; i < 3; i++) {
+        for (const unsigned char *p = (const unsigned char *)parts[i]; *p; ++p)
+            hash = (hash ^ (uint32_t)SDL_tolower(*p)) * 16777619u;
+        hash = (hash ^ 0xffu) * 16777619u;
+    }
+    return (hash ^ (uint32_t)format) * 16777619u;
+}
+
+static bool catalog_lookup_equal(const GameItem *item, const char *title,
+                                 const char *source, const char *id, PackageFormat format) {
+    return item->format == format && SDL_strcasecmp(item->title, title) == 0 &&
+           SDL_strcasecmp(item->source_name, source) == 0 &&
+           SDL_strcasecmp(item->id_code, id) == 0;
+}
+
+static void catalog_lookup_rebuild(WolodriveApp *app) {
+    if (!app->catalog_lookup) {
+        app->catalog_lookup = calloc(1, sizeof(*app->catalog_lookup));
+        if (!app->catalog_lookup) return; /* Safe linear-search fallback on OOM. */
+    }
+    struct CatalogLookup *lookup = app->catalog_lookup;
+    if (lookup->indexed_count == app->catalog_count) return;
+    memset(lookup->slots, 0, sizeof(lookup->slots));
+    for (int i = 0; i < app->catalog_count; i++) {
+        GameItem *item = &app->catalog[i];
+        uint32_t slot = catalog_lookup_hash(item->title, item->source_name,
+                                            item->id_code, item->format) % CATALOG_LOOKUP_SLOTS;
+        while (lookup->slots[slot])
+            slot = (slot + 1u) % CATALOG_LOOKUP_SLOTS;
+        lookup->slots[slot] = (uint32_t)i + 1u;
+    }
+    lookup->indexed_count = app->catalog_count;
+}
+
+static GameItem *catalog_lookup_find(WolodriveApp *app, const char *title,
+                                     const char *source, const char *id, PackageFormat format) {
+    catalog_lookup_rebuild(app);
+    if (app->catalog_lookup) {
+        const struct CatalogLookup *lookup = app->catalog_lookup;
+        uint32_t slot = catalog_lookup_hash(title, source, id, format) % CATALOG_LOOKUP_SLOTS;
+        while (lookup->slots[slot]) {
+            GameItem *item = &app->catalog[lookup->slots[slot] - 1u];
+            if (catalog_lookup_equal(item, title, source, id, format)) return item;
+            slot = (slot + 1u) % CATALOG_LOOKUP_SLOTS;
+        }
+        return NULL;
+    }
+    for (int i = 0; i < app->catalog_count; i++)
+        if (catalog_lookup_equal(&app->catalog[i], title, source, id, format))
+            return &app->catalog[i];
+    return NULL;
+}
+
+static void catalog_lookup_append(WolodriveApp *app, int index) {
+    if (!app->catalog_lookup) return;
+    struct CatalogLookup *lookup = app->catalog_lookup;
+    GameItem *item = &app->catalog[index];
+    uint32_t slot = catalog_lookup_hash(item->title, item->source_name,
+                                        item->id_code, item->format) % CATALOG_LOOKUP_SLOTS;
+    while (lookup->slots[slot])
+        slot = (slot + 1u) % CATALOG_LOOKUP_SLOTS;
+    lookup->slots[slot] = (uint32_t)index + 1u;
+    lookup->indexed_count = app->catalog_count;
+}
+
 static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
                                  const char *id_code, const char *title,
                                  const char *version, const char *desc,
@@ -323,17 +401,10 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
 
     SDL_LockMutex(app->catalog_mutex);
 
-    /* Sprawdź czy gra o tym samym ID lub tytule już istnieje – jeśli tak, zaktualizuj dane */
-    GameItem *target = NULL;
-    for (int i = 0; i < app->catalog_count; i++) {
-        if (SDL_strcasecmp(app->catalog[i].title, title) == 0 &&
-            SDL_strcasecmp(app->catalog[i].source_name, catalog_name && catalog_name[0] ? catalog_name : "Pegasus-DL") == 0 &&
-            SDL_strcasecmp(app->catalog[i].id_code, id_code && id_code[0] ? id_code : "PPSA00001") == 0 &&
-            app->catalog[i].format == fmt) {
-            target = &app->catalog[i];
-            break;
-        }
-    }
+    const char *source_key = catalog_name && catalog_name[0] ? catalog_name : "Pegasus-DL";
+    const char *id_key = id_code && id_code[0] ? id_code : "PPSA00001";
+    GameItem *target = catalog_lookup_find(app, title, source_key, id_key, fmt);
+    bool inserted = target == NULL;
 
     if (!target) {
         if (app->catalog_count >= MAX_CATALOG_ITEMS) {
@@ -453,6 +524,7 @@ static void register_parsed_game(WolodriveApp *app, const char *catalog_name,
 
     generate_color_from_id(target->id_code, &target->cover_r, &target->cover_g, &target->cover_b);
 
+    if (inserted) catalog_lookup_append(app, (int)(target - app->catalog));
     app->catalog_dirty = true;
     SDL_UnlockMutex(app->catalog_mutex);
 }
@@ -729,4 +801,6 @@ void catalog_start_async_sync(WolodriveApp *app) {
 void catalog_stop_sync(WolodriveApp *app) {
     if (app->catalog_thread) SDL_WaitThread(app->catalog_thread, NULL);
     app->catalog_thread = NULL;
+    free(app->catalog_lookup);
+    app->catalog_lookup = NULL;
 }

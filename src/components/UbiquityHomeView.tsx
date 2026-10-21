@@ -1,3 +1,7 @@
+import { useLanguagePresentation } from '../useLanguagePresentation';
+import { SlidingHighlight } from './SlidingHighlight';
+import { MemoryImage } from './MemoryImage';
+import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { GameItem, LanguageCode, HomeCategoryId } from '../types';
 import { nextCoverSource, coverSources } from '../artworkMatches';
@@ -56,9 +60,9 @@ function CinematicBackground({ game }: { game: GameItem | null }) {
 
   return (
     <div className="ubq-cinematic-background" aria-hidden="true">
-      {visible && <img className="ubq-backdrop-current" src={visible} alt=""
+      {visible && <MemoryImage artworkSize="hero" className="ubq-backdrop-current" src={visible} alt=""
         onError={() => setFailed(old => old.includes(visible) ? old : [...old, visible])} />}
-      {next && next !== visible && <img key={next} className={'ubq-backdrop-next' + (ready ? ' ubq-backdrop-next-ready' : '')} src={next} alt=""
+      {next && next !== visible && <MemoryImage artworkSize="hero" key={next} className={'ubq-backdrop-next' + (ready ? ' ubq-backdrop-next-ready' : '')} src={next} alt=""
         onLoad={() => setReady(true)}
         onError={() => { setFailed(old => old.includes(next) ? old : [...old, next]); setNext(''); }} />}
       <div className="ubq-cinematic-vignette" />
@@ -69,6 +73,7 @@ function CinematicBackground({ game }: { game: GameItem | null }) {
 function UbiquityCover({ game, selected, onSelect, onOpen }: {
   game: GameItem; selected: boolean; onSelect: () => void; onOpen: () => void;
 }) {
+  game = useCatalogDetails(game);
   const [failed, setFailed] = useState<string[]>([]);
   const sources = coverSources(game, false);
   const localFallbacks = ['/assets/covers/0ad60600d3caf8d0.art', '/assets/covers/88c5672513ff89df.art', '/assets/covers/76c3e998b3fc03d8.art'];
@@ -82,7 +87,7 @@ function UbiquityCover({ game, selected, onSelect, onOpen }: {
       onFocus={onSelect} onClick={() => { onSelect(); onOpen(); }}>
       <span className="ubq-square-art">
         {cover
-          ? <img src={cover} alt="" loading="eager"
+          ? <MemoryImage src={cover} alt="" loading="eager"
               onError={() => setFailed(values => [...values, cover])} />
           : <span className="ubq-cover-fallback">{game.title}</span>}
       </span>
@@ -99,14 +104,15 @@ export function UbiquityHomeView({
   selected, sidebarFocused, onSelect, onOpen, onPlay,
   heading, emptyMessage, showDate
 }: Props) {
+  const { displayLanguage, fading } = useLanguagePresentation(language);
   const activeCategory = categories?.[activeCategoryIndex];
   const list = activeCategory ? activeCategory.games : games;
   const index = Math.max(0, Math.min(selected, list.length - 1));
-  const game = list[index] || null;
+  const game = useCatalogDetails(list[index] || null);
   // Full public source indexes can contain tens of thousands of entries.
   // Keep a small window of real DOM covers without losing scroll geometry.
-  const windowStart = list.length > 64 ? Math.max(0, index - 6) : 0;
-  const windowEnd = list.length > 64 ? Math.min(list.length, index + 15) : list.length;
+  const windowStart = list.length > 24 ? Math.max(0, index - 6) : 0;
+  const windowEnd = list.length > 24 ? Math.min(list.length, index + 15) : list.length;
   const scrollRef = useRef<HTMLDivElement>(null);
   const focusScrollRef = useRef<HTMLDivElement>(null);
 
@@ -154,13 +160,13 @@ export function UbiquityHomeView({
       <div className="ubq-feature" key={game?.id_code || heading}>
         <h1 className="ubq-feature-title">{game?.title || heading || t(language, 'TXT_LATEST_GAMES')}</h1>
         {game && <div className="ubq-feature-metadata">
-          <span className="tv-meta-pill">{game.source_name || 'PolDrive'}</span>
-          <span className="tv-meta-pill">{game.id_code}</span>
-          <span className="tv-meta-pill">v{game.version}</span>
-          <span className="tv-meta-pill">{game.format.toUpperCase()}</span>
-          <span className="tv-meta-pill">{game.size_gb.toFixed(1)} GB</span>
-          {(game.rating_score || 0) > 0 && <span className="tv-meta-pill ubq-score">★ {(game.rating_score || 0).toFixed(1)}/10</span>}
-          {showDate && year && <span className="tv-meta-pill">{year}</span>}
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.source_name || 'PolDrive'}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.id_code}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">v{game.version}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.format.toUpperCase()}</span>
+          <span className="tv-meta-pill glass-pill glass-pill--sm">{game.size_gb.toFixed(1)} GB</span>
+          {(game.rating_score || 0) > 0 && <span className="tv-meta-pill glass-pill glass-pill--sm ubq-score">★ {(game.rating_score || 0).toFixed(1)}/10</span>}
+          {showDate && year && <span className="tv-meta-pill glass-pill glass-pill--sm">{year}</span>}
         </div>}
         <p className="ubq-feature-description">{summary}</p>
       </div>
@@ -193,12 +199,14 @@ export function UbiquityHomeView({
       </section>
 
       {categories && categories.length > 1 && <nav className="ubq-category-select" aria-label="Game categories">
+        <SlidingHighlight activeKey={String(activeCategoryIndex)} axis="x" />
         {categories.map((cat, catIndex) => (
           <button type="button" key={cat.id}
-            className={catIndex === activeCategoryIndex ? 'ubq-category-current' : ''}
+            data-highlight-key={String(catIndex)}
+            className={'glass-pill glass-pill--md' + (catIndex === activeCategoryIndex ? ' ubq-category-current' : '')}
             aria-current={catIndex === activeCategoryIndex ? 'page' : undefined}
             onClick={() => onSelectCategory?.(catIndex)}>
-            {t(language, cat.titleKey)}
+            <span className="language-copy" data-language-fading={fading}>{t(displayLanguage, cat.titleKey)}</span>
           </button>
         ))}
       </nav>}

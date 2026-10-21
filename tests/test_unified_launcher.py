@@ -34,12 +34,22 @@ int poldrive_shortcut_registered(void) {
     return (existing && *existing) ||
         (stage>=1 && completed && *completed && !getenv("FAIL_SHORTCUT"));
 }
+int poldrive_shortcut_prepare(void) {
+    return getenv("STATUS_PREPARE_FAILED") ? 0 : 1;
+}
+int poldrive_shortcut_status(void) {
+    if (getenv("FAIL_SHORTCUT")) return 0;
+    if (getenv("HELPER_ALREADY_CURRENT")) return 2;
+    if (stage>=1 && getenv("HELPER_CURRENT_AFTER_DISPATCH")) return 2;
+    if (stage>=1 && getenv("HELPER_JUST_INSTALLED")) return 1;
+    return 0;
+}
 int poldrive_dispatch_shortcut(void) {
     assert(stage==0); stage=1; puts("SHORTCUT"); errno=ECONNREFUSED;
     return getenv("FAIL_SHORTCUT") ? -1 : 0;
 }
 int wolodrive_native_main(int argc,char **argv) {
-    assert(stage==1 && argc==2 && argv[1]); stage=2; puts("NATIVE");
+    assert((stage==0 || stage==1) && argc==2 && argv[1]); stage=2; puts("NATIVE");
     return getenv("FAIL_NATIVE") ? 1 : 0;
 }
 int wolodrive_web_main(void) {
@@ -47,62 +57,70 @@ int wolodrive_web_main(void) {
     return getenv("FAIL_WEB") ? 7 : 0;
 }
 ''')
+        cls.app_executable = cls.folder/'app'
         cls.executable = cls.folder/'launcher'
         subprocess.run(['gcc', '-Wall', '-Wextra', '-Werror', '-DWOLO_UNIFIED_TEST',
                         f'-DPOLDRIVE_LAUNCH_LOG="{cls.log}"', str(ROOT/'src/ps5_unified_launcher.c'),
                         str(driver), '-o', str(cls.executable)], check=True)
+        subprocess.run(['gcc', '-Wall', '-Wextra', '-Werror', '-DWOLO_UNIFIED_TEST',
+                        '-DPOLDRIVE_APP_ENTRY', f'-DPOLDRIVE_LAUNCH_LOG="{cls.log}"',
+                        str(ROOT/'src/ps5_unified_launcher.c'), str(driver),
+                        '-o', str(cls.app_executable)], check=True)
 
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def launch(self, already_installed=True, **environment):
+    def launch(self, already_installed=True, app=False, **environment):
         env = {k:v for k,v in os.environ.items() if k not in
-               ['FAIL_SHORTCUT', 'FAIL_NATIVE', 'FAIL_WEB', 'ALREADY_REGISTERED', 'REGISTER_AFTER_DISPATCH']}
+               ['FAIL_SHORTCUT', 'FAIL_NATIVE', 'FAIL_WEB', 'ALREADY_REGISTERED',
+                'REGISTER_AFTER_DISPATCH', 'HELPER_ALREADY_CURRENT',
+                'HELPER_JUST_INSTALLED', 'HELPER_CURRENT_AFTER_DISPATCH',
+                'STATUS_PREPARE_FAILED']}
         if already_installed:
             env['ALREADY_REGISTERED']='1'
-        return subprocess.run([str(self.executable), 'test'], env={**env, **environment},
+        return subprocess.run([str(self.app_executable if app else self.executable), 'test'], env={**env, **environment},
                               capture_output=True, text=True)
 
-    def test_first_launch_registers_shortcut_without_opening_app(self):
-        result=self.launch(already_installed=False, REGISTER_AFTER_DISPATCH='1')
-        self.assertEqual(result.returncode,0)
-        self.assertEqual(result.stdout.splitlines(),['SHORTCUT'])
-        self.assertIn('Installer-only first launch',self.log.read_text())
+    def test_installer_never_opens_ui_in_any_registration_state(self):
+        for state in ({'HELPER_JUST_INSTALLED':'1'},
+                      {'HELPER_CURRENT_AFTER_DISPATCH':'1'},
+                      {'HELPER_ALREADY_CURRENT':'1'}):
+            for existing in (False, True):
+                with self.subTest(state=state, existing=existing):
+                    result=self.launch(already_installed=existing, **state)
+                    self.assertEqual(result.returncode, 0)
+                    self.assertEqual(result.stdout.splitlines(), ['SHORTCUT'])
+                    self.assertIn('Installer-only payload', self.log.read_text())
 
-    def test_first_launch_does_not_open_app_if_registration_unconfirmed(self):
-        result=self.launch(already_installed=False)
-        self.assertEqual(result.returncode,1)
-        self.assertEqual(result.stdout.splitlines(),['SHORTCUT'])
-        self.assertIn('registration unconfirmed',self.log.read_text())
+    def test_old_marker_does_not_count_as_dashboard_registration(self):
+        result=self.launch(REGISTER_AFTER_DISPATCH='1')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout.splitlines(), ['SHORTCUT'])
+        self.assertIn('registration unconfirmed', self.log.read_text())
 
-    def test_first_launch_failed_dispatch_does_not_open_app(self):
-        result=self.launch(already_installed=False,FAIL_SHORTCUT='1')
-        self.assertEqual(result.returncode,1)
-        self.assertEqual(result.stdout.splitlines(),['SHORTCUT'])
-        self.assertIn('transfer failed',self.log.read_text())
+    def test_uncleared_status_cancels_before_dispatch(self):
+        result=self.launch(STATUS_PREPARE_FAILED='1', HELPER_ALREADY_CURRENT='1')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, '')
 
-    def test_native_normal_exit_does_not_open_browser(self):
-        result=self.launch()
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.splitlines(), ['SHORTCUT', 'NATIVE'])
-        self.assertIn('Normal exit; no browser fallback', self.log.read_text())
-        self.assertIn('registration result is in', self.log.read_text())
-
-    def test_native_startup_error_runs_web_and_reports_limitation(self):
-        result=self.launch(FAIL_NATIVE='1')
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.splitlines(), ['SHORTCUT', 'NATIVE', 'WEB'])
-        self.assertIn('console-local file bridge', self.log.read_text())
-
-    def test_registration_transfer_failure_does_not_block_native(self):
+    def test_failed_dispatch_never_opens_ui(self):
         result=self.launch(FAIL_SHORTCUT='1')
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.splitlines(), ['SHORTCUT', 'NATIVE'])
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout.splitlines(), ['SHORTCUT'])
         self.assertIn('transfer failed', self.log.read_text())
 
-    def test_web_failure_is_returned(self):
-        self.assertEqual(self.launch(FAIL_NATIVE='1', FAIL_WEB='1').returncode, 7)
+    def test_dashboard_opens_native_without_installer(self):
+        result=self.launch(app=True, already_installed=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.splitlines(), ['NATIVE'])
+        self.assertIn('Normal exit; no browser fallback', self.log.read_text())
+
+    def test_dashboard_native_failure_runs_web_fallback(self):
+        result=self.launch(app=True, FAIL_NATIVE='1')
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.splitlines(), ['NATIVE', 'WEB'])
+        self.assertEqual(self.launch(app=True, FAIL_NATIVE='1', FAIL_WEB='1').returncode, 7)
 
     def test_embeds_exact_helper_bytes_and_refuses_non_elf(self):
         source=self.folder/'helper.elf'; target=self.folder/'helper.h'
@@ -119,7 +137,21 @@ int wolodrive_web_main(void) {
         self.assertIn('-o build/poldrive.elf',make)
         self.assertNotIn('cp build/wolodrive-web.elf build/poldrive.elf',make)
         self.assertIn('src/ps5_unified_launcher.c build/poldrive-native-main.o build/poldrive-web-fallback.o',make)
-        self.assertIn('src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/poldrive-shortcut-helper.elf',make)
+        self.assertIn('-DPOLDRIVE_APP_ENTRY',make)
+        self.assertIn('build/ps5_app_payload.h app_payload_elf',make)
+        self.assertIn('-DWOLO_EMBED_APP',make)
+        self.assertIn('src/web_shortcut_installer.c -lSceIpmi -lSceAppInstUtil -o build/.internal/poldrive-shortcut-helper.elf',make)
+        default_recipe=make.split('ps5: ps5-web-assets', 1)[1].split('ps5-native:', 1)[0]
+        self.assertIn('src/ps5_single_installer.c', default_recipe)
+        self.assertIn('-DWOLO_WEB_NO_BROWSER', default_recipe)
+        self.assertIn('-DWOLO_SINGLE_SHORTCUT', default_recipe)
+        self.assertIn('embed_ps5_service.py', default_recipe)
+        self.assertNotIn('wolodrive_native_main', default_recipe)
+        fullscreen_recipe=make.split('ps5-fullscreen-test: ps5-web-assets ps5-fullscreen-restore',1)[1].split('ps5-native:',1)[0]
+        self.assertIn('-DWOLO_FULLSCREEN_WEBAPP', fullscreen_recipe)
+        self.assertIn('-o build/poldrive-fullscreen-v2.elf', fullscreen_recipe)
+        self.assertNotIn('-o build/poldrive.elf', fullscreen_recipe)
+        self.assertNotIn('build/ps5_shortcut_helper.h', fullscreen_recipe)
 
     def test_fallback_serves_root_and_preserves_notice_on_reuse(self):
         with tempfile.TemporaryDirectory(prefix='poldrive-fallback-') as temporary:
@@ -133,7 +165,7 @@ int wolodrive_web_main(void) {
             binary=folder/'web'
             subprocess.run(['gcc','-D_GNU_SOURCE','-DWOLO_NATIVE_FALLBACK','-DWOLO_WEB_TEST_BROWSER',
                             '-DWOLO_WEB_PORT=0','-Wall','-Wextra','-Werror',f'-I{folder}',
-                            str(ROOT/'src/web_payload.c'),str(stub),'-pthread','-o',str(binary)],check=True)
+                            str(ROOT/'src/web_payload.c'),str(stub),'-pthread','-lz','-o',str(binary)],check=True)
             process=subprocess.Popen([str(binary)],cwd=folder,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             try:
                 opened=folder/'opened.url'

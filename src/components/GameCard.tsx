@@ -1,3 +1,5 @@
+import { MemoryImage } from './MemoryImage';
+import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
@@ -5,7 +7,8 @@ import { platformLabel } from '../layout';
 import { FittedText } from './FittedText';
 import { nextCoverSource } from '../artworkMatches';
 
-export function CoverArt({ game, className = '' }: { game: GameItem; className?: string }) {
+export function CoverArt({ game: summary, className = '' }: { game: GameItem; className?: string }) {
+  const game = useCatalogDetails(summary);
   const [failedSources, setFailedSources] = useState<string[]>([]);
   const source = nextCoverSource(game, failedSources);
   const platform = platformLabel(game.id_code);
@@ -18,7 +21,7 @@ export function CoverArt({ game, className = '' }: { game: GameItem; className?:
     ) : null}
     <div className="tv-cover-image">
       {!source && <div className="tv-cover-placeholder"><strong>PolDrive</strong><span>{game.title}</span></div>}
-      {source && <img src={source} alt={game.title}
+      {source && <MemoryImage src={source} alt={game.title}
         onError={() => setFailedSources(values => [...values, source])} />}
     </div>
   </div>;
@@ -27,10 +30,12 @@ export function CoverArt({ game, className = '' }: { game: GameItem; className?:
 interface GameCardProps {
   game: GameItem; isSelected: boolean; onSelect: () => void;
   onOpen: () => void; language: LanguageCode;
+  virtualIndex?: number;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game, isSelected, onSelect, onOpen, language }) => (
+export const GameCard: React.FC<GameCardProps> = ({ game, isSelected, onSelect, onOpen, language, virtualIndex }) => (
   <button type="button" className={`tv-card ${isSelected ? 'tv-card-selected' : ''}`}
+    data-grid-index={virtualIndex}
     aria-label={`${game.title} — ${t(language, 'TXT_GAME_DETAILS')}`}
     onFocus={onSelect} onClick={() => { onSelect(); onOpen(); }}>
     <CoverArt game={game} />
