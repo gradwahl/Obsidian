@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameItem, LanguageCode, HomeCategoryId } from '../types';
-import { nextCoverSource } from '../artworkMatches';
+import { nextCoverSource, coverSources } from '../artworkMatches';
 import { t } from '../translations';
 
 interface Category {
@@ -70,7 +70,10 @@ function UbiquityCover({ game, selected, onSelect, onOpen }: {
   game: GameItem; selected: boolean; onSelect: () => void; onOpen: () => void;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
-  const cover = nextCoverSource(game, failed);
+  const sources = coverSources(game, false);
+  const localFallbacks = ['/assets/covers/0ad60600d3caf8d0.art', '/assets/covers/88c5672513ff89df.art', '/assets/covers/76c3e998b3fc03d8.art'];
+  const allSources = [...sources, ...localFallbacks];
+  const cover = allSources.find(url => !failed.includes(url)) || localFallbacks[0];
   const downloadable = game.state === 'available' && game.format !== 'catalog';
   return (
     <button type="button"
@@ -149,15 +152,15 @@ export function UbiquityHomeView({
           <h2>{activeCategory ? t(language, activeCategory.titleKey) : heading || t(language, 'TXT_LATEST_GAMES')}</h2>
           <span>{list.length ? index + 1 : 0} / {list.length}</span>
         </div>
+        {!sidebarFocused && list.length > 0 && (
+          <div
+            className="ubq-focus-pill"
+            style={{
+              transform: `translate3d(${28 + index * 252 - 15 - (scrollRef.current?.scrollLeft || 0)}px, 0, 0)`,
+            }}
+          />
+        )}
         <div className="ubq-shelf-track" ref={scrollRef}>
-          {!sidebarFocused && list.length > 0 && (
-            <div
-              className="ubq-focus-pill"
-              style={{
-                transform: `translate3d(${28 + index * 252 - 15}px, 9px, 0)`,
-              }}
-            />
-          )}
           {windowStart > 0 && <span aria-hidden="true" className="ubq-virtual-spacer"
             style={{ flexBasis: windowStart * 252 - 20 }} />}
           {list.slice(windowStart, windowEnd).map((item, offset) => {

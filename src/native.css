@@ -471,12 +471,12 @@
 }
 .ubq-focus-pill {
   position: absolute;
-  top: 0;
+  top: 75px;
   left: 0;
   width: 262px;
   height: 262px;
   border-radius: 24px;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: none;
   z-index: 10;
   box-sizing: border-box;
