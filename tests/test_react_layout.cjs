@@ -296,6 +296,43 @@ assert.equal(gameSourceMetadata({...game, format: 'catalog', version: 'v2.00 / 7
 const { gameSourceFormat, gameSourceVersion } = require('../src/gameList.ts');
 assert.equal(gameSourceFormat({...game, format: 'catalog', version: ' / 7Z'}), '7Z');
 assert.equal(gameSourceVersion({...game, format: 'catalog', version: ' / 7Z'}), '');
+const { ALVRO_COLLECTIONS, ARCHIVE_ORG_LOGIN, alvroDirectoryForGame } =
+  require('../src/archiveOrgAccount.ts');
+const { ArchiveOrgAccount } = require('../src/components/ArchiveOrgAccount.tsx');
+const alvroSettings = render(React.createElement(ArchiveOrgAccount));
+const curatedAlvro = JSON.parse(fs.readFileSync(path.join(root, 'config/additional_sources.json'), 'utf8'))
+  .find(row => row.id === 'alvro').archive_identifiers;
+assert.equal(ALVRO_COLLECTIONS.length, 8);
+assert.deepEqual(ALVRO_COLLECTIONS.map(collection => collection.identifier), curatedAlvro);
+assert.match(alvroSettings, /Sign in at Archive.org/);
+assert.match(alvroSettings, /This app cannot verify your login/);
+assert.match(alvroSettings, /same browser/);
+assert.match(alvroSettings, /noopener noreferrer/);
+assert.doesNotMatch(alvroSettings, /type="password"|session cookie|Paste your token/i);
+assert.equal(ARCHIVE_ORG_LOGIN, 'https://archive.org/account/login.php');
+assert.equal(alvroDirectoryForGame('Archive.org / AlvRo',
+  'https://archive.org/details/ps2japanredump2'), 'https://archive.org/download/ps2japanredump2');
+assert.equal(alvroDirectoryForGame('Archive.org / AlvRo',
+  'https://evil.example/details/ps2japanredump2'), null);
+assert.equal(alvroDirectoryForGame('Other source',
+  'https://archive.org/details/ps2japanredump2'), null);
+assert.equal(alvroDirectoryForGame('Archive.org / AlvRo',
+  'https://archive.org/details/%2e%2e'), null);
+assert.equal(alvroDirectoryForGame('Archive.org / AlvRo',
+  'https://archive.org/details/not-an-alvro-collection'), null);
+const alvroGame = {
+  ...game, source_name: 'Archive.org / AlvRo',
+  source_url: 'https://archive.org/details/ps2japanredump2', format: 'catalog',
+  version: ' / 7Z'
+};
+const alvroDetails = render(React.createElement(UbiquityGameDetails, {
+  game: alvroGame, catalog: [alvroGame], language: 'en', onClose: noop, onTriggerAction: noop,
+  onSelectGame: noop, actionIndex: 0, onActionIndexChange: noop
+}));
+assert.match(alvroDetails, /Access varies/);
+assert.match(alvroDetails, /Sign in on Archive.org/);
+assert.match(alvroDetails, /https:\/\/archive.org\/download\/ps2japanredump2/);
+assert.match(alvroDetails, /https:\/\/archive.org\/account\/login.php/);
 const nativeSourcesDetail = fs.readFileSync(path.join(root, 'src/ui_game_details.h'), 'utf8');
 assert.match(nativeSourcesDetail, /GAME_TABS\[\] = \{TXT_GAME_SOURCES,/);
 assert.match(nativeSourcesDetail, /game_source_metadata\(app, package, metadata, sizeof\(metadata\)\)/);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LanguageCode, CatalogFilters, PackageFormat } from '../types';
 import { t } from '../translations';
 import { SOURCE_WEBSITES } from '../catalog';
+import { ArchiveOrgAccount } from './ArchiveOrgAccount';
 import { Check, RotateCcw, ShieldCheck, Cpu, HardDrive, Layers, Globe, Radio, Sparkles } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -251,6 +252,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             )}
           </div>
+
+          <ArchiveOrgAccount />
 
           {/* Row 6: Formats Selector Expandable Row */}
           <div className="bg-[#14141c]/85 backdrop-blur-md border border-white/10 rounded-[18px] p-4 transition-all hover:border-white/20">
