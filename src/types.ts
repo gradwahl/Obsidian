@@ -38,6 +38,8 @@ export interface GameItem {
   install_path: string;
   download_url?: string;
   source_url?: string; // Informational website page; not an installer.
+  archive_filename?: string; // Archive.org metadata name; never an in-app download target.
+  archive_access?: 'public' | 'sign-in-required'; // Restricted flag is not permission verification.
   platform?: string;
   cover_url?: string;
   cover_fallback_url?: string;

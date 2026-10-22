@@ -65,10 +65,14 @@ function build() {
       pages.push(file);
       // Browsing needs identity, flags, sorting and size, not long descriptions
       // or artwork/source URLs. Offset in this index is the full-page locator.
-      const indexData = JSON.stringify(part.map(item => [
-        item.id, item.title, item.platform || '', item.category || '',
-        item.version || '', item.sizeBytes || 0, item.createdAt || ''
-      ]));
+      const indexData = JSON.stringify(part.map(item => {
+        const summary = [
+          item.id, item.title, item.platform || '', item.category || '',
+          item.version || '', item.sizeBytes || 0, item.createdAt || ''
+        ];
+        if (item.archiveAccess === 'sign-in-required') summary.push('sign-in-required');
+        return summary;
+      }));
       const indexDigest = crypto.createHash('sha256').update(indexData).digest('hex').slice(0, 10);
       const indexName = basename + '-index-' + String(indexes.length).padStart(3, '0') + '-' + indexDigest + '.json';
       fs.writeFileSync(path.join(OUTPUT, indexName), indexData);

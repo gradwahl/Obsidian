@@ -1,7 +1,8 @@
-"""Index every public game file listed in matching Archive.org collections.
+"""Index Archive.org metadata without fetching game content.
 
-Only game filename/title and archive item page URL are retained; no download URL,
-archive file content, or public uploader identifier is written into snapshots.
+AlvRo indexes only anonymous-public games. maelly_pooh also indexes private-flagged
+file *metadata* with explicit restricted access, so an authorised browser can
+open Archive.org's own download URL. The importer never downloads packages.
 """
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
@@ -54,6 +55,7 @@ def index_source(source, workers=4):
     files_found = 0
     skipped = 0
     restricted = 0
+    indexed_restricted = 0
     collections = {}
 
     def load(document):
@@ -83,12 +85,17 @@ def index_source(source, workers=4):
                 name = file.get("name", "")
                 if not FORMATS.search(name) or name.startswith("__"):
                     continue
-                if file.get("private"):
+                is_restricted = str(file.get("private") or "").lower() in ("1", "true", "yes")
+                if is_restricted:
                     restricted += 1
                     stats["restrictedGameFiles"] += 1
-                    continue
-                files_found += 1
-                stats["publicGameFiles"] += 1
+                    # Only maelly_pooh offers restricted metadata for browsing
+                    # via a separately authenticated first-party Archive.org tab.
+                    if source["id"] != "maelly-pooh":
+                        continue
+                else:
+                    files_found += 1
+                    stats["publicGameFiles"] += 1
                 entry_system = platform(name, system)
                 if not entry_system or entry_system not in supported:
                     skipped += 1
@@ -101,13 +108,19 @@ def index_source(source, workers=4):
                 if key in seen:
                     continue
                 seen.add(key)
+                if is_restricted:
+                    indexed_restricted += 1
                 page = "https://archive.org/details/" + urllib.parse.quote(archive, safe="")
                 entries.append({
                     "id": "EXT-" + hashlib.sha256(
                         (source["id"] + ":" + archive + ":" + name).encode()).hexdigest()[:20],
                     "title": title[:200], "platform": entry_system,
                     "format": "catalog", "sourceUrl": page,
-                    **({"version": archive_alvro_display_version(name)} if source["id"] == "alvro" else {})
+                    **({"version": archive_alvro_display_version(name)} if source["id"] == "alvro" else {}),
+                    **({"archiveFileName": name,
+                        "archiveAccess": "sign-in-required" if is_restricted else "public",
+                        "version": archive_alvro_display_version(name)}
+                       if source["id"] == "maelly-pooh" else {})
                 })
     entries.sort(key=lambda item: (item["platform"], item["title"].lower(), item["id"]))
     reports = [collections[item["identifier"]] for item in documents]
@@ -117,9 +130,14 @@ def index_source(source, workers=4):
         "id": source["id"], "name": source["name"], "website": source["url"],
         "status": "ready",
         "note": (f"{expected} collections; {restricted_collections} restricted; "
-                 f"{len(entries)} public games indexed") if identifiers is not None else "",
+                 f"{len(entries)} public games indexed") if identifiers is not None
+                else (f"{len(entries)-indexed_restricted} public files, "
+                      f"{indexed_restricted} restricted file listings"
+                      if source["id"] == "maelly-pooh" else ""),
         "coverage": {"archiveItems": expected, "gameFiles": files_found,
-                     "restrictedFiles": restricted, "excludedFiles": skipped,
+                     "restrictedFiles": restricted, "restrictedEntries": indexed_restricted,
+                     "publicIndexedEntries": len(entries) - indexed_restricted,
+                     "excludedFiles": skipped,
                      "indexedEntries": len(entries), "collections": reports},
         "packages": entries
     }]}

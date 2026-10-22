@@ -17,7 +17,7 @@ can be installed. One title may have multiple platform or region records.
 | NoPayStation | 11,932 | All PS3/PSP/PS1/Vita TSV rows inspected; Vita excluded; identical content IDs de-duplicated | Web full |
 | PSN-Content | 5,459 | All 5,515 PS3 feed rows; duplicate content IDs removed | Web full |
 | Archive.org / AlvRo | 63 public files | Eight explicitly configured collections verified; 3,997 additional game files marked private by Archive.org and excluded | Web full public-only |
-| Archive.org / maelly_pooh | 131 | All 30 indexed public uploader collections checked | Web full |
+| Archive.org / maelly_pooh | 901 listings (131 public, 770 private-flagged) | 30 uploader items checked; restricted entries labelled and linked to first-party Archive.org downloads, not claimed accessible anonymously | Web full browser-only |
 | RomsTime | 24,097 | All 26 sitemap files, 24,098 ROM page URLs; one Vita URL excluded | Web full |
 
 **Web full** indexes load as separate JS data chunks in the React static preview.

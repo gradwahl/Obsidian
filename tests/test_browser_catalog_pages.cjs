@@ -37,9 +37,13 @@ for (const source of manifest.sources) {
     const items = JSON.parse(contents);
     const index = JSON.parse(fs.readFileSync(path.join(dir, source.indexes[source.pages.indexOf(page)]), 'utf8'));
     assert.equal(index.length, items.length);
-    index.forEach((row, i) => assert.deepEqual(row, [items[i].id, items[i].title,
-      items[i].platform || '', items[i].category || '', items[i].version || '',
-      items[i].sizeBytes || 0, items[i].createdAt || '']));
+    index.forEach((row, i) => {
+      const expected = [items[i].id, items[i].title,
+        items[i].platform || '', items[i].category || '', items[i].version || '',
+        items[i].sizeBytes || 0, items[i].createdAt || ''];
+      if (items[i].archiveAccess === 'sign-in-required') expected.push('sign-in-required');
+      assert.deepEqual(row, expected);
+    });
     assert.ok(items.length > 0 && items.length <= 384);
     for (const item of items) {
       const original = originalEntries[offset++];
