@@ -12,7 +12,8 @@ interface SourcePackage {
   id: string; title: string; platform?: string; category?: string;
   version?: string; sizeBytes?: number; coverUrl?: string;
   sourceUrl?: string; description?: string; createdAt?: string;
-  archiveCoverPath?: string;
+  archiveCoverPath?: string; archiveFileName?: string;
+  archiveAccess?: 'public' | 'sign-in-required';
 }
 export interface SourceLoadStatus {
   id: string; name: string; entries: number; status: string; note?: string;
@@ -59,6 +60,9 @@ function safeGame(entry: SourcePackage, source: SourceInfo): GameItem | null {
     is_dlc: entry.category === 'dlc', screenshot_urls: [],
     platform: entry.platform || '',
     source_url: safeUrl(entry.sourceUrl) || safeUrl(source.website),
+    ...(source.id === 'maelly-pooh' && entry.archiveFileName &&
+      (entry.archiveAccess === 'public' || entry.archiveAccess === 'sign-in-required')
+      ? { archive_filename: entry.archiveFileName, archive_access: entry.archiveAccess } : {}),
     boxart_url: streamCover,
     cover_url: safeUrl(entry.coverUrl),
     description: entry.description || 'Catalog metadata only - ' + source.name,
@@ -122,6 +126,8 @@ export async function loadSourceCatalogues(
             const converted = Object.assign(Object.create(defaults[raw[3] === 'dlc' ? 1 : 0]), {
               id_code: raw[0], title: raw[1], platform: raw[2], version: raw[4],
               size_gb: Number.isFinite(Number(raw[5])) && Number(raw[5]) > 0 ? Number(raw[5]) / 1e9 : 0,
+              ...(source.id === 'maelly-pooh' && raw[7] === 'sign-in-required'
+                ? { archive_access: 'sign-in-required' as const } : {}),
               detailsPage, detailsOffset: row
             }) as CatalogSummary;
             const created = raw[6];
@@ -185,7 +191,7 @@ export async function loadCatalogDetails(game: GameItem, signal?: AbortSignal): 
     const raw = page[summary.detailsOffset];
     if (!raw || raw.id !== game.id_code || raw.title !== game.title)
       throw new Error('Catalogue details do not match the selected item');
-    const full = safeGame(raw, { id: '', name: game.source_name, website: game.source_url || '', status: '', pages: [], indexes: [] });
+    const full = safeGame(raw, { id: game.source_name === 'Archive.org / maelly_pooh' ? 'maelly-pooh' : '', name: game.source_name, website: game.source_url || '', status: '', pages: [], indexes: [] });
     if (!full) throw new Error('Invalid catalogue record');
     return { ...full, is_game: game.is_game, is_dlc: game.is_dlc };
   } finally {

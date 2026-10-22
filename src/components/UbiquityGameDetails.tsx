@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GameItem, LanguageCode } from '../types';
 import { t } from '../translations';
 import { isSameGame } from '../catalog';
-import { alvroDirectoryForGame, ARCHIVE_ORG_LOGIN } from '../archiveOrgAccount';
+import { alvroDirectoryForGame, maellyFileOnArchive, ARCHIVE_ORG_LOGIN } from '../archiveOrgAccount';
 
 interface Props {
   game: GameItem;
@@ -56,6 +56,9 @@ export function UbiquityGameDetails({
   );
 
   const alvroDirectory = alvroDirectoryForGame(game.source_name, game.source_url);
+  const maellyFileUrl = maellyFileOnArchive(game.source_name, game.source_url, game.archive_filename);
+  const maellyRestricted = game.source_name === 'Archive.org / maelly_pooh' &&
+    game.archive_access === 'sign-in-required';
   const rawDate = game.release_date || String(game.catalog_added_at || '').slice(0, 8);
   const year = /^\d{4}/.test(rawDate) ? rawDate.slice(0, 4) : null;
   const description = game.description_id && !showOriginal
@@ -111,7 +114,7 @@ export function UbiquityGameDetails({
           </button>}
           <div className="ubq-detail-stats">
             <div><span>Install size</span><strong>{gameSize(game)}</strong></div>
-            <div><span>Status</span><strong>{alvroDirectory ? 'Access varies' : game.state === 'installed' ? 'Installed' : game.state === 'downloading' ? 'Downloading' : 'Available'}</strong></div>
+            <div><span>Status</span><strong>{maellyRestricted ? 'Restricted on Archive.org' : alvroDirectory ? 'Access varies' : game.state === 'installed' ? 'Installed' : game.state === 'downloading' ? 'Downloading' : 'Available'}</strong></div>
             <div><span>Packages</span><strong>{siblings.length}</strong></div>
             {(game.download_count || 0) > 0 && <div><span>Downloads</span><strong>{game.download_count?.toLocaleString()}</strong></div>}
           </div>
@@ -120,6 +123,20 @@ export function UbiquityGameDetails({
           <p className="text-white/70">Archive.org may require you to sign in to access files in this collection. Obsidian cannot verify your permissions.</p>
           <a className="text-indigo-300 underline hover:text-white" href={ARCHIVE_ORG_LOGIN} target="_blank" rel="noopener noreferrer">Sign in on Archive.org ↗</a>
           <a className="text-indigo-300 underline hover:text-white" href={alvroDirectory} target="_blank" rel="noopener noreferrer">Browse collection on Archive.org ↗</a>
+        </div>}
+        {maellyFileUrl && <div className="ubq-detail-archive-access flex flex-col gap-2 rounded-xl border border-white/15 bg-black/30 p-3 text-xs" aria-label="Archive.org file access">
+          <p className="text-white/70">{maellyRestricted
+            ? 'Archive.org marks this file restricted. Sign in on Archive.org first; downloading requires your account to have access.'
+            : 'Archive.org lists this file publicly. The actual download is handled by Archive.org.'}</p>
+          {maellyRestricted && <a className="text-indigo-300 underline hover:text-white"
+            href={ARCHIVE_ORG_LOGIN} target="_blank" rel="noopener noreferrer">
+            Sign in on Archive.org ↗
+          </a>}
+          <a className="text-indigo-300 underline hover:text-white"
+            href={maellyFileUrl} target="_blank" rel="noopener noreferrer">
+            {maellyRestricted ? 'Try downloading on Archive.org ↗' : 'Download on Archive.org ↗'}
+          </a>
+          <p className="text-white/60">If Archive.org denies access, Obsidian cannot override it. This does not install games.</p>
         </div>}
         <div className="ubq-detail-actions" role="group" aria-label="Game actions">
           <button type="button" className={actionIndex === 0 ? 'ubq-detail-action-focused' : ''}

@@ -17,7 +17,7 @@ license keys, direct package-download links or credentials.
 | DownloadGamePSP | 1,972 | Full PSP WordPress index |
 | GFS Catalog | 686 | All published structured pack pages |
 | RomHeaven | 141 | Full published Switch CSV |
-| Archive.org / maelly_pooh | 131 | Public files only |
+| Archive.org / maelly_pooh | 901 | 131 public plus 770 restricted file listings; browse/download only through authorised Archive.org browser |
 | Archive.org / AlvRo | 63 | Public files only |
 | PKGPS4 | 64 | Partial public HTML |
 | Vimm's Lair | 62 | Partial public index |

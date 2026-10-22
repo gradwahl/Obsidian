@@ -11,8 +11,9 @@ export function ArchiveOrgAccount() {
       className="rounded-[18px] border border-white/10 bg-[#14141c]/85 p-4 text-white">
       <h3 className="text-sm font-bold">Archive.org account</h3>
       <p className="mt-2 text-xs leading-relaxed text-[#aaaabb]">
-        Sign in on Archive.org, then open an AlvRo collection in the same browser.
-        Some files are visible to signed-in visitors but restricted anonymously.
+        Sign in on Archive.org, then open an AlvRo or maelly_pooh collection
+        in the same browser. Some files are visible to signed-in visitors
+        but restricted anonymously.
         This app cannot verify your login or guarantee access to a particular file.
       </p>
       <a href={ARCHIVE_ORG_LOGIN} target="_blank" rel="noopener noreferrer"
@@ -34,6 +35,10 @@ export function ArchiveOrgAccount() {
           ))}
         </ul>
       </details>
+      <a className="mt-2 inline-block text-xs text-[#a5b4fc] hover:text-white"
+        href="https://archive.org/details/@maelly_pooh" target="_blank" rel="noopener noreferrer">
+        Browse maelly_pooh collections ↗
+      </a>
       <p className="mt-2 text-[11px] leading-relaxed text-[#9292a7]">
         Credentials stay with Archive.org, not Obsidian. Cookies are not copied
         between browsers or devices; PS5 embedded-browser support is unverified.

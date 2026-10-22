@@ -34,6 +34,30 @@ private in the last metadata audit) are available as directory links, not as
 install-ready game records. The optional account feature does **not**
 download or install game files.
 
+## maelly_pooh restricted game files
+
+The maelly_pooh source contains **901** file listings collected from 30
+Archive.org items: **131** publicly listed games and **770** files whose
+metadata reports `private`. Restricted files are now searchable in the **web
+catalogue**, with explicit `sign-in-required` metadata instead of being
+labelled available.
+
+1. Sign in using the **Archive.org account** panel in Settings.
+2. Select a maelly_pooh game and open its details.
+3. For a restricted game, select **Try downloading on Archive.org**.
+   The link goes directly to the original file on `archive.org` (new tab).
+4. Archive.org—not Obsidian—decides whether that logged-in browser can
+   download the file. A 401/403 means the account is not authorised or the
+   browser session was not shared.
+
+Obsidian stores only the Archive.org *metadata filename* and access flag in
+its static catalogue. It does **not** store cookies, collect account
+credentials, proxy file bytes, install games, or assert that private files can
+be downloaded. The native PS5 catalogue has not been extended to make
+authenticated downloads, and session compatibility with the PS5 browser is
+unverified. Browser downloads also depend on device storage and the browser's
+handling of large files.
+
 ## Why not a password field or OAuth redirect?
 
 Archive.org's documented restricted-content access uses logged-in browser

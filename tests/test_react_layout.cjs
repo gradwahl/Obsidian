@@ -333,6 +333,47 @@ assert.match(alvroDetails, /Access varies/);
 assert.match(alvroDetails, /Sign in on Archive.org/);
 assert.match(alvroDetails, /https:\/\/archive.org\/download\/ps2japanredump2/);
 assert.match(alvroDetails, /https:\/\/archive.org\/account\/login.php/);
+const { maellyFileOnArchive } = require('../src/archiveOrgAccount.ts');
+assert.equal(maellyFileOnArchive('Archive.org / maelly_pooh',
+  'https://archive.org/details/ps4-fpkg-collection-english-a',
+  'A Hat in Time - [US] [EN] [1.04].pkg'),
+  'https://archive.org/download/ps4-fpkg-collection-english-a/A%20Hat%20in%20Time%20-%20%5BUS%5D%20%5BEN%5D%20%5B1.04%5D.pkg');
+for (const [name, page, file] of [
+  ['Other', 'https://archive.org/details/ps4-fpkg-collection-english-a', 'test.pkg'],
+  ['Archive.org / maelly_pooh', 'https://evil.example/details/ps4-fpkg-collection-english-a', 'test.pkg'],
+  ['Archive.org / maelly_pooh', 'https://archive.org/details/ps4-fpkg-collection-english-a', '../test.pkg'],
+  ['Archive.org / maelly_pooh', 'https://archive.org/details/ps4-fpkg-collection-english-a', 'test.jpg'],
+  ['Archive.org / maelly_pooh', 'https://archive.org/details/ps4-fpkg-collection-english-a', 'test.pkg?token=x'],
+  ['Archive.org / maelly_pooh', 'https://archive.org/details/ps4-fpkg-collection-english-a', 'test.pkg#frag'],
+]) {
+  assert.equal(maellyFileOnArchive(name, page, file), null);
+}
+const maellyPrivateGame = {
+  ...game, source_name: 'Archive.org / maelly_pooh',
+  source_url: 'https://archive.org/details/ps4-fpkg-collection-english-a',
+  archive_filename: 'A Hat in Time - [US] [EN] [1.04].pkg',
+  archive_access: 'sign-in-required', format: 'catalog', version: ' / PKG'
+};
+const privateMarkup = render(React.createElement(UbiquityGameDetails, {
+  game: maellyPrivateGame, catalog: [maellyPrivateGame], language: 'en', onClose: noop,
+  onTriggerAction: noop, onSelectGame: noop, actionIndex: 0, onActionIndexChange: noop
+}));
+assert.match(privateMarkup, /Restricted on Archive.org/);
+assert.match(privateMarkup, /Sign in on Archive.org/);
+assert.match(privateMarkup, /Try downloading on Archive.org/);
+assert.match(privateMarkup, /A%20Hat%20in%20Time/);
+assert.match(privateMarkup, /noopener noreferrer/);
+assert.match(alvroSettings, /Browse maelly_pooh collections/);
+const maellySnapshot = JSON.parse(fs.readFileSync(
+  path.join(root, 'assets/catalogs/maelly-pooh.json'), 'utf8')).sources[0];
+assert.equal(maellySnapshot.packages.length, 901);
+assert.equal(maellySnapshot.packages.filter(row => row.archiveAccess === 'sign-in-required').length, 770);
+for (const entry of maellySnapshot.packages) {
+  const fileURL = maellyFileOnArchive(maellyPrivateGame.source_name,
+    entry.sourceUrl, entry.archiveFileName);
+  assert.ok(fileURL && fileURL.startsWith('https://archive.org/download/'),
+    'No safe first-party Archive.org file link: ' + entry.title);
+}
 const nativeSourcesDetail = fs.readFileSync(path.join(root, 'src/ui_game_details.h'), 'utf8');
 assert.match(nativeSourcesDetail, /GAME_TABS\[\] = \{TXT_GAME_SOURCES,/);
 assert.match(nativeSourcesDetail, /game_source_metadata\(app, package, metadata, sizeof\(metadata\)\)/);
