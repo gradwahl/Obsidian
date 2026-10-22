@@ -1,0 +1,33 @@
+# Sources dialog verification - 22 October 2026
+
+The web details dialog and native package tab now use the localized Sources label. Each source shows its name followed by Format - Version; sizes and title IDs are removed from that line. Explicit format suffixes in catalog versions (for example 01.008 / fpkg) display as FPKG - 01.008. Missing metadata uses an em dash. Source selection/action behavior is unchanged.
+
+Passed: npm run lint, npm run test:web, npm run build:static, python tests/check_static_preview.py, and WSL Ubuntu make build-linux, make test-native-snapshot and make test-game-list. Web/native fixtures cover ordinary formats, an embedded format suffix and missing metadata. The full make test command still fails at the previously documented tests/test_glass_ui.c:35 texture assertion.
+
+The final generated static-preview directory was served at the HTTP root with Python on port 3012, without Vite. Browser checks verified Home startup, Search, details, opening/closing Sources, multiple source rows (EXFAT, FPKG, LZ4 and unavailable metadata), and the two-line appearance. The browser console contained no errors. The static checker verified root HTML/JS/CSS, catalog pages and versioned assets. No hosting paths, dependencies or runtime requirements changed.
+
+AI Studio deployment not verified. PS5 device testing and a fresh native/browser visual comparison were not performed. Existing native source cards use a three-column tabbed panel while the browser uses a vertical overlay; this pre-existing composition gap remains, so this change does not establish whole-dialog visual parity. Native and web catalog populations can also differ as documented in text-list-verification.md.
+
+Manual follow-up: serve the final static-preview at the AI Studio URL root, hard refresh and check Home/sidebar, Search, categories, dialogs, image fallbacks and Settings with no fatal console errors. On PS5, open the same title and language, compare Sources labels/name/format/version against the browser at 1920x1080, and check D-pad/Cross/Circle selection, back and truthful unavailable actions. Native panel composition needs separate parity work.
+
+## Axekin label repair
+
+The Axekin index publishes version fields, but both import paths discarded them. The adapters now preserve verified version text and extract only allowlisted format names explicitly present in link filenames. They retain the existing metadata-only version / format contract and never store the package links. Opaque links, platform names and query parameters are not used to guess formats.
+
+A complete 841-page scan checked 21,021 public game records. Every existing Axekin snapshot entry matched; 20,067 of 20,091 received labels, including 886 with explicit format hints. All IDs, ordering, sizes and other non-label entry fields were compared against the original snapshot and preserved. Spider-Man 2 is version 01.04.03; the public index does not identify its format. Both renderers now use localized Format not provided / Version not provided labels for genuinely unavailable data.
+
+For future updates, run `python scripts/refresh_axekin_labels.py`. It validates the complete scan before writing atomically and updates only display labels on existing entries. Then regenerate native sources/snapshot and rebuild the static preview. The regular bounded/full import adapters also retain these labels.
+
+Verification passed: Python Axekin extraction/enrichment tests (5), source importer tests (12), full source tests (2), npm lint, complete web tests, static production build, HTTP-root static checker, WSL Linux build, native snapshot tests and native game-list UI tests. Native source seeds contain the updated versions within their existing bounded 512-entry Axekin sample. The browser still has the full source population; population parity is not claimed.
+
+The final preview was served with plain Python HTTP on port 3013. Browser screenshot review at 1280x720 verified Spider-Man 2 Sources with `Format not provided - 01.04.03` for Axekin, plus unchanged GFS/EXFAT entries and truthful unavailable-action toast. Settings and Games/Roms company navigation also loaded correctly after closing the dialog. No browser console errors occurred. Native/browser composition and PS5 device visuals remain unverified, with the existing tabbed-native/vertical-web panel difference described above. Full native suite retains the previously observed glass-test blocker.
+
+AI Studio deployment not verified. Deploy the regenerated static-preview directory at the URL root and check startup/Home, sidebar, Search, categories, Sources dialogs, Settings and the console. On PS5, compare labels for a shared title in the bounded native sample (for example The Exit 8, version 01.004.000) and test controller selection/back. To roll back the label repair, restore the Axekin snapshot and adapters/label fallbacks together, regenerate both native headers and rebuild static-preview; do not roll back only its HTML or bundle.
+
+## Archive.org / AlvRo source metadata - 22 October 2026
+
+The AlvRo full index (`assets/catalogs/alvro.json`) and bounded native index (`assets/catalogs/additional.json`) contain the same 63 public PS2 file entries. The previous bounded descriptions recorded an original `7z` extension for each entry, but neither index exposed this format to the Sources UI. The importer now encodes that *archive container* format in the existing `version / format` metadata contract, without claiming the extracted disc-image type. Entries with no explicit version display `7Z - Version not provided`; the Bumpy Trot title explicitly marked `(v2.00)` displays `7Z - v2.00`.
+
+The full and bounded importer paths both persist these labels on future refreshes for AlvRo alone; maelly_pooh is unchanged. The browser detail header now displays the actual catalogue file format and only a real version badge (no `CATALOG` badge or `v / 7Z` text). IDs, titles, platforms, sizes, source-page links, ordering and other sources' catalogue records were preserved. Neither importer stores download links or downloads game files. The source remains limited to the 63 publicly indexed files in the saved snapshot; a live Archive.org availability scan was not performed, and private/unavailable entries must not be presented as available.
+
+Verification: `python -B tests/test_alvro_source.py` (3 passed), `python -B tests/test_import_sources.py` (12 passed), `npm run lint`, `npm run test:web`, `npm run build:static`, `python -B tests/check_static_preview.py`, and WSL `make build-linux test-native-snapshot test-game-list` passed. The existing full native-suite glass-texture assertion and physical PS5/browser visual check remain outside this targeted source repair.

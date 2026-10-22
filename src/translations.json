@@ -2154,5 +2154,38 @@
     "it": "Formato",
     "zh": "格式",
     "ru": "Формат"
+  },
+  "TXT_GAME_SOURCES": {
+    "en": "Sources",
+    "pl": "Źródła",
+    "es": "Fuentes",
+    "fr": "Sources",
+    "nl": "Bronnen",
+    "de": "Quellen",
+    "it": "Fonti",
+    "zh": "来源",
+    "ru": "Источники"
+  },
+  "TXT_SOURCE_FORMAT_UNKNOWN": {
+      "en": "Format not provided",
+      "pl": "Nie podano formatu",
+      "es": "Formato no indicado",
+      "fr": "Format non fourni",
+      "nl": "Formaat niet opgegeven",
+      "de": "Format nicht angegeben",
+      "it": "Formato non specificato",
+      "zh": "未提供格式",
+      "ru": "Формат не указан"
+  },
+  "TXT_SOURCE_VERSION_UNKNOWN": {
+      "en": "Version not provided",
+      "pl": "Nie podano wersji",
+      "es": "Versión no indicada",
+      "fr": "Version non fournie",
+      "nl": "Versie niet opgegeven",
+      "de": "Version nicht angegeben",
+      "it": "Versione non specificata",
+      "zh": "未提供版本",
+      "ru": "Версия не указана"
   }
 }

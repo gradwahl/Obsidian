@@ -18,6 +18,8 @@ int main(void) {
     sys_import_native_snapshot(app);
     assert(ui_init(app));
     assert(game_list_view(app));
+    assert(GAME_TABS[GAME_INSTALL] == TXT_GAME_SOURCES);
+    assert(strcmp(TR(app, TXT_GAME_SOURCES), "Sources") == 0);
     assert(HOME_TAB_COUNT == 2);
     assert(HOME_TABS[0] == HOME_CAT_NEWEST && HOME_TABS[1] == HOME_CAT_POPULAR);
     assert(app->home_cat_index == HOME_CAT_NEWEST);
@@ -44,6 +46,17 @@ int main(void) {
     metadata.format=FMT_PKG; assert(!strcmp(game_list_format(&metadata),"PKG"));
     metadata.format=FMT_FFPKG; assert(!strcmp(game_list_format(&metadata),"FFPKG"));
     metadata.format=FMT_CATALOG; assert(!strcmp(game_list_format(&metadata),"—"));
+    game_source_metadata(app,&metadata,size,sizeof(size)); assert(!strcmp(size,"Format not provided - Version not provided"));
+    SDL_strlcpy(metadata.version,"01.008 / fpkg",sizeof(metadata.version));
+    game_source_metadata(app,&metadata,size,sizeof(size)); assert(!strcmp(size,"FPKG - 01.008"));
+    SDL_strlcpy(metadata.version,"01.060 / FFPFS",sizeof(metadata.version));
+    game_source_metadata(app,&metadata,size,sizeof(size)); assert(!strcmp(size,"FFPFS - 01.060"));
+    SDL_strlcpy(metadata.version," / 7Z",sizeof(metadata.version));
+    game_source_metadata(app,&metadata,size,sizeof(size)); assert(!strcmp(size,"7Z - Version not provided"));
+    metadata.format=FMT_EXFAT;
+    SDL_strlcpy(metadata.version,"v01.008",sizeof(metadata.version));
+    game_source_metadata(app,&metadata,size,sizeof(size)); assert(!strcmp(size,"EXFAT - v01.008"));
+
     game_list_size(&metadata,size); assert(strcmp(size,"—")==0);
     metadata.size_gb=-2; game_list_size(&metadata,size); assert(strcmp(size,"—")==0);
     metadata.size_gb=42; game_list_size(&metadata,size); assert(strcmp(size,"42.0 GB")==0);

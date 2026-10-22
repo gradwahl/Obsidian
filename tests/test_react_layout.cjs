@@ -282,6 +282,26 @@ assert.match(ubiquityDetails, /class="ubq-detail-game-title"/);
 assert.match(ubiquityDetails, /class="ubq-detail-stats"/);
 assert.match(ubiquityDetails, /class="ubq-detail-actions"/);
 assert.match(ubiquityDetails, /Install size/);
+const sourcesDetail = fs.readFileSync(path.join(root, 'src/components/UbiquityGameDetails.tsx'), 'utf8');
+assert.doesNotMatch(sourcesDetail, /Game options|Close game options/);
+assert.match(sourcesDetail, /<h2>\{t\(language, 'TXT_GAME_SOURCES'\)\}<\/h2>/);
+assert.equal((sourcesDetail.match(/gameSourceMetadata\(item,/g) || []).length, 2);
+const { gameSourceMetadata } = require('../src/gameList.ts');
+assert.equal(gameSourceMetadata({...game, format: 'exfat', version: 'v01.008'}), 'EXFAT - v01.008');
+assert.equal(gameSourceMetadata({...game, format: 'catalog', version: '01.008 / fpkg'}), 'FPKG - 01.008');
+assert.equal(gameSourceMetadata({...game, format: 'catalog', version: '01.060 / FFPFS'}), 'FFPFS - 01.060');
+assert.equal(gameSourceMetadata({...game, format: 'catalog', version: ''}), 'Format not provided - Version not provided');
+assert.equal(gameSourceMetadata({...game, format: 'catalog', version: ' / 7Z'}), '7Z - Version not provided');
+assert.equal(gameSourceMetadata({...game, format: 'catalog', version: 'v2.00 / 7Z'}), '7Z - v2.00');
+const { gameSourceFormat, gameSourceVersion } = require('../src/gameList.ts');
+assert.equal(gameSourceFormat({...game, format: 'catalog', version: ' / 7Z'}), '7Z');
+assert.equal(gameSourceVersion({...game, format: 'catalog', version: ' / 7Z'}), '');
+const nativeSourcesDetail = fs.readFileSync(path.join(root, 'src/ui_game_details.h'), 'utf8');
+assert.match(nativeSourcesDetail, /GAME_TABS\[\] = \{TXT_GAME_SOURCES,/);
+assert.match(nativeSourcesDetail, /game_source_metadata\(app, package, metadata, sizeof\(metadata\)\)/);
+for (const language of ['en','pl','fr','nl','de','es','it','zh','ru'])
+  assert.notEqual(t(language, 'TXT_GAME_SOURCES'), 'TXT_GAME_SOURCES');
+
 assert.doesNotMatch(ubiquityDetails, /tv-detail-tabs|tv-neighbors|Achievement Progress|Time Played/);
 assert.match(detail, /tv-detail-tabs/);
 const appDetailSource = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');

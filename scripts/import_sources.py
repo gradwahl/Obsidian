@@ -246,11 +246,147 @@ def file_size_bytes(text):
         return 0
 
 
+# Display metadata only. Never retain package URLs from the public payload.
+AXEKIN_FORMATS = frozenset("exfat ffpfs ffpkg fpkg pkg lz4 nsp xci iso chd cso rvz wbfs cia nds gba nes sfc n64 z64 v64 pbp gdi cdi bin zip 7z rar".split())
+AXEKIN_ARCHIVES = frozenset({"ZIP", "7Z", "RAR"})
+AXEKIN_FILE_HOSTS = frozenset({"akirabox.com", "www.akirabox.com", "akirabox.to",
+                               "www.akirabox.to", "datavaults.co", "www.datavaults.co"})
+
+
+class HostedFilePage(HTMLParser):
+    """Read file headings, never advertisement text or download buttons."""
+    def __init__(self):
+        super().__init__()
+        self.og_titles = []
+        self.headings = []
+        self.titles = []
+        self.tag = None
+        self.text = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "meta" and attrs.get("property", "").lower() == "og:title":
+            self.og_titles.append(attrs.get("content", ""))
+        if tag in {"h1", "h2", "title"}:
+            self.tag, self.text = tag, []
+
+    def handle_data(self, text):
+        if self.tag:
+            self.text.append(text)
+
+    def handle_endtag(self, tag):
+        if tag == self.tag:
+            target = self.titles if tag == "title" else self.headings
+            target.append("".join(self.text).strip())
+            self.tag, self.text = None, []
+
+    def formats(self):
+        # AkiraBox's og:title is the actual filename. Its page also contains
+        # an unrelated ZIP advertisement, which must never become a label.
+        for group in (self.og_titles, self.headings, self.titles):
+            found = set()
+            for name in group:
+                match = re.search(r"\.([a-z0-9]+)(?=\s*(?:$|[|\u00b7\u2013\u2014]| - ))", name, re.I)
+                if match and match[1].lower() in AXEKIN_FORMATS:
+                    found.add(match[1].upper())
+            if found or group is self.og_titles and group:
+                return found
+        return set()
+
+
+def axekin_file_page_formats(url):
+    """Build-time HTML metadata only: no binary reads, accounts or client fetches."""
+    def allowed(value):
+        try:
+            parts = urllib.parse.urlsplit(value)
+            return (parts.scheme == "https" and parts.hostname in AXEKIN_FILE_HOSTS
+                    and not parts.username and not parts.password and parts.port in {None, 443})
+        except ValueError:
+            return False
+    if not allowed(url):
+        return set()
+
+    class HostRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            if not allowed(newurl):
+                raise ValueError("Not a supported public file metadata page")
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "Obsidian/2.0 catalog metadata importer"})
+        with urllib.request.build_opener(HostRedirect()).open(request, timeout=12) as response:
+            if response.headers.get_content_type() != "text/html":
+                return set()
+            data = response.read(512 * 1024 + 1)
+        if len(data) > 512 * 1024:
+            return set()
+        parser = HostedFilePage()
+        parser.feed(data.decode("utf-8", errors="replace"))
+        return parser.formats()
+    except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError):
+        return set()
+
+
+def axekin_labels(game, resolve_files=False):
+    version = game.get("version")
+    version = version.strip() if isinstance(version, str) else ""
+    # Keep version text bounded and reject markup/URLs rather than rendering them.
+    if not re.fullmatch(r"[vV]?\d[\w.+() -]{0,29}", version):
+        version = ""
+    formats = set()
+    links = game.get("downloadLinks")
+    for link in links if isinstance(links, list) else []:
+        if not isinstance(link, dict) or not isinstance(link.get("url"), str):
+            continue
+        try:
+            url = urllib.parse.urlsplit(link["url"])
+        except ValueError:
+            continue
+        if url.scheme not in {"http", "https"}:
+            continue
+        # Updates and DLC can have a different format from the base release.
+        if link.get("type") not in {None, "base"}:
+            continue
+        filename = urllib.parse.unquote(url.path).rsplit("/", 1)[-1].lower()
+        # File names can explicitly name a format before an archive suffix.
+        for token in re.findall(r"(?<![a-z0-9])([a-z0-9]+)(?![a-z0-9])", filename):
+            if token in AXEKIN_FORMATS:
+                formats.add(token.upper())
+        if resolve_files:
+            formats.update(axekin_file_page_formats(link["url"]))
+    # A named package format is more useful than its transport archive.
+    specific = formats - AXEKIN_ARCHIVES
+    return {"slug": game.get("slug", ""), "version": version,
+            "formats": sorted(specific or formats)}
+
+
+def axekin_label_version(labels, previous=""):
+    # Match the existing GFS metadata contract: version / original format.
+    version = labels.get("version") or ""
+    formats = labels.get("formats") or []
+    if (not formats or set(formats) <= AXEKIN_ARCHIVES) and "/" in previous:
+        old_version, old_format = previous.split("/", 1)
+        old_formats = set(old_format.strip().split("+"))
+        if version.strip() == old_version.strip() and (not formats or old_formats - AXEKIN_ARCHIVES):
+            return version + " / " + old_format.strip()
+    return version + (" / " + "+".join(formats) if formats else "")
+
+
+def axekin_previous_labels():
+    path = ROOT / "assets/catalogs/axekin.json"
+    if not path.exists():
+        return {}
+    source = json.loads(path.read_text(encoding="utf8"))["sources"][0]
+    return {urllib.parse.urlsplit(row["sourceUrl"]).path.removeprefix("/games/").rstrip("/"):
+            row.get("version", "") for row in source["packages"]}
+
+
 def axekin(source, limit):
     # Axekin serves a paginated Inertia payload in an HTML attribute (25 games/page).
     rows = []
     seen = set()
     total = None
+    previous_labels = axekin_previous_labels()
     for page in range(1, (limit + 24) // 25 + 1):
         index = source.get("index_url", source["url"])
         endpoint = index + ("&" if "?" in index else "?") + urllib.parse.urlencode({"page": page})
@@ -280,9 +416,11 @@ def axekin(source, limit):
             cover = game.get("coverImage") or ""
             if cover and not str(cover).startswith(("https://", "http://")):
                 cover = urllib.parse.urljoin(source["url"], str(cover))
-            rows.append(record(source, title, page_url, system=system, cover=cover,
-                               description=game.get("description") or "",
-                               size=file_size_bytes(game.get("fileSize"))))
+            entry = record(source, title, page_url, system=system, cover=cover,
+                           description=game.get("description") or "",
+                           size=file_size_bytes(game.get("fileSize")))
+            entry["version"] = axekin_label_version(axekin_labels(game), previous_labels.get(slug, ""))
+            rows.append(entry)
             if len(rows) >= limit:
                 break
         if len(rows) >= limit or not games:
@@ -333,6 +471,7 @@ def axekin_full(source, workers=5, progress=None):
     Fail atomically on missing pages: a partial crawl must never be marked full.
     """
     mappings = axekin_supported_platforms()
+    previous_labels = axekin_previous_labels()
     first = axekin_page(source, 1)
     total_pages = int(first.get("meta", {}).get("lastPage", 0))
     total_games = int(first.get("meta", {}).get("total", 0))
@@ -390,7 +529,7 @@ def axekin_full(source, workers=5, progress=None):
                 entry.pop("category", None)
                 entry.pop("sizeBytes", None) if entry["sizeBytes"] == 0 else None
                 entry.pop("description", None)
-                entry.pop("version", None)
+                entry["version"] = axekin_label_version(axekin_labels(game), previous_labels.get(slug, ""))
                 rows.append(entry)
     if visited < total_games * 0.90:
         raise ValueError(f"Axekin crawl yielded only {visited}/{total_games} advertised games")
@@ -591,28 +730,65 @@ def romheaven_full(source):
     return rows, {"csvRecords": len(data), "indexed": len(rows)}
 
 
+def archive_collection_ids(source):
+    """Explicitly curated Archive.org collections, validated before any request."""
+    identifiers = source.get("archive_identifiers")
+    if identifiers is None:
+        return None
+    if (not isinstance(identifiers, list) or not identifiers
+            or len(identifiers) > 100 or len(set(map(str, identifiers))) != len(identifiers)):
+        raise ValueError("Invalid or duplicate Archive.org collection IDs")
+    if not all(isinstance(value, str) and re.fullmatch(r"[a-zA-Z0-9_.-]{5,100}", value)
+               for value in identifiers):
+        raise ValueError("Invalid Archive.org collection identifier")
+    return identifiers
+
+
+def archive_alvro_display_version(filename):
+    """Archive container suffix and explicit disc revision, not an inferred disc image type."""
+    extension = Path(filename).suffix.lower().removeprefix(".")
+    if extension not in {"7z", "zip", "rar", "iso", "chd", "cso", "pbp", "pkg", "nsp", "xci", "cia", "nds", "gba", "gbc", "nes", "sfc", "n64"}:
+        return ""
+    explicit = re.search(r"\((v\d+(?:\.\d+)+)\)$", Path(filename).stem, re.I)
+    version = explicit.group(1) if explicit else ""
+    return f"{version} / {extension.upper()}"
+
+
 def archive(source, limit):
+
+    identities = archive_collection_ids(source)
     uploader = ""
-    if source.get("seed_identifier"):
-        seed = source["seed_identifier"]
-        if not re.fullmatch(r"[a-zA-Z0-9_-]+", seed):
-            raise ValueError("Invalid Archive.org seed identifier")
-        metadata = json.loads(fetch("https://archive.org/metadata/" + seed))
-        uploader = str(metadata.get("metadata", {}).get("uploader", "")).strip().lower()
-        if not re.fullmatch(r"[a-z0-9._%+-]+@[a-z0-9.-]+", uploader):
-            raise ValueError("Archive.org seed has no public uploader identifier")
-    # The profile @handle is not the uploader index key. Look up the public
-    # identifier from one known item, without persisting an email in config.
-    query = 'uploader:"' + uploader + '"' if uploader else source["query"]
-    params = {"q": query, "output": "json", "rows": 50,
-              "fl[]": ["identifier", "title", "subject", "mediatype"]}
-    endpoint = "https://archive.org/advancedsearch.php?" + urllib.parse.urlencode(params, doseq=True)
-    document = json.loads(fetch(endpoint))["response"]
+    if identities is not None:
+        documents = [{"identifier": identifier} for identifier in identities]
+        truncated = False
+    else:
+        if source.get("seed_identifier"):
+            seed = source["seed_identifier"]
+            if not re.fullmatch(r"[a-zA-Z0-9_-]+", seed):
+                raise ValueError("Invalid Archive.org seed identifier")
+            metadata = json.loads(fetch("https://archive.org/metadata/" + seed))
+            uploader = str(metadata.get("metadata", {}).get("uploader", "")).strip().lower()
+            if not re.fullmatch(r"[a-z0-9._%+-]+@[a-z0-9.-]+", uploader):
+                raise ValueError("Archive.org seed has no public uploader identifier")
+        # For other uploaders, resolve from the public index.
+        query = 'uploader:"' + uploader + '"' if uploader else source["query"]
+        params = {"q": query, "output": "json", "rows": 50,
+                  "fl[]": ["identifier", "title", "subject", "mediatype"]}
+        endpoint = "https://archive.org/advancedsearch.php?" + urllib.parse.urlencode(params, doseq=True)
+        document = json.loads(fetch(endpoint))["response"]
+        documents = document["docs"]
+        truncated = document.get("numFound", 0) > 50
     rows = []
-    for item in document["docs"]:
+    for item in documents:
         identity = item["identifier"]; title = str(item.get("title", identity))
         system = platform(title + " " + str(item.get("subject", "")))
         metadata = json.loads(fetch("https://archive.org/metadata/" + urllib.parse.quote(identity, safe="")))
+        if identities is not None:
+            creator = str(metadata.get("metadata", {}).get("creator", "")).strip().lower()
+            if creator != "alvro":
+                raise ValueError("Archive.org collection is no longer attributed to AlvRo")
+            title = str(metadata.get("metadata", {}).get("title") or identity)
+            system = platform(title)
         if uploader and str(metadata.get("metadata", {}).get("uploader", "")).strip().lower() != uploader:
             continue
         for file in metadata.get("files", []):
@@ -622,11 +798,14 @@ def archive(source, limit):
             if file.get("private") or name.startswith("__"):
                 continue
             page = "https://archive.org/details/" + urllib.parse.quote(identity, safe="")
-            rows.append(record(source, Path(name).stem, page, system=platform(name, system),
-                               description=title, size=file.get("size", 0), original_format=name.rsplit(".", 1)[-1]))
+            entry = record(source, Path(name).stem, page, system=platform(name, system),
+                           description=title, size=file.get("size", 0), original_format=name.rsplit(".", 1)[-1])
+            if source["id"] == "alvro":
+                entry["version"] = archive_alvro_display_version(name)
+            rows.append(entry)
             if len(rows) >= limit:
                 return rows, True
-    return rows, document.get("numFound", 0) > 50
+    return rows, truncated
 
 
 def import_source(source, limit, previous=None):

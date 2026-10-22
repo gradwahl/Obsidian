@@ -23,3 +23,19 @@ export function gameSize(game: GameItem): string {
   if (gb >= 0.000001) return (gb * 1000000).toFixed(1) + ' KB';
   return Math.max(1, Math.round(gb * 1000000000)) + ' B';
 }
+
+/** Some catalog sources store their file format after the version. */
+export function gameSourceVersion(game: GameItem): string {
+  return (game.version || '').split('/')[0].trim();
+}
+
+export function gameSourceFormat(game: GameItem, unknownFormat = 'Format not provided'): string {
+  const sourceFormat = (game.version || '').split('/')[1]?.trim();
+  return game.format === 'catalog' ? sourceFormat?.toUpperCase() || unknownFormat : gameFormat(game);
+}
+
+export function gameSourceMetadata(game: GameItem, unknownFormat = 'Format not provided', unknownVersion = 'Version not provided'): string {
+  const version = gameSourceVersion(game);
+  const format = gameSourceFormat(game, unknownFormat);
+  return `${format} - ${version || unknownVersion}`;
+}

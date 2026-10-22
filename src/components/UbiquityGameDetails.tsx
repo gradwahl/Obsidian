@@ -1,4 +1,4 @@
-import { gameSize } from '../gameList';
+import { gameSourceFormat, gameSourceMetadata, gameSourceVersion, gameSize } from '../gameList';
 import { GlassLiquid } from './GlassLiquid';
 import { useCatalogDetails } from '../useCatalogDetails';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -96,9 +96,9 @@ export function UbiquityGameDetails({
             {(game.rating_score || 0) > 0 && <><span aria-hidden="true">•</span><span>★ {(game.rating_score || 0).toFixed(1)}/10</span></>}
           </div>
           <div className="ubq-detail-tags">
-            <span className="glass-pill glass-pill--sm"><GlassLiquid />{game.format.toUpperCase()}</span>
+            <span className="glass-pill glass-pill--sm"><GlassLiquid />{game.format === 'catalog' ? gameSourceFormat(game, t(language, 'TXT_SOURCE_FORMAT_UNKNOWN')) : game.format.toUpperCase()}</span>
             <span className="glass-pill glass-pill--sm"><GlassLiquid />{game.id_code}</span>
-            {game.version && <span className="glass-pill glass-pill--sm"><GlassLiquid />v{game.version}</span>}
+            {gameSourceVersion(game) && <span className="glass-pill glass-pill--sm"><GlassLiquid />v{gameSourceVersion(game).replace(/^v/i, '')}</span>}
           </div>
           <div className="ubq-detail-description" ref={descriptionRef}>
             {description || game.title}
@@ -120,26 +120,26 @@ export function UbiquityGameDetails({
             {game.format === 'catalog' ? t(language, 'TXT_GAME_DETAILS') :
               game.state === 'installed' ? t(language, 'TXT_MOUNT') : t(language, 'TXT_GAME_INSTALL')}
           </button>
-          <button type="button" aria-label="More options" className={actionIndex === 1 ? 'ubq-detail-action-focused' : ''}
+          <button type="button" aria-label={t(language, 'TXT_GAME_SOURCES')} className={actionIndex === 1 ? 'ubq-detail-action-focused' : ''}
             onFocus={() => onActionIndexChange(1)} onClick={() => act(1)}>•••</button>
           <button type="button" aria-label="Back to games" className={actionIndex === 2 ? 'ubq-detail-action-focused' : ''}
             onFocus={() => onActionIndexChange(2)} onClick={() => act(2)}>←</button>
         </div>
       </div>
 
-      {optionsOpen && <section className="ubq-detail-options" aria-label="Game packages and media">
+      {optionsOpen && <section className="ubq-detail-options" aria-label={t(language, 'TXT_GAME_SOURCES')}>
         <div className="ubq-detail-options-header">
-          <h2>Game options</h2>
-          <button type="button" onClick={() => setOptionsOpen(false)} aria-label="Close game options">✕</button>
+          <h2>{t(language, 'TXT_GAME_SOURCES')}</h2>
+          <button type="button" onClick={() => setOptionsOpen(false)} aria-label="Close sources">✕</button>
         </div>
         <div className="ubq-detail-option-list">
           {siblings.map((item, index) => <button type="button" key={item.id_code + '-' + index}
             onClick={() => onTriggerAction(item)}>
-            <b>{item.source_name || item.title}</b>
-            <span>{item.format.toUpperCase()} · {item.version} · {gameSize(item)}</span>
+            <b>{item.source_name || 'Obsidian'}</b>
+            <span>{gameSourceMetadata(item, t(language, 'TXT_SOURCE_FORMAT_UNKNOWN'), t(language, 'TXT_SOURCE_VERSION_UNKNOWN'))}</span>
           </button>)}
           {dlc.map((item, index) => <button type="button" key={'dlc-' + index} onClick={() => onSelectGame(item)}>
-            <b>{item.title}</b><span>DLC · {item.id_code}</span>
+            <b>{item.source_name || 'Obsidian'}</b><span>{gameSourceMetadata(item, t(language, 'TXT_SOURCE_FORMAT_UNKNOWN'), t(language, 'TXT_SOURCE_VERSION_UNKNOWN'))}</span>
           </button>)}
           {!siblings.length && !dlc.length &&
             <p>No additional items available.</p>}

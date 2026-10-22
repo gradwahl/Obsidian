@@ -1,7 +1,28 @@
 /* Shared game panel used by every catalog entry point. */
 enum { GAME_INSTALL, GAME_DLC, GAME_DETAILS, GAME_TAB_COUNT, GAME_SCREENSHOTS };
 static const SDL_Rect GAME_CLOSE = {1820, 215, 60, 60};
-static const TextId GAME_TABS[] = {TXT_GAME_INSTALL, TXT_GAME_DLC, TXT_GAME_DETAILS};
+static const TextId GAME_TABS[] = {TXT_GAME_SOURCES, TXT_GAME_DLC, TXT_GAME_DETAILS};
+
+/* Catalog versions may include an explicit / format suffix. */
+static void game_source_metadata(WolodriveApp *app, const GameItem *item, char *out, size_t capacity) {
+    char version[sizeof(item->version)];
+    SDL_strlcpy(version, item->version, sizeof(version));
+    char *suffix = strchr(version, '/');
+    if (suffix) *suffix++ = '\0';
+    char *end = version + strlen(version);
+    while (end > version && SDL_isspace((unsigned char)end[-1])) *--end = '\0';
+    char *start = version;
+    while (SDL_isspace((unsigned char)*start)) start++;
+    if (suffix) {
+        while (SDL_isspace((unsigned char)*suffix)) suffix++;
+        end = suffix + strlen(suffix);
+        while (end > suffix && SDL_isspace((unsigned char)end[-1])) *--end = '\0';
+        for (char *c = suffix; *c; c++) *c = (char)SDL_toupper((unsigned char)*c);
+    }
+    const char *format = item->format == FMT_CATALOG && suffix && *suffix ?
+        suffix : item->format == FMT_CATALOG ? TR(app, TXT_SOURCE_FORMAT_UNKNOWN) : game_list_format(item);
+    snprintf(out, capacity, "%s - %s", format, *start ? start : TR(app, TXT_SOURCE_VERSION_UNKNOWN));
+}
 
 static SDL_Rect game_tab_target(int tab) {
     return (SDL_Rect){CONTENT_X + tab * 380, 850, 360, 65};
@@ -295,10 +316,9 @@ static void render_game_details(WolodriveApp *app) {
             } else {
                 GameItem *package = entries[i];
                 render_cover_or_placeholder(app, package, box.x+(box.w-110)/2, box.y, 110, 155, false);
-                snprintf(metadata, sizeof(metadata), "%s  |  %s  |  %s", package->id_code,
-                         sys_format_short_badge(package->format), package->version);
+                game_source_metadata(app, package, metadata, sizeof(metadata));
                 SDL_Rect label = {box.x+14, box.y+165, box.w-28, 48};
-                draw_fitted_text(app, app->font_small, app->detail_tab == GAME_DLC ? package->title : package->source_name, label, white, label, false);
+                draw_fitted_text(app, app->font_small, package->source_name[0] ? package->source_name : "Obsidian", label, white, label, false);
                 draw_text(app, app->font_micro, metadata, box.x+14, box.y+220, muted, box.w-28);
                 draw_text(app, app->font_small, app->detail_tab == GAME_DLC ? TR(app, TXT_GAME_DETAILS) : action_label(app, package), box.x+14, box.y+285, white, box.w-28);
             }

@@ -192,3 +192,8 @@ TEXT(TXT_LIST_CONSOLE, "Console", "Konsola", "Consola", "Console", "Console", "K
 TEXT(TXT_LIST_NAME, "Name", "Nazwa", "Nombre", "Nom", "Naam", "Name", "Nome", "名称", "Название")
 TEXT(TXT_LIST_SIZE, "Size", "Rozmiar", "Tamaño", "Taille", "Grootte", "Größe", "Dimensione", "大小", "Размер")
 TEXT(TXT_LIST_FORMAT, "Format", "Format", "Formato", "Format", "Formaat", "Format", "Formato", "格式", "Формат")
+
+TEXT(TXT_GAME_SOURCES, "Sources", "Źródła", "Fuentes", "Sources", "Bronnen", "Quellen", "Fonti", "来源", "Источники")
+
+TEXT(TXT_SOURCE_FORMAT_UNKNOWN, "Format not provided", "Nie podano formatu", "Formato no indicado", "Format non fourni", "Formaat niet opgegeven", "Format nicht angegeben", "Formato non specificato", "未提供格式", "Формат не указан")
+TEXT(TXT_SOURCE_VERSION_UNKNOWN, "Version not provided", "Nie podano wersji", "Versión no indicada", "Version non fournie", "Versie niet opgegeven", "Version nicht angegeben", "Versione non specificata", "未提供版本", "Версия не указана")

@@ -40,7 +40,17 @@
     "name": "Archive.org / AlvRo",
     "url": "https://archive.org/search?query=creator%3A%22AlvRo%22",
     "adapter": "archive",
-    "query": "creator:\"AlvRo\""
+    "query": "creator:\"AlvRo\"",
+    "archive_identifiers": [
+      "httpsarchive.orgdetailsps2japanredump4",
+      "ps2japanredump2",
+      "ps2japanredump3",
+      "ps2usaredump1_20200816_1458",
+      "ps2japanredump5",
+      "ps2japanredumpmissing",
+      "ps2japanredump1",
+      "ps2usaredump1"
+    ]
   },
   {
     "id": "superpsx",

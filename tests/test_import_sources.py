@@ -105,7 +105,7 @@ class SourceImportTests(unittest.TestCase):
                     "title": "Example Game", "slug": "example-game",
                     "description": "<p>Adventure &amp; puzzles</p>",
                     "coverImage": "/uploads/games/example.webp",
-                    "fileSize": "1.5 GB",
+                    "fileSize": "1.5 GB", "version": "3.4",
                     "platforms": [{"name": "Nintendo Switch"}],
                     "downloadLinks": [{"url": "https://downloads.example/bad.pkg"}]
                 }]
@@ -122,6 +122,7 @@ class SourceImportTests(unittest.TestCase):
         self.assertEqual(rows[0]["sourceUrl"], "https://www.axekin.com/games/example-game")
         self.assertEqual(rows[0]["platform"], "nintendo-switch")
         self.assertEqual(rows[0]["sizeBytes"], 1_500_000_000)
+        self.assertEqual(rows[0]["version"], "3.4 / PKG")
         self.assertNotIn("downloadLinks", rows[0])
         self.assertNotIn("bad.pkg", json.dumps(rows[0]))
         self.assertEqual(fetch.call_count, 1)
@@ -200,7 +201,7 @@ class SourceImportTests(unittest.TestCase):
         self.assertEqual(source["id"], "axekin")
         self.assertEqual(source["status"], "ready")
         coverage = source["coverage"]
-        self.assertEqual(coverage["pages"], 840)
+        self.assertEqual(coverage["pages"], (coverage["advertisedGames"] + 24) // 25)
         self.assertEqual(coverage["visitedGames"], coverage["advertisedGames"])
         self.assertEqual(coverage["indexedEntries"], len(source["packages"]))
         self.assertGreater(len(source["packages"]), 18000)
@@ -223,7 +224,7 @@ class SourceImportTests(unittest.TestCase):
         base = {"id": "axekin", "name": "Axekin", "url": "https://www.axekin.com/",
                 "index_url": "https://www.axekin.com/games"}
         def game(n, platforms):
-            return {"id": n, "title": f"Game {n}", "slug": f"game-{n}",
+            return {"id": n, "title": f"Game {n}", "slug": f"game-{n}", "version": "1.2",
                     "platforms": [{"slug": slug} for slug in platforms],
                     "downloadLinks": [{"url": "https://bad.example/rom.zip"}]}
         pages = {
@@ -246,6 +247,7 @@ class SourceImportTests(unittest.TestCase):
                           ("Game 4", "atari-2600"),
                           ("Game 4", "nintendo-switch")})
         self.assertTrue(all("bad.example" not in json.dumps(x) for x in rows))
+        self.assertTrue(all(x["version"] == "1.2 / ZIP" for x in rows))
 
 if __name__ == "__main__":
     unittest.main()

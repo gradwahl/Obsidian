@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "native_catalog_snapshot.h"
+#include "native_source_index.h"
 
 int main(void) {
     WolodriveApp *app = calloc(1, sizeof(*app));
@@ -25,6 +26,16 @@ int main(void) {
         if (!strcmp(src, "NoPayStation")) nps = true;
     }
     assert(archive && axekin && nps);
+    bool axekin_version = false;
+    for (size_t i=0; i<NATIVE_SOURCE_CATALOGUE_COUNT; i++) {
+        const NativeSourceSeed *entry = &NATIVE_SOURCE_CATALOGUE[i];
+        if (!strcmp(entry->source, "Axekin") && !strcmp(entry->title, "The Exit 8")) {
+            assert(!strcmp(entry->version, "01.004.000 / PKG"));
+            axekin_version = true;
+        }
+    }
+    assert(axekin_version);
+
     for (int i=0; i<app->catalog_count; i++) {
         GameItem *it = &app->catalog[i];
         games += it->is_game;
